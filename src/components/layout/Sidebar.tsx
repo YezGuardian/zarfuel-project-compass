@@ -8,24 +8,34 @@ import {
   DollarSign,
   Shield,
   FileArchive,
-  Contact
+  Contact,
+  Users
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
+import { useAuth } from '@/contexts/AuthContext';
 
 interface SidebarProps {
   isOpen: boolean;
 }
 
-const navigation = [
-  { name: 'Overview', path: '/', icon: LayoutDashboard },
-  { name: 'Phases & Tasks', path: '/tasks', icon: FileText },
-  { name: 'Budget', path: '/budget', icon: DollarSign },
-  { name: 'Risk Management', path: '/risks', icon: Shield },
-  { name: 'Document Repository', path: '/documents', icon: FileArchive },
-  { name: 'Contact Directory', path: '/contacts', icon: Contact },
-];
-
 const Sidebar: React.FC<SidebarProps> = ({ isOpen }) => {
+  const { isAdmin } = useAuth();
+  
+  const navigation = [
+    { name: 'Overview', path: '/', icon: LayoutDashboard },
+    { name: 'Phases & Tasks', path: '/tasks', icon: FileText },
+    { name: 'Budget', path: '/budget', icon: DollarSign },
+    { name: 'Risk Management', path: '/risks', icon: Shield },
+    { name: 'Document Repository', path: '/documents', icon: FileArchive },
+    { name: 'Contact Directory', path: '/contacts', icon: Contact },
+  ];
+
+  const adminNavigation = [
+    { name: 'User Management', path: '/users', icon: Users, requiresAdmin: true },
+  ];
+  
+  const allNavItems = [...navigation, ...(isAdmin() ? adminNavigation : [])];
+
   return (
     <div
       className={cn(
@@ -42,7 +52,7 @@ const Sidebar: React.FC<SidebarProps> = ({ isOpen }) => {
       {/* Navigation Links */}
       <nav className="py-6 px-3">
         <ul className="space-y-1">
-          {navigation.map((item) => (
+          {allNavItems.map((item) => (
             <li key={item.name}>
               <NavLink
                 to={item.path}

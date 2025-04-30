@@ -10,6 +10,7 @@ import DashboardLayout from "@/components/layout/DashboardLayout";
 
 // Pages
 import Login from "@/pages/Login";
+import Register from "@/pages/Register";
 import Dashboard from "@/pages/Dashboard";
 import TasksPage from "@/pages/TasksPage";
 import BudgetPage from "@/pages/BudgetPage";
@@ -17,6 +18,7 @@ import RiskManagementPage from "@/pages/RiskManagementPage";
 import DocumentsPage from "@/pages/DocumentsPage";
 import ContactsPage from "@/pages/ContactsPage";
 import ProfilePage from "@/pages/ProfilePage";
+import UsersPage from "@/pages/UsersPage";
 import Unauthorized from "@/pages/Unauthorized";
 import NotFound from "@/pages/NotFound";
 
@@ -32,6 +34,7 @@ const App = () => (
           <Routes>
             {/* Public routes */}
             <Route path="/login" element={<Login />} />
+            <Route path="/auth/register" element={<Register />} />
             <Route path="/unauthorized" element={<Unauthorized />} />
             
             {/* Protected routes */}
@@ -47,6 +50,7 @@ const App = () => (
               <Route path="documents" element={<DocumentsPage />} />
               <Route path="contacts" element={<ContactsPage />} />
               <Route path="profile" element={<ProfilePage />} />
+              <Route path="users" element={<UsersPage />} />
             </Route>
             
             {/* 404 route */}

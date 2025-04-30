@@ -1,28 +1,40 @@
 
-import React, { useState } from 'react';
-import { useNavigate } from 'react-router-dom';
+import React, { useState, useEffect } from 'react';
+import { useNavigate, Link } from 'react-router-dom';
 import { useAuth } from '@/contexts/AuthContext';
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
+import { Alert, AlertDescription } from '@/components/ui/alert';
+import { AlertCircle, Loader2 } from 'lucide-react';
 
 const Login: React.FC = () => {
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [isLoading, setIsLoading] = useState(false);
-  const { login } = useAuth();
+  const [error, setError] = useState<string | null>(null);
+  const { login, user } = useAuth();
   const navigate = useNavigate();
+
+  useEffect(() => {
+    // If user is already logged in, redirect to dashboard
+    if (user) {
+      navigate('/');
+    }
+  }, [user, navigate]);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setIsLoading(true);
+    setError(null);
     
     try {
       await login(email, password);
       navigate('/');
-    } catch (error) {
+    } catch (error: any) {
       console.error('Login failed:', error);
+      setError(error.message || 'Login failed. Please check your credentials and try again.');
     } finally {
       setIsLoading(false);
     }
@@ -45,12 +57,19 @@ const Login: React.FC = () => {
           </CardHeader>
           <form onSubmit={handleSubmit}>
             <CardContent className="space-y-4">
+              {error && (
+                <Alert variant="destructive">
+                  <AlertCircle className="h-4 w-4" />
+                  <AlertDescription>{error}</AlertDescription>
+                </Alert>
+              )}
+              
               <div className="space-y-2">
                 <Label htmlFor="email">Email</Label>
                 <Input
                   id="email"
                   type="email"
-                  placeholder="admin@zarfuel.com"
+                  placeholder="Enter your email"
                   value={email}
                   onChange={(e) => setEmail(e.target.value)}
                   required
@@ -66,12 +85,9 @@ const Login: React.FC = () => {
                   onChange={(e) => setPassword(e.target.value)}
                   required
                 />
-                <p className="text-xs text-muted-foreground mt-1">
-                  Demo credentials: admin@zarfuel.com / password
-                </p>
               </div>
             </CardContent>
-            <CardFooter>
+            <CardFooter className="flex flex-col space-y-2">
               <Button 
                 type="submit" 
                 className="w-full bg-zarfuel-blue hover:bg-zarfuel-blue/90"
@@ -79,10 +95,7 @@ const Login: React.FC = () => {
               >
                 {isLoading ? (
                   <span className="flex items-center">
-                    <svg className="animate-spin -ml-1 mr-2 h-4 w-4 text-white" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
-                      <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
-                      <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
-                    </svg>
+                    <Loader2 className="animate-spin -ml-1 mr-2 h-4 w-4 text-white" />
                     Signing In...
                   </span>
                 ) : 'Sign In'}

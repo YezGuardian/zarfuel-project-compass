@@ -9,7 +9,81 @@ export type Json =
 export type Database = {
   public: {
     Tables: {
-      [_ in never]: never
+      invitations: {
+        Row: {
+          created_at: string | null
+          email: string
+          expires_at: string | null
+          id: string
+          invited_by: string
+          organization: string | null
+          position: string | null
+          role: string
+        }
+        Insert: {
+          created_at?: string | null
+          email: string
+          expires_at?: string | null
+          id?: string
+          invited_by: string
+          organization?: string | null
+          position?: string | null
+          role?: string
+        }
+        Update: {
+          created_at?: string | null
+          email?: string
+          expires_at?: string | null
+          id?: string
+          invited_by?: string
+          organization?: string | null
+          position?: string | null
+          role?: string
+        }
+        Relationships: []
+      }
+      profiles: {
+        Row: {
+          created_at: string
+          email: string
+          first_name: string | null
+          id: string
+          invited_by: string | null
+          last_name: string | null
+          organization: string | null
+          phone: string | null
+          position: string | null
+          role: string
+          updated_at: string
+        }
+        Insert: {
+          created_at?: string
+          email: string
+          first_name?: string | null
+          id: string
+          invited_by?: string | null
+          last_name?: string | null
+          organization?: string | null
+          phone?: string | null
+          position?: string | null
+          role?: string
+          updated_at?: string
+        }
+        Update: {
+          created_at?: string
+          email?: string
+          first_name?: string | null
+          id?: string
+          invited_by?: string | null
+          last_name?: string | null
+          organization?: string | null
+          phone?: string | null
+          position?: string | null
+          role?: string
+          updated_at?: string
+        }
+        Relationships: []
+      }
     }
     Views: {
       [_ in never]: never

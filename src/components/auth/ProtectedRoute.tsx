@@ -2,6 +2,7 @@
 import React, { ReactNode } from 'react';
 import { Navigate } from 'react-router-dom';
 import { useAuth } from '@/contexts/AuthContext';
+import { Loader2 } from 'lucide-react';
 
 type ProtectedRouteProps = {
   children: ReactNode;
@@ -12,13 +13,16 @@ const ProtectedRoute: React.FC<ProtectedRouteProps> = ({
   children, 
   requiresAdmin = false 
 }) => {
-  const { user, isLoading, isAdmin } = useAuth();
+  const { user, profile, isLoading, isAdmin } = useAuth();
 
   if (isLoading) {
     // Show loading indicator while checking authentication
     return (
       <div className="flex items-center justify-center min-h-screen">
-        <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-zarfuel-gold"></div>
+        <div className="flex flex-col items-center">
+          <Loader2 className="h-12 w-12 animate-spin text-zarfuel-gold mb-4" />
+          <p className="text-lg font-medium">Loading...</p>
+        </div>
       </div>
     );
   }

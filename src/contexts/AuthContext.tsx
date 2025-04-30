@@ -1,78 +1,159 @@
 
 import React, { createContext, useState, useContext, useEffect } from 'react';
 import { toast } from 'sonner';
+import { supabase } from '@/integrations/supabase/client';
+import { Session, User } from '@supabase/supabase-js';
 
 // Types for our authentication context
-type User = {
+type Profile = {
   id: string;
   email: string;
-  name: string;
+  first_name: string;
+  last_name: string;
   role: 'admin' | 'viewer';
+  organization?: string;
+  position?: string;
+  phone?: string;
 };
 
 type AuthContextType = {
   user: User | null;
+  profile: Profile | null;
+  session: Session | null;
   isLoading: boolean;
   login: (email: string, password: string) => Promise<void>;
   logout: () => void;
   isAdmin: () => boolean;
+  refreshProfile: () => Promise<void>;
 };
 
 // Create the authentication context
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
 
-// Mock users for demonstration
-const MOCK_USERS: User[] = [
-  { id: '1', email: 'admin@zarfuel.com', name: 'Admin User', role: 'admin' },
-  { id: '2', email: 'viewer@zarfuel.com', name: 'Viewer User', role: 'viewer' },
-];
-
 export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
   const [user, setUser] = useState<User | null>(null);
+  const [profile, setProfile] = useState<Profile | null>(null);
+  const [session, setSession] = useState<Session | null>(null);
   const [isLoading, setIsLoading] = useState<boolean>(true);
 
-  useEffect(() => {
-    // Check for saved user in local storage
-    const savedUser = localStorage.getItem('zarfuelUser');
-    if (savedUser) {
-      setUser(JSON.parse(savedUser));
+  // Fetch user profile data
+  const fetchProfile = async (userId: string) => {
+    try {
+      const { data, error } = await supabase
+        .from('profiles')
+        .select('*')
+        .eq('id', userId)
+        .single();
+      
+      if (error) {
+        console.error('Error fetching profile:', error);
+        return null;
+      }
+      
+      return data as Profile;
+    } catch (error) {
+      console.error('Error fetching profile:', error);
+      return null;
     }
-    setIsLoading(false);
+  };
+
+  // Refresh the user's profile
+  const refreshProfile = async () => {
+    if (user) {
+      const profileData = await fetchProfile(user.id);
+      if (profileData) {
+        setProfile(profileData);
+      }
+    }
+  };
+
+  useEffect(() => {
+    // Set up auth state listener
+    const { data: { subscription } } = supabase.auth.onAuthStateChange(
+      async (event, session) => {
+        setSession(session);
+        setUser(session?.user ?? null);
+        
+        if (session?.user) {
+          setTimeout(async () => {
+            const profileData = await fetchProfile(session.user.id);
+            setProfile(profileData);
+          }, 0);
+        } else {
+          setProfile(null);
+        }
+
+        setIsLoading(false);
+      }
+    );
+
+    // Check for existing session
+    supabase.auth.getSession().then(({ data: { session } }) => {
+      setSession(session);
+      setUser(session?.user ?? null);
+      
+      if (session?.user) {
+        fetchProfile(session.user.id).then(profileData => {
+          setProfile(profileData);
+        });
+      }
+      
+      setIsLoading(false);
+    });
+
+    return () => subscription.unsubscribe();
   }, []);
 
   const login = async (email: string, password: string): Promise<void> => {
     setIsLoading(true);
     
-    // Simulate API call delay
-    await new Promise(resolve => setTimeout(resolve, 1000));
-    
-    // Find user in mock data (in a real app, this would be an API call)
-    const foundUser = MOCK_USERS.find(user => user.email === email);
-    
-    if (foundUser && password === 'password') { // In a real app, compare hashed passwords
-      setUser(foundUser);
-      localStorage.setItem('zarfuelUser', JSON.stringify(foundUser));
-      toast.success(`Welcome back, ${foundUser.name}`);
-    } else {
-      toast.error('Invalid email or password');
-      throw new Error('Invalid email or password');
+    try {
+      const { data, error } = await supabase.auth.signInWithPassword({
+        email,
+        password
+      });
+      
+      if (error) {
+        toast.error(error.message || 'Login failed');
+        throw error;
+      }
+      
+      if (data.user) {
+        const profileData = await fetchProfile(data.user.id);
+        setProfile(profileData);
+        toast.success(`Welcome back, ${profileData?.first_name || data.user.email}`);
+      }
+    } catch (error: any) {
+      console.error('Login error:', error);
+      throw error;
+    } finally {
+      setIsLoading(false);
     }
-    
-    setIsLoading(false);
   };
 
-  const logout = (): void => {
+  const logout = async (): Promise<void> => {
+    await supabase.auth.signOut();
     setUser(null);
-    localStorage.removeItem('zarfuelUser');
+    setProfile(null);
+    setSession(null);
     toast.info('You have been logged out');
   };
 
   const isAdmin = (): boolean => {
-    return user?.role === 'admin';
+    return profile?.role === 'admin';
   };
 
   return (
-    <AuthContext.Provider value={{ user, isLoading, login, logout, isAdmin }}>
+    <AuthContext.Provider value={{ 
+      user, 
+      profile, 
+      session, 
+      isLoading, 
+      login, 
+      logout, 
+      isAdmin,
+      refreshProfile
+    }}>
       {children}
     </AuthContext.Provider>
   );
