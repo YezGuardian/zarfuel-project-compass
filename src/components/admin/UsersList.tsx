@@ -45,8 +45,14 @@ const UsersList: React.FC = () => {
       if (error) {
         throw error;
       }
+
+      // Transform the data to match the UserProfile type
+      const transformedData: UserProfile[] = data?.map(user => ({
+        ...user,
+        last_sign_in_at: null // Add the missing property
+      })) || [];
       
-      setUsers(data || []);
+      setUsers(transformedData);
     } catch (error: any) {
       console.error('Error fetching users:', error);
       toast.error('Failed to load users');

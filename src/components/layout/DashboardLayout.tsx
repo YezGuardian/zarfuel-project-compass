@@ -7,12 +7,18 @@ import { useAuth } from '@/contexts/AuthContext';
 
 const DashboardLayout: React.FC = () => {
   const [sidebarOpen, setSidebarOpen] = useState(true);
-  const { user } = useAuth();
+  const { user, profile } = useAuth();
 
   // If user is not authenticated (this shouldn't happen due to ProtectedRoute)
   if (!user) {
     return null;
   }
+
+  // Prepare user info for the header
+  const userInfo = {
+    name: profile ? `${profile.first_name || ''} ${profile.last_name || ''}`.trim() || user.email : user.email,
+    role: profile?.role || 'viewer'
+  };
 
   return (
     <div className="flex h-screen bg-slate-50">
@@ -25,7 +31,7 @@ const DashboardLayout: React.FC = () => {
         <Header 
           sidebarOpen={sidebarOpen} 
           setSidebarOpen={setSidebarOpen} 
-          user={user} 
+          user={userInfo} 
         />
         
         {/* Main Content */}
