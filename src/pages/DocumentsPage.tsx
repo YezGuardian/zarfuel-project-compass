@@ -1,4 +1,3 @@
-
 import React, { useState } from 'react';
 import { 
   Card, 
@@ -26,7 +25,7 @@ import {
   Download,
   UploadCloud,
   FileSpreadsheet,
-  FilePresentation
+  Presentation
 } from 'lucide-react';
 import { toast } from 'sonner';
 
@@ -57,7 +56,7 @@ const DocumentsPage: React.FC = () => {
       case 'xlsx':
         return <FileSpreadsheet className="h-8 w-8 text-green-500" />;
       case 'pptx':
-        return <FilePresentation className="h-8 w-8 text-orange-500" />;
+        return <Presentation className="h-8 w-8 text-orange-500" />;
       default:
         return <File className="h-8 w-8 text-gray-500" />;
     }
