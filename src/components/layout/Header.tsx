@@ -1,5 +1,5 @@
 
-import React, { useState } from 'react';
+import React from 'react';
 import { Link } from 'react-router-dom';
 import { 
   Menu, 
@@ -17,6 +17,7 @@ import {
   DropdownMenuTrigger,
 } from '@/components/ui/dropdown-menu';
 import { useAuth } from '@/contexts/AuthContext';
+import NotificationCenter from '@/components/notifications/NotificationCenter';
 
 interface HeaderProps {
   sidebarOpen: boolean;
@@ -55,7 +56,9 @@ const Header: React.FC<HeaderProps> = ({ sidebarOpen, setSidebarOpen, user }) =>
           </h1>
         </div>
         
-        <div className="flex items-center">
+        <div className="flex items-center gap-2">
+          <NotificationCenter />
+          
           <DropdownMenu>
             <DropdownMenuTrigger asChild>
               <Button variant="ghost" className="flex items-center gap-2 text-base">

@@ -33,7 +33,7 @@ const Login: React.FC = () => {
     
     // If user is already logged in, redirect to dashboard
     if (user) {
-      navigate('/');
+      navigate('/dashboard');
     }
   }, [user, navigate]);
 
@@ -51,9 +51,6 @@ const Login: React.FC = () => {
       if (newPassword.length < 6) {
         throw new Error('Password must be at least 6 characters long');
       }
-      
-      // Instead of trying to get user by email which isn't available,
-      // we'll create a new user or reset password directly
       
       // Try to sign up, if user exists it will fail appropriately
       const { data: signUpData, error: signUpError } = await supabase.auth.signUp({
@@ -108,7 +105,7 @@ const Login: React.FC = () => {
     
     try {
       await login(email, password);
-      navigate('/');
+      navigate('/dashboard');
     } catch (error: any) {
       console.error('Login failed:', error);
       setError(error.message || 'Login failed. Please check your credentials and try again.');

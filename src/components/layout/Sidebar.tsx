@@ -9,7 +9,8 @@ import {
   Shield,
   FileArchive,
   Contact,
-  Users
+  Users,
+  CalendarClock
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { useAuth } from '@/contexts/AuthContext';
@@ -22,8 +23,10 @@ const Sidebar: React.FC<SidebarProps> = ({ isOpen }) => {
   const { isAdmin } = useAuth();
   
   const navigation = [
-    { name: 'Overview', path: '/', icon: LayoutDashboard },
+    { name: 'Overview', path: '/dashboard', icon: LayoutDashboard },
     { name: 'Phases & Tasks', path: '/tasks', icon: FileText },
+    { name: 'Calendar', path: '/calendar', icon: CalendarDays },
+    { name: 'Meetings', path: '/meetings', icon: CalendarClock },
     { name: 'Budget', path: '/budget', icon: DollarSign },
     { name: 'Risk Management', path: '/risks', icon: Shield },
     { name: 'Document Repository', path: '/documents', icon: FileArchive },
