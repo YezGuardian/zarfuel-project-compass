@@ -18,23 +18,26 @@ const TaskStatusBadge: React.FC<TaskStatusBadgeProps> = ({
   const statusConfig = {
     complete: {
       label: 'Complete',
-      color: 'bg-status-complete text-white',
+      color: 'bg-green-500 text-white',
     },
     inprogress: {
       label: 'In Progress',
-      color: 'bg-status-inprogress text-white',
+      color: 'bg-blue-500 text-white',
     },
     notstarted: {
       label: 'Not Started',
-      color: 'bg-status-notstarted text-white',
+      color: 'bg-slate-500 text-white',
     },
     ongoing: {
       label: 'Ongoing',
-      color: 'bg-status-ongoing text-white',
+      color: 'bg-amber-500 text-white',
     },
   };
 
-  const config = statusConfig[status];
+  const config = statusConfig[status] || {
+    label: status.charAt(0).toUpperCase() + status.slice(1),
+    color: 'bg-gray-500 text-white',
+  };
 
   return (
     <Badge className={cn(config.color, className)}>

@@ -2,7 +2,7 @@
 import React, { createContext, useContext, useState, useEffect } from 'react';
 import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from './AuthContext';
-import { Notification } from '@/types';
+import { Notification, NotificationType } from '@/types';
 import { toast } from 'sonner';
 
 type NotificationsContextType = {
@@ -37,7 +37,8 @@ export const NotificationsProvider: React.FC<{ children: React.ReactNode }> = ({
         return;
       }
       
-      setNotifications(data || []);
+      // Type assertion to ensure data matches our Notification type
+      setNotifications(data as Notification[] || []);
     } catch (error) {
       console.error('Error in fetchNotifications:', error);
     }

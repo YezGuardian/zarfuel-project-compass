@@ -116,9 +116,11 @@ export type Document = {
   };
 };
 
+export type NotificationType = 'task_created' | 'task_updated' | 'comment_added' | 'meeting_scheduled' | 'document_uploaded' | string;
+
 export type Notification = {
   id: string;
-  type: 'task_created' | 'task_updated' | 'comment_added' | 'meeting_scheduled' | 'document_uploaded';
+  type: NotificationType;
   content: string;
   link?: string;
   is_read: boolean;
