@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect } from 'react';
 import { useNavigate, Link } from 'react-router-dom';
 import { useAuth } from '@/contexts/AuthContext';
@@ -53,44 +52,42 @@ const Login: React.FC = () => {
         throw new Error('Password must be at least 6 characters long');
       }
       
-      // Check if user exists
-      const { data: { user: existingUser }, error: userError } = await supabase.auth.admin.getUserByEmail(email);
+      // Instead of trying to get user by email which isn't available,
+      // we'll create a new user or reset password directly
       
-      if (userError && !existingUser) {
-        // Create admin user if they don't exist
-        const { data: signUpData, error: signUpError } = await supabase.auth.signUp({
-          email,
-          password: newPassword,
-        });
-        
-        if (signUpError) {
+      // Try to sign up, if user exists it will fail appropriately
+      const { data: signUpData, error: signUpError } = await supabase.auth.signUp({
+        email,
+        password: newPassword,
+      });
+      
+      if (signUpError) {
+        if (signUpError.message.includes('already registered')) {
+          // User exists, send password reset email
+          const { error: resetError } = await supabase.auth.resetPasswordForEmail(email, {
+            redirectTo: `${window.location.origin}/login`,
+          });
+          
+          if (resetError) {
+            throw resetError;
+          }
+          
+          toast.success('Password reset email sent');
+        } else {
           throw signUpError;
         }
-        
+      } else if (signUpData.user) {
         // Set admin role
-        if (signUpData.user) {
-          const { error: roleError } = await supabase
-            .from('profiles')
-            .update({ role: 'admin', first_name: 'Yezreel', last_name: 'Shirinda' })
-            .eq('id', signUpData.user.id);
-            
-          if (roleError) {
-            throw roleError;
-          }
+        const { error: roleError } = await supabase
+          .from('profiles')
+          .update({ role: 'admin', first_name: 'Yezreel', last_name: 'Shirinda' })
+          .eq('id', signUpData.user.id);
+          
+        if (roleError) {
+          throw roleError;
         }
         
         toast.success('Admin account created successfully');
-      } else {
-        // Update password for existing user
-        const { error: resetError } = await supabase.auth.resetPasswordForEmail(email, {
-          redirectTo: `${window.location.origin}/login`,
-        });
-        
-        if (resetError) {
-          throw resetError;
-        }
-        
-        toast.success('Password reset email sent');
       }
       
       // Switch back to regular login
