@@ -53,7 +53,8 @@ const CalendarPage: React.FC = () => {
         
       if (error) throw error;
       
-      setEvents(data as Event[] || []);
+      // Use a type assertion to handle the mismatch between API response and our Event type
+      setEvents((data || []) as unknown as Event[]);
     } catch (error) {
       console.error('Error fetching events:', error);
       toast.error('Failed to load events');

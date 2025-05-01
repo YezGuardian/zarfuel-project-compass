@@ -75,12 +75,16 @@ const ContactForm: React.FC<ContactFormProps> = ({
     
     try {
       if (mode === 'create') {
+        // Ensure name is always included as it's required
+        const contactData = {
+          ...values,
+          created_by: user.id,
+          name: values.name, // Explicitly include name to satisfy the type checker
+        };
+        
         const { error } = await supabase
           .from('contacts')
-          .insert({
-            ...values,
-            created_by: user.id,
-          });
+          .insert(contactData);
           
         if (error) throw error;
         toast.success('Contact created successfully');

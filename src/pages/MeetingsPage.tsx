@@ -58,7 +58,8 @@ const MeetingsPage: React.FC = () => {
         
       if (meetingsError) throw meetingsError;
       
-      setMeetings(meetingsData as Event[] || []);
+      // Use a type assertion to handle the mismatch between API response and our Event type
+      setMeetings((meetingsData || []) as unknown as Event[]);
       
       // Fetch meeting minutes for all meetings
       const minutesMap: Record<string, MeetingMinute[]> = {};
@@ -78,7 +79,8 @@ const MeetingsPage: React.FC = () => {
           
         if (minutesError) throw minutesError;
         
-        minutesMap[meeting.id] = minutesData as MeetingMinute[];
+        // Use a type assertion to handle the mismatch between API response and our MeetingMinute type
+        minutesMap[meeting.id] = (minutesData as unknown as MeetingMinute[]);
       }
       
       setMeetingMinutes(minutesMap);

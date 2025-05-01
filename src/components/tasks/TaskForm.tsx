@@ -131,7 +131,11 @@ const TaskForm: React.FC<TaskFormProps> = ({
     };
     
     const taskData = {
-      ...values,
+      title: values.title, // Explicitly include title to satisfy the type checker
+      description: values.description,
+      phase_id: values.phase_id,
+      responsible_teams: values.responsible_teams,
+      status: values.status,
       progress: progressMap[values.status],
       start_date: values.start_date ? values.start_date.toISOString() : null,
       end_date: values.end_date ? values.end_date.toISOString() : null,

@@ -77,9 +77,12 @@ const TasksPage: React.FC = () => {
         ...task,
         phase: task.phases?.name,
         status: task.status as any,
+        // Ensure progress is always defined, default to 0 if not present
+        progress: task.progress !== undefined ? task.progress : 0
       }));
       
-      setTasks(formattedTasks as Task[]);
+      // Use a type assertion after ensuring all required fields are present
+      setTasks(formattedTasks as unknown as Task[]);
       
       // Extract unique teams
       const allTeams = new Set<string>();
