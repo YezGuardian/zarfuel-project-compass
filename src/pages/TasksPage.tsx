@@ -73,13 +73,33 @@ const TasksPage: React.FC = () => {
       if (tasksError) throw tasksError;
       
       // Transform tasks to match our Task type
-      const formattedTasks = tasksData.map(task => ({
-        ...task,
-        phase: task.phases?.name,
-        status: task.status as any,
-        // Ensure progress is always defined, default to 0 if not present
-        progress: task.progress !== undefined ? task.progress : 0
-      }));
+      const formattedTasks = tasksData.map(task => {
+        // Calculate a default progress value based on status
+        let progressValue = 0;
+        switch (task.status) {
+          case 'complete':
+            progressValue = 100;
+            break;
+          case 'inprogress':
+            progressValue = 50;
+            break;
+          case 'ongoing':
+            progressValue = 30;
+            break;
+          case 'notstarted':
+          default:
+            progressValue = 0;
+            break;
+        }
+        
+        return {
+          ...task,
+          phase: task.phases?.name,
+          status: task.status as any,
+          // Add the missing progress property
+          progress: progressValue
+        };
+      });
       
       // Use a type assertion after ensuring all required fields are present
       setTasks(formattedTasks as unknown as Task[]);
