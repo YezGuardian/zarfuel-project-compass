@@ -130,23 +130,19 @@ const TaskForm: React.FC<TaskFormProps> = ({
       complete: 100
     };
     
-    const taskData = {
-      title: values.title, // Explicitly include title to satisfy the type checker
-      description: values.description,
-      phase_id: values.phase_id,
-      responsible_teams: values.responsible_teams,
-      status: values.status,
-      progress: progressMap[values.status],
-      start_date: values.start_date ? values.start_date.toISOString() : null,
-      end_date: values.end_date ? values.end_date.toISOString() : null,
-    };
-    
     try {
       if (mode === 'create') {
+        // For create, make sure title is included (required by database schema)
         const { error } = await supabase
           .from('tasks')
           .insert({
-            ...taskData,
+            title: values.title,
+            description: values.description,
+            phase_id: values.phase_id,
+            responsible_teams: values.responsible_teams,
+            status: values.status,
+            start_date: values.start_date ? values.start_date.toISOString() : null,
+            end_date: values.end_date ? values.end_date.toISOString() : null,
             created_by: user.id,
             updated_by: user.id,
           });
@@ -156,10 +152,17 @@ const TaskForm: React.FC<TaskFormProps> = ({
       } else {
         if (!initialData?.id) throw new Error('Task ID is required for updates');
         
+        // For update, make sure title is included (required by database schema)
         const { error } = await supabase
           .from('tasks')
           .update({
-            ...taskData,
+            title: values.title,
+            description: values.description,
+            phase_id: values.phase_id,
+            responsible_teams: values.responsible_teams,
+            status: values.status,
+            start_date: values.start_date ? values.start_date.toISOString() : null,
+            end_date: values.end_date ? values.end_date.toISOString() : null,
             updated_by: user.id,
           })
           .eq('id', initialData.id);
