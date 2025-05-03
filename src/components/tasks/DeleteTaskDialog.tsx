@@ -11,6 +11,7 @@ import {
   AlertDialogTitle,
 } from '@/components/ui/alert-dialog';
 import { Task } from '@/types';
+import { ScrollArea } from '@/components/ui/scroll-area';
 
 interface DeleteTaskDialogProps {
   open: boolean;
@@ -27,13 +28,15 @@ const DeleteTaskDialog: React.FC<DeleteTaskDialogProps> = ({
 }) => {
   return (
     <AlertDialog open={open} onOpenChange={onOpenChange}>
-      <AlertDialogContent>
+      <AlertDialogContent className="max-h-[85vh]">
         <AlertDialogHeader>
           <AlertDialogTitle>Are you sure?</AlertDialogTitle>
-          <AlertDialogDescription>
-            This will permanently delete the task "{task?.title}".
-            This action cannot be undone.
-          </AlertDialogDescription>
+          <ScrollArea className="max-h-[calc(85vh-180px)]">
+            <AlertDialogDescription>
+              This will permanently delete the task "{task?.title}".
+              This action cannot be undone.
+            </AlertDialogDescription>
+          </ScrollArea>
         </AlertDialogHeader>
         <AlertDialogFooter>
           <AlertDialogCancel>Cancel</AlertDialogCancel>

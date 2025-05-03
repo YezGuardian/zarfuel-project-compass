@@ -9,6 +9,7 @@ import {
 } from '@/components/ui/dialog';
 import TaskForm from '@/components/tasks/TaskForm';
 import { Task } from '@/types';
+import { ScrollArea } from '@/components/ui/scroll-area';
 
 interface AddEditTaskDialogProps {
   open: boolean;
@@ -27,7 +28,7 @@ const AddEditTaskDialog: React.FC<AddEditTaskDialogProps> = ({
 }) => {
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="sm:max-w-[600px]">
+      <DialogContent className="sm:max-w-[600px] max-h-[85vh]">
         <DialogHeader>
           <DialogTitle>
             {mode === 'create' ? 'Create New Task' : 'Edit Task'}
@@ -36,13 +37,15 @@ const AddEditTaskDialog: React.FC<AddEditTaskDialogProps> = ({
             {mode === 'create' ? 'Add a new task to the project' : 'Update task details'}
           </DialogDescription>
         </DialogHeader>
-        {(mode === 'create' || (mode === 'edit' && task)) && (
-          <TaskForm
-            onSuccess={onSuccess}
-            initialData={mode === 'edit' ? task : undefined}
-            mode={mode}
-          />
-        )}
+        <ScrollArea className="max-h-[calc(85vh-120px)]">
+          {(mode === 'create' || (mode === 'edit' && task)) && (
+            <TaskForm
+              onSuccess={onSuccess}
+              initialData={mode === 'edit' ? task : undefined}
+              mode={mode}
+            />
+          )}
+        </ScrollArea>
       </DialogContent>
     </Dialog>
   );
