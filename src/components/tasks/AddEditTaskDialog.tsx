@@ -37,7 +37,7 @@ const AddEditTaskDialog: React.FC<AddEditTaskDialogProps> = ({
             {mode === 'create' ? 'Add a new task to the project' : 'Update task details'}
           </DialogDescription>
         </DialogHeader>
-        <ScrollArea className="max-h-[calc(85vh-120px)]">
+        <ScrollArea className="max-h-[calc(85vh-120px)] pr-4">
           {(mode === 'create' || (mode === 'edit' && task)) && (
             <TaskForm
               onSuccess={onSuccess}

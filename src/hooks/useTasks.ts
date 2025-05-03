@@ -1,5 +1,5 @@
 
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useCallback } from 'react';
 import { Task, Phase } from '@/types';
 import { supabase } from '@/integrations/supabase/client';
 import { toast } from 'sonner';
@@ -12,7 +12,7 @@ export const useTasks = () => {
   const [teams, setTeams] = useState<string[]>([]);
   
   // Fetch phases and tasks data
-  const fetchData = async () => {
+  const fetchData = useCallback(async () => {
     setIsLoading(true);
     try {
       // Fetch phases
@@ -65,7 +65,7 @@ export const useTasks = () => {
     } finally {
       setIsLoading(false);
     }
-  };
+  }, []);
 
   useEffect(() => {
     fetchData();
@@ -88,7 +88,7 @@ export const useTasks = () => {
     return () => {
       supabase.removeChannel(channel);
     };
-  }, []);
+  }, [fetchData]);
 
   const handleDeleteTask = async (taskId: string) => {
     try {
@@ -100,7 +100,6 @@ export const useTasks = () => {
       if (error) throw error;
       
       setTasks(tasks.filter(t => t.id !== taskId));
-      toast.success('Task deleted successfully');
       return true;
     } catch (error: any) {
       console.error('Error deleting task:', error);

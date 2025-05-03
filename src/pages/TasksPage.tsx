@@ -11,6 +11,7 @@ import KanbanBoard from '@/components/tasks/KanbanBoard';
 import DeleteTaskDialog from '@/components/tasks/DeleteTaskDialog';
 import AddEditTaskDialog from '@/components/tasks/AddEditTaskDialog';
 import { useTasks } from '@/hooks/useTasks';
+import { toast } from 'sonner';
 
 const TasksPage: React.FC = () => {
   // State for filters
@@ -25,6 +26,7 @@ const TasksPage: React.FC = () => {
   const [editDialogOpen, setEditDialogOpen] = useState(false);
   const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
   const [currentTask, setCurrentTask] = useState<Task | null>(null);
+  const [isProcessing, setIsProcessing] = useState(false);
   
   const { isAdmin } = useAuth();
   const { tasks, phases, teams, isLoading, fetchData, handleDeleteTask } = useTasks();
@@ -56,12 +58,28 @@ const TasksPage: React.FC = () => {
   };
   
   const handleConfirmDelete = async () => {
-    if (!currentTask) return;
+    if (!currentTask || isProcessing) return;
     
-    const success = await handleDeleteTask(currentTask.id);
-    if (success) {
-      setDeleteDialogOpen(false);
+    try {
+      setIsProcessing(true);
+      const success = await handleDeleteTask(currentTask.id);
+      if (success) {
+        setDeleteDialogOpen(false);
+        toast.success('Task deleted successfully');
+      }
+    } catch (error) {
+      console.error('Error deleting task:', error);
+      toast.error('Failed to delete task');
+    } finally {
+      setIsProcessing(false);
     }
+  };
+
+  const handleTaskSuccess = () => {
+    setAddDialogOpen(false);
+    setEditDialogOpen(false);
+    fetchData();
+    toast.success(editDialogOpen ? 'Task updated successfully' : 'Task created successfully');
   };
   
   return (
@@ -136,11 +154,7 @@ const TasksPage: React.FC = () => {
         }}
         task={currentTask}
         mode={addDialogOpen ? 'create' : 'edit'}
-        onSuccess={() => {
-          setAddDialogOpen(false);
-          setEditDialogOpen(false);
-          fetchData();
-        }}
+        onSuccess={handleTaskSuccess}
       />
       
       {/* Delete Confirmation Dialog */}
