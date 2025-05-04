@@ -23,13 +23,15 @@ interface TaskTableProps {
   isAdmin: boolean;
   onEdit: (task: Task) => void;
   onDelete: (task: Task) => void;
+  showPhaseColumn?: boolean;
 }
 
 const TaskTable: React.FC<TaskTableProps> = ({ 
   tasks, 
   isAdmin, 
   onEdit, 
-  onDelete 
+  onDelete,
+  showPhaseColumn = true
 }) => {
   return (
     <Card>
@@ -44,9 +46,12 @@ const TaskTable: React.FC<TaskTableProps> = ({
           <table className="w-full border-collapse">
             <thead>
               <tr className="border-b">
-                <th className="px-4 py-3 text-left text-sm font-medium text-muted-foreground">Phase</th>
+                {showPhaseColumn && (
+                  <th className="px-4 py-3 text-left text-sm font-medium text-muted-foreground">Phase</th>
+                )}
                 <th className="px-4 py-3 text-left text-sm font-medium text-muted-foreground">Task</th>
                 <th className="px-4 py-3 text-left text-sm font-medium text-muted-foreground">Team</th>
+                <th className="px-4 py-3 text-left text-sm font-medium text-muted-foreground">Description</th>
                 <th className="px-4 py-3 text-left text-sm font-medium text-muted-foreground">Timeline</th>
                 <th className="px-4 py-3 text-left text-sm font-medium text-muted-foreground">Progress</th>
                 <th className="px-4 py-3 text-left text-sm font-medium text-muted-foreground">Status</th>
@@ -59,10 +64,15 @@ const TaskTable: React.FC<TaskTableProps> = ({
               {tasks.length > 0 ? (
                 tasks.map((task) => (
                   <tr key={task.id} className="border-b last:border-0 hover:bg-muted/30">
-                    <td className="px-4 py-3 text-sm">{task.phase}</td>
+                    {showPhaseColumn && (
+                      <td className="px-4 py-3 text-sm">{task.phase}</td>
+                    )}
                     <td className="px-4 py-3 text-sm font-medium">{task.title}</td>
                     <td className="px-4 py-3 text-sm">
                       {task.responsible_teams?.join(', ') || 'N/A'}
+                    </td>
+                    <td className="px-4 py-3 text-sm max-w-[200px] truncate">
+                      {task.description || 'N/A'}
                     </td>
                     <td className="px-4 py-3 text-sm">
                       {task.start_date ? new Date(task.start_date).toLocaleDateString() : 'N/A'} - 
@@ -116,7 +126,7 @@ const TaskTable: React.FC<TaskTableProps> = ({
                 ))
               ) : (
                 <tr>
-                  <td colSpan={isAdmin ? 7 : 6} className="px-4 py-8 text-center text-muted-foreground">
+                  <td colSpan={isAdmin ? (showPhaseColumn ? 8 : 7) : (showPhaseColumn ? 7 : 6)} className="px-4 py-8 text-center text-muted-foreground">
                     No tasks found matching your filters
                   </td>
                 </tr>

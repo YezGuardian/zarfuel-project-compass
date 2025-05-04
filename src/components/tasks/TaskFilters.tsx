@@ -68,7 +68,9 @@ const TaskFilters: React.FC<TaskFiltersProps> = ({
             <SelectContent>
               <SelectItem value="all">All Phases</SelectItem>
               {phases.map(phase => (
-                <SelectItem key={phase.id} value={phase.id}>{phase.name}</SelectItem>
+                <SelectItem key={phase.id} value={phase.id}>
+                  Phase {phase.position}: {phase.name}
+                </SelectItem>
               ))}
             </SelectContent>
           </Select>

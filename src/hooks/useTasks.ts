@@ -57,6 +57,10 @@ export const useTasks = () => {
           task.responsible_teams.forEach(team => allTeams.add(team));
         }
       });
+
+      // Add default teams if they don't exist
+      ['ZARSOM', 'SAPPI', 'Afzelia', 'Executive Team'].forEach(team => allTeams.add(team));
+      
       setTeams(Array.from(allTeams));
       
     } catch (error) {
@@ -71,7 +75,7 @@ export const useTasks = () => {
     fetchData();
     
     // Set up real-time updates for tasks
-    const channel = supabase
+    const tasksChannel = supabase
       .channel('tasks-changes')
       .on('postgres_changes', 
         { 
@@ -85,8 +89,24 @@ export const useTasks = () => {
       )
       .subscribe();
       
+    // Set up real-time updates for phases
+    const phasesChannel = supabase
+      .channel('phases-changes')
+      .on('postgres_changes', 
+        { 
+          event: '*', 
+          schema: 'public', 
+          table: 'phases'
+        }, 
+        () => {
+          fetchData();
+        }
+      )
+      .subscribe();
+      
     return () => {
-      supabase.removeChannel(channel);
+      supabase.removeChannel(tasksChannel);
+      supabase.removeChannel(phasesChannel);
     };
   }, [fetchData]);
 

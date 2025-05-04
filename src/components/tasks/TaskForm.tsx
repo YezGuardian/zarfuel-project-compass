@@ -1,5 +1,5 @@
 
-import React from 'react';
+import React, { useState } from 'react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Textarea } from '@/components/ui/textarea';
@@ -11,7 +11,7 @@ import {
   FormLabel,
   FormMessage,
 } from '@/components/ui/form';
-import { Loader2 } from 'lucide-react';
+import { Loader2, Plus, X } from 'lucide-react';
 import { Task } from '@/types';
 import { useTaskForm } from './useTaskForm';
 import TeamSelector from './TeamSelector';
@@ -39,6 +39,17 @@ const TaskForm: React.FC<TaskFormProps> = ({
     toggleTeam,
     onSubmit
   } = useTaskForm({ initialData, mode, onSuccess });
+
+  const [newTeam, setNewTeam] = useState('');
+  const [isAddingTeam, setIsAddingTeam] = useState(false);
+  
+  const handleAddTeam = () => {
+    if (newTeam.trim()) {
+      toggleTeam(newTeam.trim());
+      setNewTeam('');
+    }
+    setIsAddingTeam(false);
+  };
   
   return (
     <Form {...form}>
@@ -48,28 +59,9 @@ const TaskForm: React.FC<TaskFormProps> = ({
           name="title"
           render={({ field }) => (
             <FormItem>
-              <FormLabel>Title*</FormLabel>
+              <FormLabel>Task Name*</FormLabel>
               <FormControl>
-                <Input placeholder="Task title" {...field} disabled={isSubmitting} />
-              </FormControl>
-              <FormMessage />
-            </FormItem>
-          )}
-        />
-        
-        <FormField
-          control={form.control}
-          name="description"
-          render={({ field }) => (
-            <FormItem>
-              <FormLabel>Description</FormLabel>
-              <FormControl>
-                <Textarea 
-                  placeholder="Describe the task..." 
-                  className="min-h-[100px]" 
-                  {...field} 
-                  disabled={isSubmitting} 
-                />
+                <Input placeholder="Task name" {...field} disabled={isSubmitting} />
               </FormControl>
               <FormMessage />
             </FormItem>
@@ -93,12 +85,88 @@ const TaskForm: React.FC<TaskFormProps> = ({
           control={form.control}
           name="responsible_teams"
           render={() => (
-            <TeamSelector 
-              teams={teams}
-              selectedTeams={selectedTeams}
-              onToggleTeam={toggleTeam}
-              disabled={isSubmitting}
-            />
+            <FormItem>
+              <FormLabel>Responsible Teams</FormLabel>
+              <div className="space-y-3">
+                <div className="flex flex-wrap gap-2">
+                  {['ZARSOM', 'SAPPI', 'Afzelia', 'Executive Team'].map(team => (
+                    <Button
+                      key={team}
+                      type="button"
+                      size="sm"
+                      variant={selectedTeams.includes(team) ? "default" : "outline"}
+                      className={selectedTeams.includes(team) ? "" : "border-dashed"}
+                      onClick={() => toggleTeam(team)}
+                      disabled={isSubmitting}
+                    >
+                      {team}
+                    </Button>
+                  ))}
+                  {selectedTeams
+                    .filter(team => !['ZARSOM', 'SAPPI', 'Afzelia', 'Executive Team'].includes(team))
+                    .map(team => (
+                      <Button
+                        key={team}
+                        type="button"
+                        size="sm"
+                        variant="default"
+                        className="flex items-center"
+                        onClick={() => toggleTeam(team)}
+                        disabled={isSubmitting}
+                      >
+                        {team}
+                        <X className="ml-1 h-3 w-3" />
+                      </Button>
+                    ))
+                  }
+                  {!isAddingTeam ? (
+                    <Button
+                      type="button"
+                      size="sm"
+                      variant="outline"
+                      className="border-dashed"
+                      onClick={() => setIsAddingTeam(true)}
+                      disabled={isSubmitting}
+                    >
+                      <Plus className="h-4 w-4 mr-1" />
+                      Add Team
+                    </Button>
+                  ) : (
+                    <div className="flex items-center space-x-2">
+                      <Input
+                        value={newTeam}
+                        onChange={(e) => setNewTeam(e.target.value)}
+                        placeholder="New team name"
+                        className="h-9 w-[150px]"
+                        autoFocus
+                        disabled={isSubmitting}
+                      />
+                      <Button
+                        type="button"
+                        size="sm"
+                        onClick={handleAddTeam}
+                        disabled={isSubmitting || !newTeam.trim()}
+                      >
+                        Add
+                      </Button>
+                      <Button
+                        type="button"
+                        size="sm"
+                        variant="ghost"
+                        onClick={() => {
+                          setIsAddingTeam(false);
+                          setNewTeam('');
+                        }}
+                        disabled={isSubmitting}
+                      >
+                        Cancel
+                      </Button>
+                    </div>
+                  )}
+                </div>
+              </div>
+              <FormMessage />
+            </FormItem>
           )}
         />
         
@@ -129,6 +197,44 @@ const TaskForm: React.FC<TaskFormProps> = ({
             )}
           />
         </div>
+        
+        <FormField
+          control={form.control}
+          name="description"
+          render={({ field }) => (
+            <FormItem>
+              <FormLabel>Description</FormLabel>
+              <FormControl>
+                <Textarea 
+                  placeholder="Describe the task..." 
+                  className="min-h-[100px]" 
+                  {...field} 
+                  disabled={isSubmitting} 
+                />
+              </FormControl>
+              <FormMessage />
+            </FormItem>
+          )}
+        />
+        
+        <FormField
+          control={form.control}
+          name="progress_summary"
+          render={({ field }) => (
+            <FormItem>
+              <FormLabel>Progress Summary</FormLabel>
+              <FormControl>
+                <Textarea 
+                  placeholder="Enter progress summary..." 
+                  className="min-h-[100px]" 
+                  {...field} 
+                  disabled={isSubmitting} 
+                />
+              </FormControl>
+              <FormMessage />
+            </FormItem>
+          )}
+        />
         
         <FormField
           control={form.control}

@@ -18,7 +18,7 @@ export const useTaskForm = ({ initialData, mode = 'create', onSuccess }: UseTask
   const { user } = useAuth();
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [phases, setPhases] = useState<Phase[]>([]);
-  const [teams, setTeams] = useState<string[]>(['ZARSOM', 'SAPPI', 'Environmental', 'Engineering', 'Logistics']);
+  const [teams, setTeams] = useState<string[]>(['ZARSOM', 'SAPPI', 'Afzelia', 'Executive Team']);
   const [selectedTeams, setSelectedTeams] = useState<string[]>([]);
   
   const form = useForm<TaskFormValues>({
@@ -31,6 +31,7 @@ export const useTaskForm = ({ initialData, mode = 'create', onSuccess }: UseTask
       start_date: initialData?.start_date ? new Date(initialData.start_date) : undefined,
       end_date: initialData?.end_date ? new Date(initialData.end_date) : undefined,
       status: initialData?.status || 'notstarted',
+      progress_summary: initialData?.description || '',
     },
   });
   
@@ -93,6 +94,7 @@ export const useTaskForm = ({ initialData, mode = 'create', onSuccess }: UseTask
             status: values.status,
             start_date: values.start_date ? values.start_date.toISOString() : null,
             end_date: values.end_date ? values.end_date.toISOString() : null,
+            progress_summary: values.progress_summary,
             created_by: user.id,
             updated_by: user.id,
           });
@@ -113,6 +115,7 @@ export const useTaskForm = ({ initialData, mode = 'create', onSuccess }: UseTask
             status: values.status,
             start_date: values.start_date ? values.start_date.toISOString() : null,
             end_date: values.end_date ? values.end_date.toISOString() : null,
+            progress_summary: values.progress_summary,
             updated_by: user.id,
           })
           .eq('id', initialData.id);
@@ -133,6 +136,7 @@ export const useTaskForm = ({ initialData, mode = 'create', onSuccess }: UseTask
           start_date: undefined,
           end_date: undefined,
           status: 'notstarted',
+          progress_summary: '',
         });
         setSelectedTeams([]);
       }
