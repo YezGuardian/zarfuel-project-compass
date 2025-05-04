@@ -15,11 +15,12 @@ import {
 import { format, isToday, isTomorrow, isThisWeek, isThisMonth, parseISO, isSameDay } from 'date-fns';
 import { supabase } from '@/integrations/supabase/client';
 import { toast } from 'sonner';
-import { Event, Task } from '@/types';
+import { Event, Task, Status } from '@/types';
 import { useAuth } from '@/contexts/AuthContext';
 import EventForm from '@/components/calendar/EventForm';
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from '@/components/ui/alert-dialog';
 import TaskStatusBadge from '@/components/tasks/TaskStatusBadge';
+import { ScrollArea } from '@/components/ui/scroll-area';
 
 // Type for combined events (meetings and task deadlines)
 interface CalendarItem {
@@ -30,7 +31,7 @@ interface CalendarItem {
   end_time?: string;
   location?: string;
   isTask: boolean;
-  status?: string;
+  status?: Status;
   taskId?: string;
   eventId?: string;
   is_meeting?: boolean;
@@ -238,19 +239,21 @@ const CalendarPage: React.FC = () => {
                 Add Event
               </Button>
             </DialogTrigger>
-            <DialogContent className="sm:max-w-[600px] max-h-[85vh]">
-              <DialogHeader>
-                <DialogTitle>Create New Event</DialogTitle>
-                <DialogDescription>
-                  Add a new event to the calendar
-                </DialogDescription>
-              </DialogHeader>
-              <EventForm 
-                onSuccess={() => {
-                  setAddDialogOpen(false);
-                  fetchData();
-                }} 
-              />
+            <DialogContent className="sm:max-w-[600px] max-h-[85vh] overflow-hidden">
+              <ScrollArea className="max-h-[calc(85vh-40px)]">
+                <DialogHeader>
+                  <DialogTitle>Create New Event</DialogTitle>
+                  <DialogDescription>
+                    Add a new event to the calendar
+                  </DialogDescription>
+                </DialogHeader>
+                <EventForm 
+                  onSuccess={() => {
+                    setAddDialogOpen(false);
+                    fetchData();
+                  }} 
+                />
+              </ScrollArea>
             </DialogContent>
           </Dialog>
         )}
@@ -468,94 +471,98 @@ const CalendarPage: React.FC = () => {
       
       {/* Item Details Dialog */}
       <Dialog open={itemDetailsOpen} onOpenChange={setItemDetailsOpen}>
-        <DialogContent className="sm:max-w-[600px] max-h-[85vh]">
-          <DialogHeader>
-            <DialogTitle>
-              {selectedItem?.isTask ? 'Task Details' : 'Event Details'}
-            </DialogTitle>
-          </DialogHeader>
-          <div className="space-y-4">
-            {selectedItem && (
-              <div className="space-y-4">
-                <div>
-                  <h3 className="text-lg font-bold">{selectedItem.title}</h3>
-                  {selectedItem.isTask ? (
-                    <div className="flex items-center mt-2">
-                      <p className="text-sm mr-2">Status:</p>
-                      <TaskStatusBadge status={selectedItem.status || 'notstarted'} />
-                    </div>
-                  ) : (
-                    <div className="flex items-center gap-2 mt-1">
-                      <Badge variant="outline">
-                        {selectedItem.is_meeting ? 'Meeting' : 'Event'}
-                      </Badge>
-                    </div>
-                  )}
-                </div>
-
-                <div className="space-y-2">
-                  <div className="flex items-center">
-                    <CalendarIcon className="w-4 h-4 mr-2 text-muted-foreground" />
-                    <p className="text-sm">
-                      {format(parseISO(selectedItem.start_time), 'EEEE, MMMM d, yyyy')}
-                      {!selectedItem.isTask && selectedItem.end_time && (
-                        <>, {format(parseISO(selectedItem.start_time), 'h:mm a')} - {format(parseISO(selectedItem.end_time), 'h:mm a')}</>
-                      )}
-                    </p>
-                  </div>
-                  
-                  {selectedItem.location && (
-                    <div className="flex items-center">
-                      <span className="mr-2">📍</span>
-                      <p className="text-sm">{selectedItem.location}</p>
-                    </div>
-                  )}
-                </div>
-
-                {selectedItem.description && (
-                  <div className="space-y-1">
-                    <p className="text-sm font-medium">Description:</p>
-                    <p className="text-sm">{selectedItem.description}</p>
-                  </div>
-                )}
-
-                {!selectedItem.isTask && selectedItem.participants && selectedItem.participants.length > 0 && (
-                  <div className="space-y-1">
-                    <p className="text-sm font-medium">Participants:</p>
-                    <div className="flex flex-wrap gap-1">
-                      {selectedItem.participants.map((participant) => (
-                        <Badge key={participant.id} variant="outline" className="text-xs">
-                          {participant.user?.first_name} {participant.user?.last_name}
+        <DialogContent className="sm:max-w-[600px] max-h-[85vh] overflow-hidden">
+          <ScrollArea className="max-h-[calc(85vh-40px)]">
+            <DialogHeader>
+              <DialogTitle>
+                {selectedItem?.isTask ? 'Task Details' : 'Event Details'}
+              </DialogTitle>
+            </DialogHeader>
+            <div className="space-y-4">
+              {selectedItem && (
+                <div className="space-y-4">
+                  <div>
+                    <h3 className="text-lg font-bold">{selectedItem.title}</h3>
+                    {selectedItem.isTask ? (
+                      <div className="flex items-center mt-2">
+                        <p className="text-sm mr-2">Status:</p>
+                        <TaskStatusBadge status={selectedItem.status || 'notstarted'} />
+                      </div>
+                    ) : (
+                      <div className="flex items-center gap-2 mt-1">
+                        <Badge variant="outline">
+                          {selectedItem.is_meeting ? 'Meeting' : 'Event'}
                         </Badge>
-                      ))}
-                    </div>
+                      </div>
+                    )}
                   </div>
-                )}
-              </div>
-            )}
-          </div>
+
+                  <div className="space-y-2">
+                    <div className="flex items-center">
+                      <CalendarIcon className="w-4 h-4 mr-2 text-muted-foreground" />
+                      <p className="text-sm">
+                        {format(parseISO(selectedItem.start_time), 'EEEE, MMMM d, yyyy')}
+                        {!selectedItem.isTask && selectedItem.end_time && (
+                          <>, {format(parseISO(selectedItem.start_time), 'h:mm a')} - {format(parseISO(selectedItem.end_time), 'h:mm a')}</>
+                        )}
+                      </p>
+                    </div>
+                    
+                    {selectedItem.location && (
+                      <div className="flex items-center">
+                        <span className="mr-2">📍</span>
+                        <p className="text-sm">{selectedItem.location}</p>
+                      </div>
+                    )}
+                  </div>
+
+                  {selectedItem.description && (
+                    <div className="space-y-1">
+                      <p className="text-sm font-medium">Description:</p>
+                      <p className="text-sm">{selectedItem.description}</p>
+                    </div>
+                  )}
+
+                  {!selectedItem.isTask && selectedItem.participants && selectedItem.participants.length > 0 && (
+                    <div className="space-y-1">
+                      <p className="text-sm font-medium">Participants:</p>
+                      <div className="flex flex-wrap gap-1">
+                        {selectedItem.participants.map((participant) => (
+                          <Badge key={participant.id} variant="outline" className="text-xs">
+                            {participant.user?.first_name} {participant.user?.last_name}
+                          </Badge>
+                        ))}
+                      </div>
+                    </div>
+                  )}
+                </div>
+              )}
+            </div>
+          </ScrollArea>
         </DialogContent>
       </Dialog>
       
       {/* Edit Event Dialog */}
       <Dialog open={editDialogOpen} onOpenChange={setEditDialogOpen}>
-        <DialogContent className="sm:max-w-[600px] max-h-[85vh]">
-          <DialogHeader>
-            <DialogTitle>Edit Event</DialogTitle>
-            <DialogDescription>
-              Update event details
-            </DialogDescription>
-          </DialogHeader>
-          {currentEvent && (
-            <EventForm 
-              initialData={currentEvent}
-              mode="edit"
-              onSuccess={() => {
-                setEditDialogOpen(false);
-                fetchData();
-              }} 
-            />
-          )}
+        <DialogContent className="sm:max-w-[600px] max-h-[85vh] overflow-hidden">
+          <ScrollArea className="max-h-[calc(85vh-40px)]">
+            <DialogHeader>
+              <DialogTitle>Edit Event</DialogTitle>
+              <DialogDescription>
+                Update event details
+              </DialogDescription>
+            </DialogHeader>
+            {currentEvent && (
+              <EventForm 
+                initialData={currentEvent}
+                mode="edit"
+                onSuccess={() => {
+                  setEditDialogOpen(false);
+                  fetchData();
+                }} 
+              />
+            )}
+          </ScrollArea>
         </DialogContent>
       </Dialog>
       

@@ -19,6 +19,7 @@ import EventForm from '@/components/calendar/EventForm';
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from '@/components/ui/alert-dialog';
 import { Badge } from '@/components/ui/badge';
 import { Input } from '@/components/ui/input';
+import { ScrollArea } from '@/components/ui/scroll-area';
 
 const MeetingsPage: React.FC = () => {
   const [meetings, setMeetings] = useState<Event[]>([]);
@@ -224,22 +225,24 @@ const MeetingsPage: React.FC = () => {
                 Schedule Meeting
               </Button>
             </DialogTrigger>
-            <DialogContent className="sm:max-w-[600px]">
-              <DialogHeader>
-                <DialogTitle>Schedule New Meeting</DialogTitle>
-                <DialogDescription>
-                  Add a new meeting to the calendar
-                </DialogDescription>
-              </DialogHeader>
-              <EventForm 
-                onSuccess={() => {
-                  setAddDialogOpen(false);
-                  fetchData();
-                }} 
-                initialData={{
-                  is_meeting: true
-                } as any}
-              />
+            <DialogContent className="sm:max-w-[600px] max-h-[85vh] overflow-hidden">
+              <ScrollArea className="max-h-[calc(85vh-40px)]">
+                <DialogHeader>
+                  <DialogTitle>Schedule New Meeting</DialogTitle>
+                  <DialogDescription>
+                    Add a new meeting to the calendar
+                  </DialogDescription>
+                </DialogHeader>
+                <EventForm 
+                  onSuccess={() => {
+                    setAddDialogOpen(false);
+                    fetchData();
+                  }} 
+                  initialData={{
+                    is_meeting: true
+                  } as any}
+                />
+              </ScrollArea>
             </DialogContent>
           </Dialog>
         )}
@@ -463,178 +466,186 @@ const MeetingsPage: React.FC = () => {
       
       {/* Edit Meeting Dialog */}
       <Dialog open={editDialogOpen} onOpenChange={setEditDialogOpen}>
-        <DialogContent className="sm:max-w-[600px]">
-          <DialogHeader>
-            <DialogTitle>Edit Meeting</DialogTitle>
-            <DialogDescription>
-              Update meeting details
-            </DialogDescription>
-          </DialogHeader>
-          {currentMeeting && (
-            <EventForm 
-              initialData={currentMeeting}
-              mode="edit"
-              onSuccess={() => {
-                setEditDialogOpen(false);
-                fetchData();
-              }} 
-            />
-          )}
+        <DialogContent className="sm:max-w-[600px] max-h-[85vh] overflow-hidden">
+          <ScrollArea className="max-h-[calc(85vh-40px)]">
+            <DialogHeader>
+              <DialogTitle>Edit Meeting</DialogTitle>
+              <DialogDescription>
+                Update meeting details
+              </DialogDescription>
+            </DialogHeader>
+            {currentMeeting && (
+              <EventForm 
+                initialData={currentMeeting}
+                mode="edit"
+                onSuccess={() => {
+                  setEditDialogOpen(false);
+                  fetchData();
+                }} 
+              />
+            )}
+          </ScrollArea>
         </DialogContent>
       </Dialog>
       
       {/* Delete Confirmation Dialog */}
       <AlertDialog open={deleteDialogOpen} onOpenChange={setDeleteDialogOpen}>
-        <AlertDialogContent>
-          <AlertDialogHeader>
-            <AlertDialogTitle>Are you sure?</AlertDialogTitle>
-            <AlertDialogDescription>
-              This will permanently delete the meeting "{currentMeeting?.title}" and all associated minutes.
-              This action cannot be undone.
-            </AlertDialogDescription>
-          </AlertDialogHeader>
-          <AlertDialogFooter>
-            <AlertDialogCancel>Cancel</AlertDialogCancel>
-            <AlertDialogAction
-              className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
-              onClick={handleDeleteMeeting}
-            >
-              Delete
-            </AlertDialogAction>
-          </AlertDialogFooter>
+        <AlertDialogContent className="max-h-[85vh] overflow-hidden">
+          <ScrollArea className="max-h-[calc(85vh-40px)]">
+            <AlertDialogHeader>
+              <AlertDialogTitle>Are you sure?</AlertDialogTitle>
+              <AlertDialogDescription>
+                This will permanently delete the meeting "{currentMeeting?.title}" and all associated minutes.
+                This action cannot be undone.
+              </AlertDialogDescription>
+            </AlertDialogHeader>
+            <AlertDialogFooter>
+              <AlertDialogCancel>Cancel</AlertDialogCancel>
+              <AlertDialogAction
+                className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
+                onClick={handleDeleteMeeting}
+              >
+                Delete
+              </AlertDialogAction>
+            </AlertDialogFooter>
+          </ScrollArea>
         </AlertDialogContent>
       </AlertDialog>
       
       {/* Upload Minutes Dialog */}
       <Dialog open={uploadDialogOpen} onOpenChange={setUploadDialogOpen}>
-        <DialogContent className="sm:max-w-[500px]">
-          <DialogHeader>
-            <DialogTitle>Upload Meeting Minutes</DialogTitle>
-            <DialogDescription>
-              Upload meeting minutes for "{currentMeeting?.title}"
-            </DialogDescription>
-          </DialogHeader>
-          <div className="space-y-4">
-            <div className="grid w-full max-w-sm items-center gap-1.5">
-              <label htmlFor="minutes-file">Select File</label>
-              <Input 
-                id="minutes-file" 
-                type="file" 
-                accept=".pdf,.doc,.docx,.txt" 
-                onChange={handleFileUpload}
-                disabled={uploadingFile}
-              />
-            </div>
-            <p className="text-sm text-muted-foreground">
-              Upload PDF, Word documents, or text files only.
-            </p>
-            {uploadingFile && (
-              <div className="flex items-center justify-center py-2">
-                <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-primary mr-2"></div>
-                <span>Uploading...</span>
+        <DialogContent className="sm:max-w-[500px] max-h-[85vh] overflow-hidden">
+          <ScrollArea className="max-h-[calc(85vh-40px)]">
+            <DialogHeader>
+              <DialogTitle>Upload Meeting Minutes</DialogTitle>
+              <DialogDescription>
+                Upload meeting minutes for "{currentMeeting?.title}"
+              </DialogDescription>
+            </DialogHeader>
+            <div className="space-y-4">
+              <div className="grid w-full max-w-sm items-center gap-1.5">
+                <label htmlFor="minutes-file">Select File</label>
+                <Input 
+                  id="minutes-file" 
+                  type="file" 
+                  accept=".pdf,.doc,.docx,.txt" 
+                  onChange={handleFileUpload}
+                  disabled={uploadingFile}
+                />
               </div>
-            )}
-          </div>
+              <p className="text-sm text-muted-foreground">
+                Upload PDF, Word documents, or text files only.
+              </p>
+              {uploadingFile && (
+                <div className="flex items-center justify-center py-2">
+                  <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-primary mr-2"></div>
+                  <span>Uploading...</span>
+                </div>
+              )}
+            </div>
+          </ScrollArea>
         </DialogContent>
       </Dialog>
       
       {/* Meeting Details & Minutes Dialog */}
       <Dialog open={minutesDialogOpen} onOpenChange={setMinutesDialogOpen}>
-        <DialogContent className="sm:max-w-[600px]">
-          <DialogHeader>
-            <DialogTitle>{currentMeeting?.title}</DialogTitle>
-            <DialogDescription>
-              Meeting details and available minutes
-            </DialogDescription>
-          </DialogHeader>
-          {currentMeeting && (
-            <div className="space-y-6">
-              <div className="space-y-2">
-                <h4 className="text-sm font-medium">Date & Time</h4>
-                <p className="text-sm">
-                  {format(parseISO(currentMeeting.start_time), 'EEEE, MMMM d, yyyy')} • {format(parseISO(currentMeeting.start_time), 'h:mm a')} - {format(parseISO(currentMeeting.end_time), 'h:mm a')}
-                </p>
-              </div>
-              
-              {currentMeeting.location && (
+        <DialogContent className="sm:max-w-[600px] max-h-[85vh] overflow-hidden">
+          <ScrollArea className="max-h-[calc(85vh-40px)]">
+            <DialogHeader>
+              <DialogTitle>{currentMeeting?.title}</DialogTitle>
+              <DialogDescription>
+                Meeting details and available minutes
+              </DialogDescription>
+            </DialogHeader>
+            {currentMeeting && (
+              <div className="space-y-6">
                 <div className="space-y-2">
-                  <h4 className="text-sm font-medium">Location</h4>
-                  <p className="text-sm">{currentMeeting.location}</p>
-                </div>
-              )}
-              
-              {currentMeeting.description && (
-                <div className="space-y-2">
-                  <h4 className="text-sm font-medium">Description</h4>
-                  <p className="text-sm">{currentMeeting.description}</p>
-                </div>
-              )}
-              
-              {currentMeeting.participants && currentMeeting.participants.length > 0 && (
-                <div className="space-y-2">
-                  <h4 className="text-sm font-medium">Participants</h4>
-                  <div className="flex flex-wrap gap-1">
-                    {currentMeeting.participants.map((participant) => (
-                      <Badge key={participant.id} variant="outline" className="text-xs">
-                        {participant.user?.first_name} {participant.user?.last_name}
-                        <span className="ml-1 text-muted-foreground">
-                          ({participant.response})
-                        </span>
-                      </Badge>
-                    ))}
-                  </div>
-                </div>
-              )}
-              
-              <div className="space-y-2">
-                <div className="flex justify-between items-center">
-                  <h4 className="text-sm font-medium">Meeting Minutes</h4>
-                  {isAdmin() && parseISO(currentMeeting.start_time) < now && (
-                    <Button 
-                      variant="ghost" 
-                      size="sm"
-                      onClick={() => {
-                        setMinutesDialogOpen(false);
-                        setUploadDialogOpen(true);
-                      }}
-                    >
-                      <Upload className="h-4 w-4 mr-1" />
-                      Upload
-                    </Button>
-                  )}
+                  <h4 className="text-sm font-medium">Date & Time</h4>
+                  <p className="text-sm">
+                    {format(parseISO(currentMeeting.start_time), 'EEEE, MMMM d, yyyy')} • {format(parseISO(currentMeeting.start_time), 'h:mm a')} - {format(parseISO(currentMeeting.end_time), 'h:mm a')}
+                  </p>
                 </div>
                 
-                {meetingMinutes[currentMeeting.id] && meetingMinutes[currentMeeting.id].length > 0 ? (
-                  <div className="border rounded-md divide-y">
-                    {meetingMinutes[currentMeeting.id].map((minutes) => (
-                      <div key={minutes.id} className="p-3 flex justify-between items-center">
-                        <div>
-                          <p className="text-sm font-medium">{minutes.file_name}</p>
-                          <p className="text-xs text-muted-foreground">
-                            Uploaded by {minutes.uploader?.first_name} {minutes.uploader?.last_name} on {format(parseISO(minutes.created_at), 'MMM d, yyyy')}
-                          </p>
-                        </div>
-                        <Button 
-                          size="sm" 
-                          variant="outline"
-                          asChild
-                        >
-                          <a href={minutes.file_path} target="_blank" rel="noopener noreferrer">
-                            <Download className="h-4 w-4 mr-1" />
-                            Download
-                          </a>
-                        </Button>
-                      </div>
-                    ))}
-                  </div>
-                ) : (
-                  <div className="text-sm text-muted-foreground py-4 text-center border rounded-md">
-                    No meeting minutes have been uploaded yet
+                {currentMeeting.location && (
+                  <div className="space-y-2">
+                    <h4 className="text-sm font-medium">Location</h4>
+                    <p className="text-sm">{currentMeeting.location}</p>
                   </div>
                 )}
+                
+                {currentMeeting.description && (
+                  <div className="space-y-2">
+                    <h4 className="text-sm font-medium">Description</h4>
+                    <p className="text-sm">{currentMeeting.description}</p>
+                  </div>
+                )}
+                
+                {currentMeeting.participants && currentMeeting.participants.length > 0 && (
+                  <div className="space-y-2">
+                    <h4 className="text-sm font-medium">Participants</h4>
+                    <div className="flex flex-wrap gap-1">
+                      {currentMeeting.participants.map((participant) => (
+                        <Badge key={participant.id} variant="outline" className="text-xs">
+                          {participant.user?.first_name} {participant.user?.last_name}
+                          <span className="ml-1 text-muted-foreground">
+                            ({participant.response})
+                          </span>
+                        </Badge>
+                      ))}
+                    </div>
+                  </div>
+                )}
+                
+                <div className="space-y-2">
+                  <div className="flex justify-between items-center">
+                    <h4 className="text-sm font-medium">Meeting Minutes</h4>
+                    {isAdmin() && parseISO(currentMeeting.start_time) < now && (
+                      <Button 
+                        variant="ghost" 
+                        size="sm"
+                        onClick={() => {
+                          setMinutesDialogOpen(false);
+                          setUploadDialogOpen(true);
+                        }}
+                      >
+                        <Upload className="h-4 w-4 mr-1" />
+                        Upload
+                      </Button>
+                    )}
+                  </div>
+                  
+                  {meetingMinutes[currentMeeting.id] && meetingMinutes[currentMeeting.id].length > 0 ? (
+                    <div className="border rounded-md divide-y">
+                      {meetingMinutes[currentMeeting.id].map((minutes) => (
+                        <div key={minutes.id} className="p-3 flex justify-between items-center">
+                          <div>
+                            <p className="text-sm font-medium">{minutes.file_name}</p>
+                            <p className="text-xs text-muted-foreground">
+                              Uploaded by {minutes.uploader?.first_name} {minutes.uploader?.last_name} on {format(parseISO(minutes.created_at), 'MMM d, yyyy')}
+                            </p>
+                          </div>
+                          <Button 
+                            size="sm" 
+                            variant="outline"
+                            asChild
+                          >
+                            <a href={minutes.file_path} target="_blank" rel="noopener noreferrer">
+                              <Download className="h-4 w-4 mr-1" />
+                              Download
+                            </a>
+                          </Button>
+                        </div>
+                      ))}
+                    </div>
+                  ) : (
+                    <div className="text-sm text-muted-foreground py-4 text-center border rounded-md">
+                      No meeting minutes have been uploaded yet
+                    </div>
+                  )}
+                </div>
               </div>
-            </div>
-          )}
+            )}
+          </ScrollArea>
         </DialogContent>
       </Dialog>
     </div>

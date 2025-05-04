@@ -44,7 +44,9 @@ export const useTasks = () => {
           phase: task.phases?.name,
           status: task.status as any,
           // Add the progress property
-          progress: progressValue
+          progress: progressValue,
+          // Add progress_summary if it doesn't exist
+          progress_summary: task.progress_summary || ''
         };
       });
       

@@ -11,6 +11,7 @@ import KanbanBoard from '@/components/tasks/KanbanBoard';
 import DeleteTaskDialog from '@/components/tasks/DeleteTaskDialog';
 import AddEditTaskDialog from '@/components/tasks/AddEditTaskDialog';
 import AddPhaseDialog from '@/components/tasks/AddPhaseDialog';
+import PhaseActions from '@/components/tasks/PhaseActions';
 import { useTasks } from '@/hooks/useTasks';
 import { toast } from 'sonner';
 
@@ -158,15 +159,24 @@ const TasksPage: React.FC = () => {
           return (
             <div key={phase.id} className="mb-8">
               <div className="flex justify-between items-center mb-4">
-                <h2 className="text-xl font-semibold">{phase.name}</h2>
-                <div className="flex items-center">
-                  <div className="text-sm font-medium mr-4">{phaseProgress}% Complete</div>
-                  <div className="w-48 bg-muted rounded-full h-2.5">
-                    <div 
-                      className="h-2.5 rounded-full bg-primary" 
-                      style={{ width: `${phaseProgress}%` }}
-                    ></div>
-                  </div>
+                <h2 className="text-xl font-semibold">
+                  PHASE {phase.position}: {phase.name}
+                </h2>
+                {isAdmin() && (
+                  <PhaseActions 
+                    phase={phase} 
+                    onSuccess={handlePhaseSuccess}
+                    tasksExist={tasks.some(task => task.phase_id === phase.id)}
+                  />
+                )}
+              </div>
+              <div className="flex items-center mb-4">
+                <div className="text-sm font-medium mr-4">{phaseProgress}% Complete</div>
+                <div className="w-48 bg-muted rounded-full h-2.5">
+                  <div 
+                    className="h-2.5 rounded-full bg-primary" 
+                    style={{ width: `${phaseProgress}%` }}
+                  ></div>
                 </div>
               </div>
               
