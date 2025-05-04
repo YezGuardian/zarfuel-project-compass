@@ -1,5 +1,11 @@
 
 project_id = "auswnhnpeetphmlqtecs"
-
-[functions.send-invitation]
-verify_jwt = true
+[api]
+enabled = true
+[functions]
+[realtime]
+enabled = true
+[db]
+major_version = 15
+[storage]
+[auth]

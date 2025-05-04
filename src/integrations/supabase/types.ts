@@ -93,34 +93,48 @@ export type Database = {
         Row: {
           category: string
           created_at: string
+          downloaded_by: Json | null
           file_name: string
           file_path: string
           file_size: number
           file_type: string
+          folder_id: string | null
           id: string
           uploaded_by: string | null
         }
         Insert: {
           category: string
           created_at?: string
+          downloaded_by?: Json | null
           file_name: string
           file_path: string
           file_size: number
           file_type: string
+          folder_id?: string | null
           id?: string
           uploaded_by?: string | null
         }
         Update: {
           category?: string
           created_at?: string
+          downloaded_by?: Json | null
           file_name?: string
           file_path?: string
           file_size?: number
           file_type?: string
+          folder_id?: string | null
           id?: string
           uploaded_by?: string | null
         }
-        Relationships: []
+        Relationships: [
+          {
+            foreignKeyName: "documents_folder_id_fkey"
+            columns: ["folder_id"]
+            isOneToOne: false
+            referencedRelation: "folders"
+            referencedColumns: ["id"]
+          },
+        ]
       }
       event_participants: {
         Row: {
@@ -190,6 +204,30 @@ export type Database = {
           start_time?: string
           title?: string
           updated_at?: string
+        }
+        Relationships: []
+      }
+      folders: {
+        Row: {
+          created_at: string | null
+          created_by: string | null
+          icon: string | null
+          id: string
+          name: string
+        }
+        Insert: {
+          created_at?: string | null
+          created_by?: string | null
+          icon?: string | null
+          id?: string
+          name: string
+        }
+        Update: {
+          created_at?: string | null
+          created_by?: string | null
+          icon?: string | null
+          id?: string
+          name?: string
         }
         Relationships: []
       }
@@ -415,6 +453,7 @@ export type Database = {
           end_date: string | null
           id: string
           phase_id: string | null
+          progress_summary: string | null
           responsible_teams: string[] | null
           start_date: string | null
           status: string
@@ -429,6 +468,7 @@ export type Database = {
           end_date?: string | null
           id?: string
           phase_id?: string | null
+          progress_summary?: string | null
           responsible_teams?: string[] | null
           start_date?: string | null
           status?: string
@@ -443,6 +483,7 @@ export type Database = {
           end_date?: string | null
           id?: string
           phase_id?: string | null
+          progress_summary?: string | null
           responsible_teams?: string[] | null
           start_date?: string | null
           status?: string

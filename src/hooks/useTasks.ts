@@ -112,6 +112,91 @@ export const useTasks = () => {
     };
   }, [fetchData]);
 
+  // Function to handle phase creation
+  const handleCreatePhase = async (name: string) => {
+    try {
+      // Get max position from existing phases
+      let maxPosition = 0;
+      if (phases.length > 0) {
+        maxPosition = Math.max(...phases.map(phase => phase.position));
+      }
+      
+      const { data, error } = await supabase
+        .from('phases')
+        .insert({
+          name,
+          position: maxPosition + 1
+        })
+        .select()
+        .single();
+      
+      if (error) throw error;
+      
+      // Update phases locally
+      setPhases(prev => [...prev, data as Phase]);
+      toast.success(`Phase "${name}" created successfully`);
+      return data;
+    } catch (error: any) {
+      console.error('Error creating phase:', error);
+      toast.error('Failed to create phase');
+      return null;
+    }
+  };
+
+  // Function to handle phase update
+  const handleUpdatePhase = async (phaseId: string, name: string) => {
+    try {
+      const { error } = await supabase
+        .from('phases')
+        .update({ name })
+        .eq('id', phaseId);
+      
+      if (error) throw error;
+      
+      // Update phases locally
+      setPhases(prev => prev.map(phase => 
+        phase.id === phaseId ? { ...phase, name } : phase
+      ));
+      
+      toast.success('Phase updated successfully');
+      return true;
+    } catch (error: any) {
+      console.error('Error updating phase:', error);
+      toast.error('Failed to update phase');
+      return false;
+    }
+  };
+
+  // Function to handle phase deletion
+  const handleDeletePhase = async (phaseId: string) => {
+    try {
+      // Check if phase has tasks
+      const hasTasksInPhase = tasks.some(task => task.phase_id === phaseId);
+      
+      if (hasTasksInPhase) {
+        toast.error('Cannot delete phase with tasks. Delete all tasks in this phase first.');
+        return false;
+      }
+      
+      const { error } = await supabase
+        .from('phases')
+        .delete()
+        .eq('id', phaseId);
+      
+      if (error) throw error;
+      
+      // Update phases locally
+      setPhases(prev => prev.filter(phase => phase.id !== phaseId));
+      
+      toast.success('Phase deleted successfully');
+      return true;
+    } catch (error: any) {
+      console.error('Error deleting phase:', error);
+      toast.error('Failed to delete phase');
+      return false;
+    }
+  };
+
   const handleDeleteTask = async (taskId: string) => {
     try {
       const { error } = await supabase
@@ -136,6 +221,9 @@ export const useTasks = () => {
     teams,
     isLoading,
     fetchData,
-    handleDeleteTask
+    handleDeleteTask,
+    handleCreatePhase,
+    handleUpdatePhase,
+    handleDeletePhase
   };
 };

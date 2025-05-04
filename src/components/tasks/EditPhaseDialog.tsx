@@ -11,18 +11,21 @@ import {
   DialogDescription,
   DialogFooter,
 } from '@/components/ui/dialog';
+import { Phase } from '@/types';
 import { ScrollArea } from '@/components/ui/scroll-area';
 
-interface AddPhaseDialogProps {
-  onSubmit: (name: string) => Promise<any>;
+interface EditPhaseDialogProps {
+  phase: Phase;
+  onSave: (name: string) => Promise<boolean>;
   onCancel: () => void;
 }
 
-const AddPhaseDialog: React.FC<AddPhaseDialogProps> = ({
-  onSubmit,
+const EditPhaseDialog: React.FC<EditPhaseDialogProps> = ({
+  phase,
+  onSave,
   onCancel,
 }) => {
-  const [name, setName] = useState('');
+  const [name, setName] = useState(phase.name);
   const [isSubmitting, setIsSubmitting] = useState(false);
 
   const handleSubmit = async (e: React.FormEvent) => {
@@ -31,8 +34,7 @@ const AddPhaseDialog: React.FC<AddPhaseDialogProps> = ({
 
     setIsSubmitting(true);
     try {
-      await onSubmit(name.trim());
-      setName(''); // Reset form after successful submission
+      await onSave(name.trim());
     } finally {
       setIsSubmitting(false);
     }
@@ -42,9 +44,9 @@ const AddPhaseDialog: React.FC<AddPhaseDialogProps> = ({
     <DialogContent className="sm:max-w-[425px]">
       <ScrollArea className="max-h-[80vh]">
         <DialogHeader>
-          <DialogTitle>Add New Phase</DialogTitle>
+          <DialogTitle>Edit Phase</DialogTitle>
           <DialogDescription>
-            Create a new phase to organize your tasks. The phase position will be assigned automatically.
+            Update the phase name. The phase position will remain the same.
           </DialogDescription>
         </DialogHeader>
 
@@ -73,10 +75,10 @@ const AddPhaseDialog: React.FC<AddPhaseDialogProps> = ({
               {isSubmitting ? (
                 <>
                   <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                  Creating...
+                  Updating...
                 </>
               ) : (
-                'Create Phase'
+                'Update Phase'
               )}
             </Button>
           </DialogFooter>
@@ -86,4 +88,4 @@ const AddPhaseDialog: React.FC<AddPhaseDialogProps> = ({
   );
 };
 
-export default AddPhaseDialog;
+export default EditPhaseDialog;

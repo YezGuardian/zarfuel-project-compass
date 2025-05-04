@@ -11,6 +11,7 @@ import { Form, FormControl, FormDescription, FormField, FormItem, FormLabel, For
 import { Loader2 } from "lucide-react";
 import { toast } from 'sonner';
 import { supabase } from "@/integrations/supabase/client";
+import { ScrollArea } from '@/components/ui/scroll-area';
 
 const formSchema = z.object({
   email: z.string().email({ message: "Please enter a valid email address." }),
@@ -50,7 +51,7 @@ const InviteUserForm: React.FC<InviteUserFormProps> = ({ onSuccess }) => {
         throw new Error(error.message || 'Failed to send invitation');
       }
       
-      if (data.error) {
+      if (data?.error) {
         throw new Error(data.error);
       }
       
@@ -69,101 +70,103 @@ const InviteUserForm: React.FC<InviteUserFormProps> = ({ onSuccess }) => {
   };
   
   return (
-    <Form {...form}>
-      <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-4">
-        <FormField
-          control={form.control}
-          name="email"
-          render={({ field }) => (
-            <FormItem>
-              <FormLabel>Email</FormLabel>
-              <FormControl>
-                <Input 
-                  placeholder="email@example.com" 
-                  {...field} 
-                  disabled={isSubmitting}
-                />
-              </FormControl>
-              <FormMessage />
-            </FormItem>
-          )}
-        />
-        
-        <FormField
-          control={form.control}
-          name="role"
-          render={({ field }) => (
-            <FormItem>
-              <FormLabel>Role</FormLabel>
-              <Select 
-                onValueChange={field.onChange} 
-                defaultValue={field.value} 
-                disabled={isSubmitting}
-              >
+    <ScrollArea className="max-h-[calc(85vh-120px)] pr-4">
+      <Form {...form}>
+        <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-4">
+          <FormField
+            control={form.control}
+            name="email"
+            render={({ field }) => (
+              <FormItem>
+                <FormLabel>Email</FormLabel>
                 <FormControl>
-                  <SelectTrigger>
-                    <SelectValue placeholder="Select a role" />
-                  </SelectTrigger>
+                  <Input 
+                    placeholder="email@example.com" 
+                    {...field} 
+                    disabled={isSubmitting}
+                  />
                 </FormControl>
-                <SelectContent>
-                  <SelectItem value="admin">Admin</SelectItem>
-                  <SelectItem value="viewer">Viewer</SelectItem>
-                </SelectContent>
-              </Select>
-              <FormDescription>
-                Admins can manage the system and invite others. Viewers have read-only access.
-              </FormDescription>
-              <FormMessage />
-            </FormItem>
-          )}
-        />
-        
-        <FormField
-          control={form.control}
-          name="organization"
-          render={({ field }) => (
-            <FormItem>
-              <FormLabel>Organization</FormLabel>
-              <FormControl>
-                <Input 
-                  placeholder="Organization name (optional)" 
-                  {...field} 
+                <FormMessage />
+              </FormItem>
+            )}
+          />
+          
+          <FormField
+            control={form.control}
+            name="role"
+            render={({ field }) => (
+              <FormItem>
+                <FormLabel>Role</FormLabel>
+                <Select 
+                  onValueChange={field.onChange} 
+                  defaultValue={field.value} 
                   disabled={isSubmitting}
-                />
-              </FormControl>
-              <FormMessage />
-            </FormItem>
-          )}
-        />
-        
-        <FormField
-          control={form.control}
-          name="position"
-          render={({ field }) => (
-            <FormItem>
-              <FormLabel>Position</FormLabel>
-              <FormControl>
-                <Input 
-                  placeholder="Position or role (optional)" 
-                  {...field} 
-                  disabled={isSubmitting}
-                />
-              </FormControl>
-              <FormMessage />
-            </FormItem>
-          )}
-        />
-        
-        <Button type="submit" disabled={isSubmitting} className="w-full">
-          {isSubmitting ? (
-            <span className="flex items-center">
-              <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-              Sending Invitation...
-            </span>
-          ) : 'Send Invitation'}
-        </Button>
-      </form>
-    </Form>
+                >
+                  <FormControl>
+                    <SelectTrigger>
+                      <SelectValue placeholder="Select a role" />
+                    </SelectTrigger>
+                  </FormControl>
+                  <SelectContent>
+                    <SelectItem value="admin">Admin</SelectItem>
+                    <SelectItem value="viewer">Viewer</SelectItem>
+                  </SelectContent>
+                </Select>
+                <FormDescription>
+                  Admins can manage the system and invite others. Viewers have read-only access.
+                </FormDescription>
+                <FormMessage />
+              </FormItem>
+            )}
+          />
+          
+          <FormField
+            control={form.control}
+            name="organization"
+            render={({ field }) => (
+              <FormItem>
+                <FormLabel>Organization</FormLabel>
+                <FormControl>
+                  <Input 
+                    placeholder="Organization name (optional)" 
+                    {...field} 
+                    disabled={isSubmitting}
+                  />
+                </FormControl>
+                <FormMessage />
+              </FormItem>
+            )}
+          />
+          
+          <FormField
+            control={form.control}
+            name="position"
+            render={({ field }) => (
+              <FormItem>
+                <FormLabel>Position</FormLabel>
+                <FormControl>
+                  <Input 
+                    placeholder="Position or role (optional)" 
+                    {...field} 
+                    disabled={isSubmitting}
+                  />
+                </FormControl>
+                <FormMessage />
+              </FormItem>
+            )}
+          />
+          
+          <Button type="submit" disabled={isSubmitting} className="w-full">
+            {isSubmitting ? (
+              <span className="flex items-center">
+                <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                Sending Invitation...
+              </span>
+            ) : 'Send Invitation'}
+          </Button>
+        </form>
+      </Form>
+    </ScrollArea>
   );
 };
 

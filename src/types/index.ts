@@ -1,3 +1,4 @@
+
 export type Status = 'complete' | 'inprogress' | 'notstarted' | 'ongoing';
 
 export type Task = {
@@ -11,6 +12,7 @@ export type Task = {
   end_date?: string;
   status: Status;
   progress: number;
+  progress_summary: string; // Added progress_summary to fix errors
   created_at: string;
   updated_at: string;
   created_by?: string;
