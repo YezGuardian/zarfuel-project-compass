@@ -1,10 +1,4 @@
-
 import React, { useState, useEffect } from 'react';
-import {
-  DialogContent,
-  DialogHeader,
-  DialogTitle,
-} from '@/components/ui/dialog';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { Button } from '@/components/ui/button';
 import { Download, Trash2, Upload, FileText, FileSpreadsheet, FileImage, File } from 'lucide-react';
@@ -12,6 +6,8 @@ import { supabase } from '@/integrations/supabase/client';
 import { toast } from 'sonner';
 import { useAuth } from '@/contexts/AuthContext';
 import { Separator } from '@/components/ui/separator';
+import { DialogHeader, DialogTitle } from '@/components/ui/dialog';
+import { downloadFile } from '@/utils/downloadHelper';
 
 interface FolderContentsDialogProps {
   folder: {
@@ -35,7 +31,7 @@ interface Document {
     first_name: string;
     last_name: string;
     email: string;
-  };
+  } | null;
 }
 
 const FolderContentsDialog: React.FC<FolderContentsDialogProps> = ({ folder, onClose }) => {
@@ -76,7 +72,7 @@ const FolderContentsDialog: React.FC<FolderContentsDialogProps> = ({ folder, onC
         .from('documents')
         .select(`
           *,
-          uploader:uploaded_by (
+          uploader:profiles!documents_uploaded_by_fkey (
             first_name,
             last_name,
             email
@@ -165,13 +161,8 @@ const FolderContentsDialog: React.FC<FolderContentsDialogProps> = ({ folder, onC
           .eq('id', document.id);
       }
       
-      // Trigger download
-      const a = document.createElement('a');
-      a.href = data.signedUrl;
-      a.download = document.file_name;
-      document.body.appendChild(a);
-      a.click();
-      document.body.removeChild(a);
+      // Use the helper function for download
+      downloadFile(data.signedUrl, document.file_name);
       
       toast.success(`Downloading ${document.file_name}`);
     } catch (error) {
@@ -249,7 +240,7 @@ const FolderContentsDialog: React.FC<FolderContentsDialogProps> = ({ folder, onC
   };
 
   return (
-    <DialogContent className="sm:max-w-[700px] max-h-[85vh] overflow-hidden">
+    <>
       <DialogHeader>
         <DialogTitle>{folder.name} Documents</DialogTitle>
       </DialogHeader>
@@ -338,7 +329,7 @@ const FolderContentsDialog: React.FC<FolderContentsDialogProps> = ({ folder, onC
       <div className="mt-4 flex justify-end">
         <Button variant="outline" onClick={onClose}>Close</Button>
       </div>
-    </DialogContent>
+    </>
   );
 };
 

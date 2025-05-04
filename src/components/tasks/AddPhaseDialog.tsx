@@ -4,13 +4,7 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Loader2 } from 'lucide-react';
-import {
-  DialogContent,
-  DialogHeader,
-  DialogTitle,
-  DialogDescription,
-  DialogFooter,
-} from '@/components/ui/dialog';
+import { DialogFooter } from '@/components/ui/dialog';
 import { ScrollArea } from '@/components/ui/scroll-area';
 
 interface AddPhaseDialogProps {
@@ -39,50 +33,39 @@ const AddPhaseDialog: React.FC<AddPhaseDialogProps> = ({
   };
 
   return (
-    <DialogContent className="sm:max-w-[425px]">
-      <ScrollArea className="max-h-[80vh]">
-        <DialogHeader>
-          <DialogTitle>Add New Phase</DialogTitle>
-          <DialogDescription>
-            Create a new phase to organize your tasks. The phase position will be assigned automatically.
-          </DialogDescription>
-        </DialogHeader>
+    <form onSubmit={handleSubmit} className="space-y-4 py-4">
+      <div className="space-y-2">
+        <Label htmlFor="phase-name">Phase Name</Label>
+        <Input
+          id="phase-name"
+          placeholder="Enter phase name"
+          value={name}
+          onChange={(e) => setName(e.target.value)}
+          disabled={isSubmitting}
+        />
+      </div>
 
-        <form onSubmit={handleSubmit} className="space-y-4 py-4">
-          <div className="space-y-2">
-            <Label htmlFor="phase-name">Phase Name</Label>
-            <Input
-              id="phase-name"
-              placeholder="Enter phase name"
-              value={name}
-              onChange={(e) => setName(e.target.value)}
-              disabled={isSubmitting}
-            />
-          </div>
-
-          <DialogFooter>
-            <Button
-              type="button"
-              variant="outline"
-              onClick={onCancel}
-              disabled={isSubmitting}
-            >
-              Cancel
-            </Button>
-            <Button type="submit" disabled={isSubmitting || !name.trim()}>
-              {isSubmitting ? (
-                <>
-                  <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                  Creating...
-                </>
-              ) : (
-                'Create Phase'
-              )}
-            </Button>
-          </DialogFooter>
-        </form>
-      </ScrollArea>
-    </DialogContent>
+      <DialogFooter>
+        <Button
+          type="button"
+          variant="outline"
+          onClick={onCancel}
+          disabled={isSubmitting}
+        >
+          Cancel
+        </Button>
+        <Button type="submit" disabled={isSubmitting || !name.trim()}>
+          {isSubmitting ? (
+            <>
+              <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+              Creating...
+            </>
+          ) : (
+            'Create Phase'
+          )}
+        </Button>
+      </DialogFooter>
+    </form>
   );
 };
 

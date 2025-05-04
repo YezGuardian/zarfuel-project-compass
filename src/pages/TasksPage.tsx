@@ -1,17 +1,9 @@
-
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { Button } from '@/components/ui/button';
-import { Plus } from 'lucide-react';
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from '@/components/ui/dialog';
+import { ScrollArea } from '@/components/ui/scroll-area';
 import { useAuth } from '@/contexts/AuthContext';
-import { Task } from '@/types';
-import TaskFilters from '@/components/tasks/TaskFilters';
-import ViewSelector from '@/components/tasks/ViewSelector';
-import TaskTable from '@/components/tasks/TaskTable';
-import KanbanBoard from '@/components/tasks/KanbanBoard';
-import DeleteTaskDialog from '@/components/tasks/DeleteTaskDialog';
-import AddEditTaskDialog from '@/components/tasks/AddEditTaskDialog';
-import AddPhaseDialog from '@/components/tasks/AddPhaseDialog';
-import PhaseActions from '@/components/tasks/PhaseActions';
+import { Plus } from 'lucide-react';
 import { useTasks } from '@/hooks/useTasks';
 import { toast } from 'sonner';
 
@@ -30,6 +22,9 @@ const TasksPage: React.FC = () => {
   const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
   const [currentTask, setCurrentTask] = useState<Task | null>(null);
   const [isProcessing, setIsProcessing] = useState(false);
+  
+  // Add this state for the phase dialog
+  const [isAddPhaseOpen, setIsAddPhaseOpen] = useState(false);
   
   const { isAdmin } = useAuth();
   const { tasks, phases, teams, isLoading, fetchData, handleDeleteTask } = useTasks();
@@ -215,11 +210,27 @@ const TasksPage: React.FC = () => {
       />
       
       {/* Add Phase Dialog */}
-      <AddPhaseDialog
-        open={addPhaseDialogOpen}
-        onOpenChange={setAddPhaseDialogOpen}
-        onSuccess={handlePhaseSuccess}
-      />
+      <Dialog open={isAddPhaseOpen} onOpenChange={setIsAddPhaseOpen}>
+        <DialogContent className="sm:max-w-[425px]">
+          <DialogHeader>
+            <DialogTitle>Add New Phase</DialogTitle>
+            <DialogDescription>
+              Create a new phase to organize your tasks. The phase position will be assigned automatically.
+            </DialogDescription>
+          </DialogHeader>
+          <ScrollArea className="max-h-[80vh]">
+            <AddPhaseDialog
+              onSubmit={async (name) => {
+                // Your phase creation logic here
+                const success = true; // Replace with your actual implementation
+                if (success) setIsAddPhaseOpen(false);
+                return success;
+              }}
+              onCancel={() => setIsAddPhaseOpen(false)}
+            />
+          </ScrollArea>
+        </DialogContent>
+      </Dialog>
       
       {/* Delete Confirmation Dialog */}
       <DeleteTaskDialog

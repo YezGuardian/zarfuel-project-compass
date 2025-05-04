@@ -4,6 +4,7 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Loader2 } from 'lucide-react';
+import { DialogFooter } from '@/components/ui/dialog';
 
 interface CreateFolderDialogProps {
   onSubmit: (name: string) => Promise<boolean>;
@@ -42,7 +43,7 @@ const CreateFolderDialog: React.FC<CreateFolderDialogProps> = ({
         />
       </div>
 
-      <div className="flex justify-end space-x-2 pt-4">
+      <DialogFooter>
         <Button
           type="button"
           variant="outline"
@@ -61,7 +62,7 @@ const CreateFolderDialog: React.FC<CreateFolderDialogProps> = ({
             'Create Folder'
           )}
         </Button>
-      </div>
+      </DialogFooter>
     </form>
   );
 };

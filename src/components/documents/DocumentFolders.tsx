@@ -158,24 +158,26 @@ const DocumentFolders: React.FC = () => {
         </div>
       )}
 
-      {selectedFolder && (
-        <Dialog open={folderContentOpen} onOpenChange={setFolderContentOpen}>
-          <FolderContentsDialog 
-            folder={selectedFolder}
-            onClose={() => {
-              setFolderContentOpen(false);
-              setSelectedFolder(null);
-            }}
-          />
-        </Dialog>
-      )}
+      <Dialog open={folderContentOpen} onOpenChange={setFolderContentOpen}>
+        {selectedFolder && (
+          <DialogContent className="sm:max-w-[700px] max-h-[85vh]">
+            <FolderContentsDialog 
+              folder={selectedFolder}
+              onClose={() => {
+                setFolderContentOpen(false);
+                setSelectedFolder(null);
+              }}
+            />
+          </DialogContent>
+        )}
+      </Dialog>
 
       <Dialog open={createFolderOpen} onOpenChange={setCreateFolderOpen}>
         <DialogContent className="sm:max-w-[425px]">
+          <DialogHeader>
+            <DialogTitle>Create New Folder</DialogTitle>
+          </DialogHeader>
           <ScrollArea className="max-h-[80vh]">
-            <DialogHeader>
-              <DialogTitle>Create New Folder</DialogTitle>
-            </DialogHeader>
             <CreateFolderDialog 
               onSubmit={async (name) => {
                 const success = await handleCreateFolder(name);
