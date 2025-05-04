@@ -1,3 +1,4 @@
+
 import React, { useState, useEffect } from 'react';
 import { Button } from '@/components/ui/button';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from '@/components/ui/dialog';
@@ -6,6 +7,15 @@ import { useAuth } from '@/contexts/AuthContext';
 import { Plus } from 'lucide-react';
 import { useTasks } from '@/hooks/useTasks';
 import { toast } from 'sonner';
+import { Task, Phase } from '@/types';
+import TaskFilters from '@/components/tasks/TaskFilters';
+import ViewSelector from '@/components/tasks/ViewSelector';
+import PhaseActions from '@/components/tasks/PhaseActions';
+import TaskTable from '@/components/tasks/TaskTable';
+import KanbanBoard from '@/components/tasks/KanbanBoard';
+import AddEditTaskDialog from '@/components/tasks/AddEditTaskDialog';
+import AddPhaseDialog from '@/components/tasks/AddPhaseDialog';
+import DeleteTaskDialog from '@/components/tasks/DeleteTaskDialog';
 
 const TasksPage: React.FC = () => {
   // State for filters

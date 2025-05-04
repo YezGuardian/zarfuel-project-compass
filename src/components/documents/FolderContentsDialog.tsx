@@ -1,3 +1,4 @@
+
 import React, { useState, useEffect } from 'react';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { Button } from '@/components/ui/button';
@@ -27,6 +28,7 @@ interface Document {
   created_at: string;
   uploaded_by: string | null;
   downloaded_by: any[] | null;
+  category: string;
   uploader?: {
     first_name: string;
     last_name: string;
@@ -82,7 +84,8 @@ const FolderContentsDialog: React.FC<FolderContentsDialogProps> = ({ folder, onC
         .order('created_at', { ascending: false });
 
       if (error) throw error;
-      setDocuments(data as Document[]);
+      // Cast the data to our Document type
+      setDocuments(data as unknown as Document[]);
     } catch (error) {
       console.error('Error fetching documents:', error);
       toast.error('Failed to load documents');

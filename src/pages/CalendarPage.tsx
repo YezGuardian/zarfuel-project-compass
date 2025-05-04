@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect } from 'react';
 import { Calendar as CalendarIcon, Plus, MoreHorizontal, Edit, Trash2, CheckCircle, Clock } from 'lucide-react';
 import { Calendar } from '@/components/ui/calendar';
@@ -94,7 +93,7 @@ const CalendarPage: React.FC = () => {
         phase: task.phases?.name,
       })) as unknown as Task[]);
 
-      // Combine events and task deadlines into calendar items
+      // Convert events and task deadlines into calendar items
       const eventItems: CalendarItem[] = eventsData.map(event => ({
         id: `event-${event.id}`,
         title: event.title,
@@ -116,7 +115,7 @@ const CalendarPage: React.FC = () => {
           description: task.description,
           start_time: task.end_date!, // Use end_date as the calendar date
           isTask: true,
-          status: task.status,
+          status: task.status as Status, // Explicitly cast to Status type
           taskId: task.id
         }));
 

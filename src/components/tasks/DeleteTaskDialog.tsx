@@ -10,41 +10,61 @@ import {
   AlertDialogHeader,
   AlertDialogTitle,
 } from '@/components/ui/alert-dialog';
+import { Loader2 } from 'lucide-react';
 import { Task } from '@/types';
-import { ScrollArea } from '@/components/ui/scroll-area';
 
 interface DeleteTaskDialogProps {
   open: boolean;
   onOpenChange: (open: boolean) => void;
   task: Task | null;
-  onConfirm: () => void;
+  onConfirm: () => Promise<void>;
 }
 
 const DeleteTaskDialog: React.FC<DeleteTaskDialogProps> = ({
   open,
   onOpenChange,
   task,
-  onConfirm
+  onConfirm,
 }) => {
+  const [isDeleting, setIsDeleting] = React.useState(false);
+
+  const handleConfirmDelete = async () => {
+    setIsDeleting(true);
+    try {
+      await onConfirm();
+    } finally {
+      setIsDeleting(false);
+    }
+  };
+
   return (
     <AlertDialog open={open} onOpenChange={onOpenChange}>
-      <AlertDialogContent className="max-h-[85vh]">
+      <AlertDialogContent>
         <AlertDialogHeader>
           <AlertDialogTitle>Are you sure?</AlertDialogTitle>
-          <ScrollArea className="max-h-[calc(85vh-180px)]">
-            <AlertDialogDescription>
-              This will permanently delete the task "{task?.title}".
-              This action cannot be undone.
-            </AlertDialogDescription>
-          </ScrollArea>
+          <AlertDialogDescription>
+            This action cannot be undone. This will permanently delete the task
+            "{task?.title}".
+          </AlertDialogDescription>
         </AlertDialogHeader>
         <AlertDialogFooter>
-          <AlertDialogCancel>Cancel</AlertDialogCancel>
+          <AlertDialogCancel disabled={isDeleting}>Cancel</AlertDialogCancel>
           <AlertDialogAction
+            onClick={(e) => {
+              e.preventDefault();
+              handleConfirmDelete();
+            }}
+            disabled={isDeleting}
             className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
-            onClick={onConfirm}
           >
-            Delete
+            {isDeleting ? (
+              <>
+                <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                Deleting...
+              </>
+            ) : (
+              'Delete'
+            )}
           </AlertDialogAction>
         </AlertDialogFooter>
       </AlertDialogContent>
