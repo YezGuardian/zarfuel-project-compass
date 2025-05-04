@@ -1,591 +1,421 @@
+
 import React, { useState, useEffect } from 'react';
-import { Calendar as CalendarIcon, Plus, MoreHorizontal, Edit, Trash2, CheckCircle, Clock } from 'lucide-react';
 import { Calendar } from '@/components/ui/calendar';
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
-import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/dialog';
+import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
+import {
+  Dialog,
+  DialogContent,
+  DialogHeader,
+  DialogTitle,
+} from '@/components/ui/dialog';
+import { ScrollArea } from '@/components/ui/scroll-area';
+import { Separator } from '@/components/ui/separator';
 import { Button } from '@/components/ui/button';
-import { Badge } from '@/components/ui/badge';
-import { 
-  DropdownMenu, 
-  DropdownMenuContent, 
-  DropdownMenuItem, 
-  DropdownMenuTrigger 
-} from '@/components/ui/dropdown-menu';
-import { format, isToday, isTomorrow, isThisWeek, isThisMonth, parseISO, isSameDay } from 'date-fns';
+import { useAuth } from '@/contexts/AuthContext';
+import { format, isToday, isSameMonth, parseISO, isAfter, isBefore, isSameDay } from 'date-fns';
+import { CalendarClock, Plus } from 'lucide-react';
+import { Task } from '@/types';
 import { supabase } from '@/integrations/supabase/client';
 import { toast } from 'sonner';
-import { Event, Task, Status } from '@/types';
-import { useAuth } from '@/contexts/AuthContext';
 import EventForm from '@/components/calendar/EventForm';
-import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from '@/components/ui/alert-dialog';
-import TaskStatusBadge from '@/components/tasks/TaskStatusBadge';
-import { ScrollArea } from '@/components/ui/scroll-area';
+import StatusBadge from '@/components/dashboard/StatusBadge';
+import { useTasks } from '@/hooks/useTasks';
 
-// Type for combined events (meetings and task deadlines)
-interface CalendarItem {
+interface Event {
+  id: string;
+  title: string;
+  description: string;
+  start_time: string;
+  end_time: string;
+  is_meeting: boolean;
+  location?: string;
+}
+
+type CalendarItem = {
   id: string;
   title: string;
   description?: string;
   start_time: string;
   end_time?: string;
-  location?: string;
-  isTask: boolean;
-  status?: Status;
+  isTask?: boolean;
+  status?: string;
   taskId?: string;
-  eventId?: string;
-  is_meeting?: boolean;
-  participants?: any[];
-}
+  location?: string;
+  isMeeting?: boolean;
+};
 
 const CalendarPage: React.FC = () => {
-  const [date, setDate] = useState<Date | undefined>(new Date());
+  const [selectedDate, setSelectedDate] = useState<Date>(new Date());
+  const [dialogOpen, setDialogOpen] = useState(false);
   const [events, setEvents] = useState<Event[]>([]);
-  const [tasks, setTasks] = useState<Task[]>([]);
-  const [calendarItems, setCalendarItems] = useState<CalendarItem[]>([]);
-  const [isLoading, setIsLoading] = useState(true);
-  const [addDialogOpen, setAddDialogOpen] = useState(false);
-  const [editDialogOpen, setEditDialogOpen] = useState(false);
-  const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
-  const [itemDetailsOpen, setItemDetailsOpen] = useState(false);
-  const [currentEvent, setCurrentEvent] = useState<Event | null>(null);
+  const [dayEvents, setDayEvents] = useState<CalendarItem[]>([]);
+  const [monthItems, setMonthItems] = useState<CalendarItem[]>([]);
   const [selectedItem, setSelectedItem] = useState<CalendarItem | null>(null);
   const { isAdmin } = useAuth();
-  
-  // Fetch events and tasks
-  const fetchData = async () => {
-    setIsLoading(true);
-    try {
-      // Fetch events
-      const { data: eventsData, error: eventsError } = await supabase
-        .from('events')
-        .select(`
-          *,
-          participants:event_participants(
-            id,
-            user_id,
-            response,
-            user:user_id(
-              first_name,
-              last_name,
-              email
-            )
-          )
-        `)
-        .order('start_time');
-        
-      if (eventsError) throw eventsError;
-
-      // Fetch tasks
-      const { data: tasksData, error: tasksError } = await supabase
-        .from('tasks')
-        .select(`
-          *,
-          phases:phase_id (name)
-        `)
-        .not('end_date', 'is', null);
-      
-      if (tasksError) throw tasksError;
-      
-      // Set events and tasks
-      setEvents(eventsData as unknown as Event[]);
-      setTasks(tasksData.map(task => ({
-        ...task,
-        phase: task.phases?.name,
-      })) as unknown as Task[]);
-
-      // Convert events and task deadlines into calendar items
-      const eventItems: CalendarItem[] = eventsData.map(event => ({
-        id: `event-${event.id}`,
-        title: event.title,
-        description: event.description,
-        start_time: event.start_time,
-        end_time: event.end_time,
-        location: event.location,
-        isTask: false,
-        eventId: event.id,
-        is_meeting: event.is_meeting,
-        participants: event.participants
-      }));
-
-      const taskItems: CalendarItem[] = tasksData
-        .filter(task => task.end_date)
-        .map(task => ({
-          id: `task-${task.id}`,
-          title: task.title,
-          description: task.description,
-          start_time: task.end_date!, // Use end_date as the calendar date
-          isTask: true,
-          status: task.status as Status, // Explicitly cast to Status type
-          taskId: task.id
-        }));
-
-      setCalendarItems([...eventItems, ...taskItems]);
-    } catch (error) {
-      console.error('Error fetching calendar data:', error);
-      toast.error('Failed to load calendar data');
-    } finally {
-      setIsLoading(false);
-    }
-  };
+  const { tasks } = useTasks();
   
   useEffect(() => {
-    fetchData();
-    
-    // Set up real-time updates
-    const eventsChannel = supabase
-      .channel('events-changes')
-      .on('postgres_changes', 
-        { 
-          event: '*', 
-          schema: 'public', 
-          table: 'events'
-        }, 
-        () => {
-          fetchData();
-        }
-      )
-      .subscribe();
-
-    const tasksChannel = supabase
-      .channel('tasks-changes')
-      .on('postgres_changes', 
-        { 
-          event: '*', 
-          schema: 'public', 
-          table: 'tasks'
-        }, 
-        () => {
-          fetchData();
-        }
-      )
-      .subscribe();
-      
-    return () => {
-      supabase.removeChannel(eventsChannel);
-      supabase.removeChannel(tasksChannel);
-    };
+    fetchEvents();
   }, []);
   
-  // Filter items for the selected date
-  const selectedDateItems = date 
-    ? calendarItems.filter(item => isSameDay(parseISO(item.start_time), date))
-    : [];
-  
-  // Filter upcoming items
-  const upcomingItems = calendarItems
-    .filter(item => {
-      const itemDate = parseISO(item.start_time);
-      return itemDate >= new Date();
-    })
-    .sort((a, b) => parseISO(a.start_time).getTime() - parseISO(b.start_time).getTime())
-    .slice(0, 5);
-  
-  const handleDeleteEvent = async () => {
-    if (!currentEvent) return;
+  useEffect(() => {
+    // Update items when selectedDate changes
+    const currentMonth = selectedDate.getMonth();
+    const currentYear = selectedDate.getFullYear();
     
+    // Combine events and tasks for current month
+    const combinedItems: CalendarItem[] = [];
+    
+    // Add events for current month
+    events.forEach(event => {
+      const startDate = parseISO(event.start_time);
+      if (isSameMonth(startDate, selectedDate)) {
+        combinedItems.push({
+          id: event.id,
+          title: event.title,
+          description: event.description,
+          start_time: event.start_time,
+          end_time: event.end_time,
+          isMeeting: event.is_meeting,
+          location: event.location
+        });
+      }
+    });
+    
+    // Add tasks with due dates
+    tasks.forEach(task => {
+      if (task.end_date) {
+        const endDate = parseISO(task.end_date);
+        if (isSameMonth(endDate, selectedDate)) {
+          combinedItems.push({
+            id: task.id,
+            title: task.title,
+            description: task.description,
+            start_time: task.end_date, // Using end date for tasks
+            isTask: true,
+            status: task.status,
+            taskId: task.id
+          });
+        }
+      }
+    });
+    
+    setMonthItems(combinedItems);
+    
+    // Set day events for selected date
+    const selectedDayItems = combinedItems.filter(item => {
+      const itemDate = parseISO(item.start_time);
+      return isSameDay(itemDate, selectedDate);
+    });
+    
+    setDayEvents(selectedDayItems);
+  }, [selectedDate, events, tasks]);
+  
+  const fetchEvents = async () => {
     try {
-      const { error } = await supabase
+      const { data, error } = await supabase
         .from('events')
-        .delete()
-        .eq('id', currentEvent.id);
-        
-      if (error) throw error;
+        .select('*')
+        .order('start_time', { ascending: true });
       
-      setEvents(events.filter(e => e.id !== currentEvent.id));
-      toast.success('Event deleted successfully');
-      setDeleteDialogOpen(false);
-    } catch (error: any) {
-      console.error('Error deleting event:', error);
-      toast.error('Failed to delete event');
+      if (error) throw error;
+      setEvents(data || []);
+    } catch (error) {
+      console.error('Error fetching events:', error);
+      toast.error('Failed to load events');
     }
   };
-
-  const handleViewItem = (item: CalendarItem) => {
-    setSelectedItem(item);
-    setItemDetailsOpen(true);
+  
+  const handleDateSelect = (date: Date | undefined) => {
+    if (date) {
+      setSelectedDate(date);
+    }
   };
   
-  // Helper function to get relative date string
-  const getRelativeDateString = (dateString: string) => {
-    const date = parseISO(dateString);
-    if (isToday(date)) return 'Today';
-    if (isTomorrow(date)) return 'Tomorrow';
-    if (isThisWeek(date)) return format(date, 'EEEE'); // Day name
-    if (isThisMonth(date)) return format(date, 'MMMM d'); // Month day
-    return format(date, 'MMM d, yyyy'); // Full date
+  const handleCreateSuccess = () => {
+    fetchEvents();
+    setDialogOpen(false);
   };
   
-  // Get date has events/tasks to show on the calendar
-  const getDateHasItems = (day: Date) => {
-    return calendarItems.some(item => isSameDay(parseISO(item.start_time), day));
+  const getDaysWithEvents = () => {
+    const daysWithEvents = new Set<string>();
+    
+    // Add event days
+    events.forEach(event => {
+      daysWithEvents.add(format(parseISO(event.start_time), 'yyyy-MM-dd'));
+    });
+    
+    // Add task due dates
+    tasks.forEach(task => {
+      if (task.end_date) {
+        daysWithEvents.add(format(parseISO(task.end_date), 'yyyy-MM-dd'));
+      }
+    });
+    
+    return daysWithEvents;
+  };
+  
+  // Get upcoming events and tasks
+  const getUpcomingItems = () => {
+    const now = new Date();
+    const upcomingItems: CalendarItem[] = [];
+    
+    // Add upcoming events
+    events.forEach(event => {
+      const startDate = parseISO(event.start_time);
+      if (isAfter(startDate, now)) {
+        upcomingItems.push({
+          id: event.id,
+          title: event.title,
+          description: event.description,
+          start_time: event.start_time,
+          end_time: event.end_time,
+          isMeeting: event.is_meeting,
+          location: event.location
+        });
+      }
+    });
+    
+    // Add upcoming tasks
+    tasks.forEach(task => {
+      if (task.end_date) {
+        const endDate = parseISO(task.end_date);
+        if (isAfter(endDate, now)) {
+          upcomingItems.push({
+            id: task.id,
+            title: task.title,
+            description: task.description,
+            start_time: task.end_date,
+            isTask: true,
+            status: task.status,
+            taskId: task.id
+          });
+        }
+      }
+    });
+    
+    // Sort by date (ascending)
+    return upcomingItems.sort((a, b) => 
+      parseISO(a.start_time).getTime() - parseISO(b.start_time).getTime()
+    ).slice(0, 5); // Limit to 5 items
   };
   
   return (
     <div className="space-y-6">
       <div className="flex justify-between items-start">
         <div>
-          <h1 className="text-2xl font-bold tracking-tight">Project Calendar</h1>
+          <h1 className="text-2xl font-bold tracking-tight">Calendar</h1>
           <p className="text-muted-foreground">
-            View and manage project events, meetings, and task deadlines
+            View and manage meetings, events, and task deadlines
           </p>
         </div>
         
         {isAdmin() && (
-          <Dialog open={addDialogOpen} onOpenChange={setAddDialogOpen}>
-            <DialogTrigger asChild>
-              <Button className="bg-zarfuel-blue hover:bg-zarfuel-blue/90">
-                <Plus className="h-4 w-4 mr-2" />
-                Add Event
-              </Button>
-            </DialogTrigger>
-            <DialogContent className="sm:max-w-[600px] max-h-[85vh] overflow-hidden">
-              <ScrollArea className="max-h-[calc(85vh-40px)]">
-                <DialogHeader>
-                  <DialogTitle>Create New Event</DialogTitle>
-                  <DialogDescription>
-                    Add a new event to the calendar
-                  </DialogDescription>
-                </DialogHeader>
-                <EventForm 
-                  onSuccess={() => {
-                    setAddDialogOpen(false);
-                    fetchData();
-                  }} 
-                />
-              </ScrollArea>
-            </DialogContent>
-          </Dialog>
+          <Button 
+            className="bg-zarfuel-blue hover:bg-zarfuel-blue/90"
+            onClick={() => setDialogOpen(true)}
+          >
+            <Plus className="h-4 w-4 mr-2" />
+            Add Event
+          </Button>
         )}
       </div>
       
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+        {/* Calendar */}
         <Card className="lg:col-span-2">
-          <CardHeader>
+          <CardHeader className="pb-3">
             <CardTitle>Calendar</CardTitle>
-            <CardDescription>
-              View all project events, meetings, and task deadlines
-            </CardDescription>
           </CardHeader>
           <CardContent>
-            <div className="p-4 border rounded-md">
-              <Calendar
-                mode="single"
-                selected={date}
-                onSelect={setDate}
-                className="rounded-md border w-full pointer-events-auto"
-                modifiers={{
-                  hasItems: day => getDateHasItems(day),
-                }}
-                modifiersStyles={{
-                  hasItems: { 
-                    textDecoration: "underline", 
-                    fontWeight: "bold" 
-                  }
-                }}
-              />
-            </div>
-            
-            {/* Selected Date Items */}
-            {date && (
-              <div className="mt-6">
-                <h3 className="text-lg font-medium mb-4">
-                  Calendar items for {format(date, 'MMMM d, yyyy')}
-                </h3>
-                
-                {isLoading ? (
-                  <div className="flex items-center justify-center py-8">
-                    <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary"></div>
-                  </div>
-                ) : selectedDateItems.length > 0 ? (
-                  <div className="space-y-4">
-                    {selectedDateItems.map((item) => (
-                      <Card key={item.id} className="overflow-hidden">
-                        <div className={`h-1 w-full ${
-                          item.isTask 
-                            ? 'bg-zarfuel-gold' 
-                            : item.is_meeting 
-                              ? 'bg-zarfuel-blue' 
-                              : 'bg-green-500'
-                        }`}></div>
-                        <CardContent className="pt-4">
-                          <div className="flex justify-between items-start">
-                            <div className="flex items-center">
-                              {item.isTask && (
-                                <Badge variant="outline" className="mr-2">
-                                  Task Deadline
-                                </Badge>
-                              )}
-                              <h4 className="font-medium">{item.title}</h4>
-                            </div>
-                            <div className="flex items-center space-x-2">
-                              <Button 
-                                variant="ghost" 
-                                size="sm" 
-                                className="h-8 p-2"
-                                onClick={() => handleViewItem(item)}
-                              >
-                                View Details
-                              </Button>
-                              
-                              {!item.isTask && isAdmin() && (
-                                <DropdownMenu>
-                                  <DropdownMenuTrigger asChild>
-                                    <Button variant="ghost" size="sm" className="h-8 w-8 p-0">
-                                      <MoreHorizontal className="h-4 w-4" />
-                                    </Button>
-                                  </DropdownMenuTrigger>
-                                  <DropdownMenuContent align="end">
-                                    <DropdownMenuItem 
-                                      onClick={() => {
-                                        const fullEvent = events.find(e => e.id === item.eventId);
-                                        if (fullEvent) {
-                                          setCurrentEvent(fullEvent);
-                                          setEditDialogOpen(true);
-                                        }
-                                      }}
-                                    >
-                                      <Edit className="mr-2 h-4 w-4" />
-                                      Edit
-                                    </DropdownMenuItem>
-                                    <DropdownMenuItem
-                                      className="text-destructive"
-                                      onClick={() => {
-                                        const fullEvent = events.find(e => e.id === item.eventId);
-                                        if (fullEvent) {
-                                          setCurrentEvent(fullEvent);
-                                          setDeleteDialogOpen(true);
-                                        }
-                                      }}
-                                    >
-                                      <Trash2 className="mr-2 h-4 w-4" />
-                                      Delete
-                                    </DropdownMenuItem>
-                                  </DropdownMenuContent>
-                                </DropdownMenu>
-                              )}
-                            </div>
-                          </div>
-                          
-                          {item.isTask && (
-                            <div className="flex items-center mt-2">
-                              <TaskStatusBadge status={item.status || 'notstarted'} />
-                            </div>
-                          )}
-                          
-                          {!item.isTask && (
-                            <div className="text-sm text-muted-foreground mt-2">
-                              {format(parseISO(item.start_time), 'h:mm a')} - {format(parseISO(item.end_time!), 'h:mm a')}
-                            </div>
-                          )}
-                          
-                          {item.location && (
-                            <div className="text-sm mt-2">📍 {item.location}</div>
-                          )}
-                          
-                          {item.description && (
-                            <div className="text-sm mt-2">{item.description}</div>
-                          )}
-                          
-                          {!item.isTask && item.participants && item.participants.length > 0 && (
-                            <div className="mt-3">
-                              <div className="text-xs text-muted-foreground mb-1">Participants:</div>
-                              <div className="flex flex-wrap gap-1">
-                                {item.participants.map((participant) => (
-                                  <Badge key={participant.id} variant="outline" className="text-xs">
-                                    {participant.user?.first_name} {participant.user?.last_name}
-                                  </Badge>
-                                ))}
-                              </div>
-                            </div>
-                          )}
-                        </CardContent>
-                      </Card>
-                    ))}
-                  </div>
-                ) : (
-                  <div className="text-center py-8 text-muted-foreground">
-                    No events or task deadlines for this day
-                  </div>
-                )}
+            <div className="flex flex-col lg:flex-row gap-6">
+              <div className="flex-1">
+                <Calendar
+                  mode="single"
+                  selected={selectedDate}
+                  onSelect={handleDateSelect}
+                  className="rounded-md border"
+                  modifiers={{
+                    eventDay: (date) => 
+                      getDaysWithEvents().has(format(date, 'yyyy-MM-dd')),
+                    today: (date) => isToday(date),
+                  }}
+                  modifiersClassNames={{
+                    eventDay: "bg-blue-100 text-blue-900 relative before:absolute before:bottom-1 before:left-1/2 before:-translate-x-1/2 before:h-1 before:w-1 before:bg-primary before:rounded-full",
+                    today: "bg-primary text-primary-foreground font-bold",
+                  }}
+                />
               </div>
-            )}
+              
+              <div className="flex-1">
+                <div className="mb-4">
+                  <h3 className="text-lg font-medium">
+                    {selectedItem ? "Item Details" : `Calendar Items for ${format(selectedDate, 'MMMM yyyy')}`}
+                  </h3>
+                </div>
+                
+                <ScrollArea className="h-[300px]">
+                  {selectedItem ? (
+                    <div className="space-y-4">
+                      <div className="space-y-2">
+                        <h4 className="font-medium text-lg">{selectedItem.title}</h4>
+                        {selectedItem.isTask && (
+                          <StatusBadge status={selectedItem.status || ''} />
+                        )}
+                        {selectedItem.isMeeting && (
+                          <div className="inline-flex items-center px-2 py-1 rounded-full text-xs font-medium bg-blue-100 text-blue-800">
+                            Meeting
+                          </div>
+                        )}
+                      </div>
+                      
+                      {selectedItem.description && (
+                        <div className="space-y-1">
+                          <p className="text-sm text-muted-foreground font-medium">Description:</p>
+                          <p className="text-sm">{selectedItem.description}</p>
+                        </div>
+                      )}
+                      
+                      <div className="space-y-1">
+                        <p className="text-sm text-muted-foreground font-medium">Date:</p>
+                        <p className="text-sm">{format(parseISO(selectedItem.start_time), 'PPP')}</p>
+                      </div>
+                      
+                      {selectedItem.end_time && (
+                        <div className="space-y-1">
+                          <p className="text-sm text-muted-foreground font-medium">Time:</p>
+                          <p className="text-sm">
+                            {format(parseISO(selectedItem.start_time), 'p')} - {format(parseISO(selectedItem.end_time), 'p')}
+                          </p>
+                        </div>
+                      )}
+                      
+                      {selectedItem.location && (
+                        <div className="space-y-1">
+                          <p className="text-sm text-muted-foreground font-medium">Location:</p>
+                          <p className="text-sm">{selectedItem.location}</p>
+                        </div>
+                      )}
+                      
+                      <div className="pt-2">
+                        <Button variant="outline" size="sm" onClick={() => setSelectedItem(null)}>
+                          Back to List
+                        </Button>
+                      </div>
+                    </div>
+                  ) : dayEvents.length > 0 ? (
+                    <div className="space-y-2">
+                      {dayEvents.map(item => (
+                        <div 
+                          key={item.id} 
+                          className="p-3 border rounded-md cursor-pointer hover:border-primary"
+                          onClick={() => setSelectedItem(item)}
+                        >
+                          <div className="flex justify-between">
+                            <div className="font-medium">{item.title}</div>
+                            {item.isTask ? (
+                              <StatusBadge status={item.status || ''} />
+                            ) : (
+                              <div className="text-xs px-2 py-1 rounded-full bg-blue-100 text-blue-800">
+                                {item.isMeeting ? 'Meeting' : 'Event'}
+                              </div>
+                            )}
+                          </div>
+                          <div className="text-sm text-muted-foreground mt-1">
+                            {format(parseISO(item.start_time), 'p')}
+                            {item.end_time && ` - ${format(parseISO(item.end_time), 'p')}`}
+                          </div>
+                        </div>
+                      ))}
+                    </div>
+                  ) : monthItems.length > 0 ? (
+                    <div className="text-center p-4">
+                      <p className="text-muted-foreground">
+                        No items scheduled for {format(selectedDate, 'PPP')}
+                      </p>
+                      <p className="text-sm mt-2">
+                        Select a day with events to view details
+                      </p>
+                    </div>
+                  ) : (
+                    <div className="text-center p-4">
+                      <p className="text-muted-foreground">
+                        No events or deadlines this month
+                      </p>
+                    </div>
+                  )}
+                </ScrollArea>
+              </div>
+            </div>
           </CardContent>
         </Card>
         
+        {/* Upcoming Events */}
         <Card>
-          <CardHeader>
-            <CardTitle>Upcoming Events</CardTitle>
-            <CardDescription>Next 5 calendar items</CardDescription>
+          <CardHeader className="pb-3">
+            <CardTitle className="flex items-center">
+              <CalendarClock className="mr-2 h-5 w-5" />
+              Upcoming Events
+            </CardTitle>
           </CardHeader>
           <CardContent>
-            {isLoading ? (
-              <div className="flex items-center justify-center py-8">
-                <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary"></div>
-              </div>
-            ) : upcomingItems.length > 0 ? (
+            <ScrollArea className="h-[400px]">
               <div className="space-y-4">
-                {upcomingItems.map((item) => (
-                  <div 
-                    key={item.id} 
-                    className="flex items-center justify-between border-b pb-2 last:border-b-0 cursor-pointer hover:bg-muted/30 p-2 rounded"
-                    onClick={() => handleViewItem(item)}
-                  >
-                    <div className="space-y-1">
-                      <div className="flex items-center">
-                        {item.isTask ? (
-                          <Clock className="w-3 h-3 mr-1 text-zarfuel-gold" />
-                        ) : (
-                          <CalendarIcon className="w-3 h-3 mr-1" />
+                {getUpcomingItems().length > 0 ? (
+                  getUpcomingItems().map((item, index) => (
+                    <div key={item.id}>
+                      {index > 0 && <Separator className="my-2" />}
+                      <div className="space-y-1">
+                        <div className="flex justify-between">
+                          <span className="font-medium">{item.title}</span>
+                          {item.isTask ? (
+                            <StatusBadge status={item.status || ''} />
+                          ) : (
+                            <span className="text-xs px-2 py-1 rounded-full bg-blue-100 text-blue-800">
+                              {item.isMeeting ? 'Meeting' : 'Event'}
+                            </span>
+                          )}
+                        </div>
+                        <div className="text-sm text-muted-foreground">
+                          {format(parseISO(item.start_time), 'PPP')}
+                        </div>
+                        {item.end_time && (
+                          <div className="text-xs text-muted-foreground">
+                            {format(parseISO(item.start_time), 'p')} - {format(parseISO(item.end_time), 'p')}
+                          </div>
                         )}
-                        <p className="font-medium">{item.title}</p>
-                      </div>
-                      <div className="flex items-center text-muted-foreground text-xs">
-                        <span>
-                          {getRelativeDateString(item.start_time)}, {item.isTask ? 'Due date' : format(parseISO(item.start_time), 'h:mm a')}
-                        </span>
+                        {item.location && (
+                          <div className="text-xs text-muted-foreground">
+                            Location: {item.location}
+                          </div>
+                        )}
                       </div>
                     </div>
-                    <Badge 
-                      className={
-                        item.isTask
-                          ? "bg-zarfuel-gold/20 text-zarfuel-gold text-xs py-1 px-2 rounded"
-                          : item.is_meeting 
-                            ? "bg-zarfuel-blue/20 text-zarfuel-blue text-xs py-1 px-2 rounded" 
-                            : "bg-green-500/20 text-green-600 text-xs py-1 px-2 rounded"
-                      }
-                    >
-                      {item.isTask ? 'Task' : item.is_meeting ? 'Meeting' : 'Event'}
-                    </Badge>
+                  ))
+                ) : (
+                  <div className="text-center p-4">
+                    <CalendarClock className="h-12 w-12 mx-auto mb-2 text-muted-foreground" />
+                    <p className="text-muted-foreground">
+                      No upcoming events or deadlines
+                    </p>
                   </div>
-                ))}
+                )}
               </div>
-            ) : (
-              <div className="text-center py-8 text-muted-foreground">
-                No upcoming events scheduled
-              </div>
-            )}
+            </ScrollArea>
           </CardContent>
         </Card>
       </div>
       
-      {/* Item Details Dialog */}
-      <Dialog open={itemDetailsOpen} onOpenChange={setItemDetailsOpen}>
-        <DialogContent className="sm:max-w-[600px] max-h-[85vh] overflow-hidden">
-          <ScrollArea className="max-h-[calc(85vh-40px)]">
-            <DialogHeader>
-              <DialogTitle>
-                {selectedItem?.isTask ? 'Task Details' : 'Event Details'}
-              </DialogTitle>
-            </DialogHeader>
-            <div className="space-y-4">
-              {selectedItem && (
-                <div className="space-y-4">
-                  <div>
-                    <h3 className="text-lg font-bold">{selectedItem.title}</h3>
-                    {selectedItem.isTask ? (
-                      <div className="flex items-center mt-2">
-                        <p className="text-sm mr-2">Status:</p>
-                        <TaskStatusBadge status={selectedItem.status || 'notstarted'} />
-                      </div>
-                    ) : (
-                      <div className="flex items-center gap-2 mt-1">
-                        <Badge variant="outline">
-                          {selectedItem.is_meeting ? 'Meeting' : 'Event'}
-                        </Badge>
-                      </div>
-                    )}
-                  </div>
-
-                  <div className="space-y-2">
-                    <div className="flex items-center">
-                      <CalendarIcon className="w-4 h-4 mr-2 text-muted-foreground" />
-                      <p className="text-sm">
-                        {format(parseISO(selectedItem.start_time), 'EEEE, MMMM d, yyyy')}
-                        {!selectedItem.isTask && selectedItem.end_time && (
-                          <>, {format(parseISO(selectedItem.start_time), 'h:mm a')} - {format(parseISO(selectedItem.end_time), 'h:mm a')}</>
-                        )}
-                      </p>
-                    </div>
-                    
-                    {selectedItem.location && (
-                      <div className="flex items-center">
-                        <span className="mr-2">📍</span>
-                        <p className="text-sm">{selectedItem.location}</p>
-                      </div>
-                    )}
-                  </div>
-
-                  {selectedItem.description && (
-                    <div className="space-y-1">
-                      <p className="text-sm font-medium">Description:</p>
-                      <p className="text-sm">{selectedItem.description}</p>
-                    </div>
-                  )}
-
-                  {!selectedItem.isTask && selectedItem.participants && selectedItem.participants.length > 0 && (
-                    <div className="space-y-1">
-                      <p className="text-sm font-medium">Participants:</p>
-                      <div className="flex flex-wrap gap-1">
-                        {selectedItem.participants.map((participant) => (
-                          <Badge key={participant.id} variant="outline" className="text-xs">
-                            {participant.user?.first_name} {participant.user?.last_name}
-                          </Badge>
-                        ))}
-                      </div>
-                    </div>
-                  )}
-                </div>
-              )}
-            </div>
+      <Dialog open={dialogOpen} onOpenChange={setDialogOpen}>
+        <DialogContent className="sm:max-w-[550px] max-h-[85vh] overflow-hidden">
+          <DialogHeader>
+            <DialogTitle>Add New Event</DialogTitle>
+          </DialogHeader>
+          <ScrollArea className="max-h-[calc(85vh-120px)]">
+            <EventForm onSuccess={handleCreateSuccess} />
           </ScrollArea>
         </DialogContent>
       </Dialog>
-      
-      {/* Edit Event Dialog */}
-      <Dialog open={editDialogOpen} onOpenChange={setEditDialogOpen}>
-        <DialogContent className="sm:max-w-[600px] max-h-[85vh] overflow-hidden">
-          <ScrollArea className="max-h-[calc(85vh-40px)]">
-            <DialogHeader>
-              <DialogTitle>Edit Event</DialogTitle>
-              <DialogDescription>
-                Update event details
-              </DialogDescription>
-            </DialogHeader>
-            {currentEvent && (
-              <EventForm 
-                initialData={currentEvent}
-                mode="edit"
-                onSuccess={() => {
-                  setEditDialogOpen(false);
-                  fetchData();
-                }} 
-              />
-            )}
-          </ScrollArea>
-        </DialogContent>
-      </Dialog>
-      
-      {/* Delete Confirmation Dialog */}
-      <AlertDialog open={deleteDialogOpen} onOpenChange={setDeleteDialogOpen}>
-        <AlertDialogContent className="max-h-[85vh]">
-          <AlertDialogHeader>
-            <AlertDialogTitle>Are you sure?</AlertDialogTitle>
-            <AlertDialogDescription>
-              This will permanently delete the event "{currentEvent?.title}".
-              This action cannot be undone.
-            </AlertDialogDescription>
-          </AlertDialogHeader>
-          <AlertDialogFooter>
-            <AlertDialogCancel>Cancel</AlertDialogCancel>
-            <AlertDialogAction
-              className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
-              onClick={handleDeleteEvent}
-            >
-              Delete
-            </AlertDialogAction>
-          </AlertDialogFooter>
-        </AlertDialogContent>
-      </AlertDialog>
     </div>
   );
 };

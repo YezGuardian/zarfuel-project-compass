@@ -16,3 +16,8 @@ export interface Document {
     email: string;
   } | null;
 }
+
+export interface DocumentUploadResponse {
+  path: string;
+  id: string;
+}

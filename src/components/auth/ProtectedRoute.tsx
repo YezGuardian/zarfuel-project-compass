@@ -7,13 +7,15 @@ import { Loader2 } from 'lucide-react';
 type ProtectedRouteProps = {
   children: ReactNode;
   requiresAdmin?: boolean;
+  requiresSpecial?: boolean;
 };
 
 const ProtectedRoute: React.FC<ProtectedRouteProps> = ({ 
   children, 
-  requiresAdmin = false 
+  requiresAdmin = false,
+  requiresSpecial = false
 }) => {
-  const { user, profile, isLoading, isAdmin } = useAuth();
+  const { user, profile, isLoading, isAdmin, isSpecial } = useAuth();
 
   if (isLoading) {
     // Show loading indicator while checking authentication
@@ -34,6 +36,11 @@ const ProtectedRoute: React.FC<ProtectedRouteProps> = ({
 
   // If route requires admin but user is not admin
   if (requiresAdmin && !isAdmin()) {
+    return <Navigate to="/unauthorized" replace />;
+  }
+
+  // If route requires special role but user doesn't have it
+  if (requiresSpecial && !isSpecial()) {
     return <Navigate to="/unauthorized" replace />;
   }
 

@@ -1,5 +1,5 @@
 
-import React, { useState, useEffect } from 'react';
+import React, { useState } from 'react';
 import { Button } from '@/components/ui/button';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from '@/components/ui/dialog';
 import { ScrollArea } from '@/components/ui/scroll-area';
@@ -7,15 +7,15 @@ import { useAuth } from '@/contexts/AuthContext';
 import { Plus } from 'lucide-react';
 import { useTasks } from '@/hooks/useTasks';
 import { toast } from 'sonner';
-import { Task, Phase } from '@/types';
+import { Task } from '@/types';
 import TaskFilters from '@/components/tasks/TaskFilters';
 import ViewSelector from '@/components/tasks/ViewSelector';
-import PhaseActions from '@/components/tasks/PhaseActions';
-import TaskTable from '@/components/tasks/TaskTable';
 import KanbanBoard from '@/components/tasks/KanbanBoard';
 import AddEditTaskDialog from '@/components/tasks/AddEditTaskDialog';
 import AddPhaseDialog from '@/components/tasks/AddPhaseDialog';
 import DeleteTaskDialog from '@/components/tasks/DeleteTaskDialog';
+import PhasesContainer from '@/components/tasks/PhasesContainer';
+import { supabase } from '@/integrations/supabase/client';
 
 const TasksPage: React.FC = () => {
   // State for filters
@@ -32,9 +32,6 @@ const TasksPage: React.FC = () => {
   const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
   const [currentTask, setCurrentTask] = useState<Task | null>(null);
   const [isProcessing, setIsProcessing] = useState(false);
-  
-  // Add this state for the phase dialog
-  const [isAddPhaseOpen, setIsAddPhaseOpen] = useState(false);
   
   const { isAdmin } = useAuth();
   const { tasks, phases, teams, isLoading, fetchData, handleDeleteTask } = useTasks();
@@ -103,6 +100,33 @@ const TasksPage: React.FC = () => {
     fetchData();
   };
   
+  const handleAddPhase = async (name: string) => {
+    try {
+      setIsProcessing(true);
+      
+      // Get the highest position
+      const maxPosition = phases.reduce((max, phase) => 
+        phase.position > max ? phase.position : max, 0
+      );
+      
+      const { error } = await supabase.from('phases')
+        .insert([{ name, position: maxPosition + 1 }]);
+      
+      if (error) throw error;
+      
+      toast.success('Phase added successfully');
+      setAddPhaseDialogOpen(false);
+      fetchData();
+      return true;
+    } catch (error) {
+      console.error('Error adding phase:', error);
+      toast.error('Failed to add phase');
+      return false;
+    } finally {
+      setIsProcessing(false);
+    }
+  };
+  
   return (
     <div className="space-y-6">
       <div className="flex justify-between items-start">
@@ -157,44 +181,15 @@ const TasksPage: React.FC = () => {
           <span className="ml-3 text-muted-foreground">Loading tasks...</span>
         </div>
       ) : view === 'table' ? (
-        phases.map(phase => {
-          const phaseTasks = filteredTasks.filter(task => task.phase_id === phase.id);
-          const phaseProgress = calculatePhaseProgress(phase.id);
-          
-          return (
-            <div key={phase.id} className="mb-8">
-              <div className="flex justify-between items-center mb-4">
-                <h2 className="text-xl font-semibold">
-                  PHASE {phase.position}: {phase.name}
-                </h2>
-                {isAdmin() && (
-                  <PhaseActions 
-                    phase={phase} 
-                    onSuccess={handlePhaseSuccess}
-                    tasksExist={tasks.some(task => task.phase_id === phase.id)}
-                  />
-                )}
-              </div>
-              <div className="flex items-center mb-4">
-                <div className="text-sm font-medium mr-4">{phaseProgress}% Complete</div>
-                <div className="w-48 bg-muted rounded-full h-2.5">
-                  <div 
-                    className="h-2.5 rounded-full bg-primary" 
-                    style={{ width: `${phaseProgress}%` }}
-                  ></div>
-                </div>
-              </div>
-              
-              <TaskTable 
-                tasks={phaseTasks}
-                isAdmin={isAdmin()}
-                onEdit={handleEditTask}
-                onDelete={handleDeleteTaskClick}
-                showPhaseColumn={false}
-              />
-            </div>
-          );
-        })
+        <PhasesContainer 
+          phases={phases}
+          filteredTasks={filteredTasks}
+          isAdmin={isAdmin()}
+          calculatePhaseProgress={calculatePhaseProgress}
+          handleEditTask={handleEditTask}
+          handleDeleteTaskClick={handleDeleteTaskClick}
+          handlePhaseSuccess={handlePhaseSuccess}
+        />
       ) : (
         <KanbanBoard
           phases={phases}
@@ -220,23 +215,18 @@ const TasksPage: React.FC = () => {
       />
       
       {/* Add Phase Dialog */}
-      <Dialog open={isAddPhaseOpen} onOpenChange={setIsAddPhaseOpen}>
-        <DialogContent className="sm:max-w-[425px]">
+      <Dialog open={addPhaseDialogOpen} onOpenChange={setAddPhaseDialogOpen}>
+        <DialogContent className="sm:max-w-[425px] max-h-[85vh] overflow-hidden">
           <DialogHeader>
             <DialogTitle>Add New Phase</DialogTitle>
             <DialogDescription>
               Create a new phase to organize your tasks. The phase position will be assigned automatically.
             </DialogDescription>
           </DialogHeader>
-          <ScrollArea className="max-h-[80vh]">
+          <ScrollArea className="max-h-[calc(85vh-140px)]">
             <AddPhaseDialog
-              onSubmit={async (name) => {
-                // Your phase creation logic here
-                const success = true; // Replace with your actual implementation
-                if (success) setIsAddPhaseOpen(false);
-                return success;
-              }}
-              onCancel={() => setIsAddPhaseOpen(false)}
+              onSubmit={handleAddPhase}
+              onCancel={() => setAddPhaseDialogOpen(false)}
             />
           </ScrollArea>
         </DialogContent>

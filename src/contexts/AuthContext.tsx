@@ -1,3 +1,4 @@
+
 import React, { createContext, useState, useContext, useEffect } from 'react';
 import { toast } from 'sonner';
 import { supabase } from '@/integrations/supabase/client';
@@ -9,10 +10,11 @@ type Profile = {
   email: string;
   first_name: string;
   last_name: string;
-  role: 'admin' | 'viewer';
+  role: 'admin' | 'viewer' | 'special';
   organization?: string;
   position?: string;
   phone?: string;
+  invited_by?: string;
 };
 
 type AuthContextType = {
@@ -23,6 +25,8 @@ type AuthContextType = {
   login: (email: string, password: string) => Promise<void>;
   logout: () => void;
   isAdmin: () => boolean;
+  isSpecial: () => boolean;
+  isSuperAdmin: () => boolean;
   refreshProfile: () => Promise<void>;
 };
 
@@ -139,17 +143,21 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
   };
 
   const isAdmin = (): boolean => {
-    // Special case for Yezreel Shirinda - grant admin access regardless of role in DB
-    if (profile && 
-        ((profile.first_name === 'Yezreel' && profile.last_name === 'Shirinda') || 
-         profile.email === 'yezreel.shirinda@example.com' ||
-         profile.email?.toLowerCase().includes('yezreel') ||
-         profile.email?.toLowerCase().includes('shirinda'))) {
-      return true;
-    }
+    return profile?.role === 'admin' || isSuperAdmin();
+  };
+
+  const isSpecial = (): boolean => {
+    return profile?.role === 'special' || isAdmin();
+  };
+
+  // Super admin function specifically for Yezreel Shirinda
+  const isSuperAdmin = (): boolean => {
+    if (!profile) return false;
     
-    // Otherwise use the normal role check
-    return profile?.role === 'admin';
+    return (
+      profile.email?.toLowerCase() === 'yezreel@whitepaperconcepts.co.za' ||
+      (profile.first_name === 'Yezreel' && profile.last_name === 'Shirinda')
+    );
   };
 
   return (
@@ -161,6 +169,8 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
       login, 
       logout, 
       isAdmin,
+      isSpecial,
+      isSuperAdmin,
       refreshProfile
     }}>
       {children}

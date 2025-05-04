@@ -3,69 +3,58 @@ import React, { useState, useEffect } from 'react';
 import { 
   Card, 
   CardContent, 
-  CardDescription, 
   CardHeader, 
-  CardTitle 
+  CardTitle
 } from '@/components/ui/card';
-import { Input } from '@/components/ui/input';
 import { 
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from '@/components/ui/select';
+  Table, 
+  TableBody, 
+  TableCell, 
+  TableHead, 
+  TableHeader, 
+  TableRow 
+} from '@/components/ui/table';
 import { Button } from '@/components/ui/button';
-import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/dialog';
-import { 
-  DropdownMenu, 
-  DropdownMenuContent, 
-  DropdownMenuItem, 
-  DropdownMenuTrigger 
-} from '@/components/ui/dropdown-menu';
-import { Mail, Phone, Building, User, Search, Plus, MoreHorizontal, Edit, Trash2 } from 'lucide-react';
-import { Contact } from '@/types';
-import { supabase } from '@/integrations/supabase/client';
+import { Input } from '@/components/ui/input';
+import { Search, Plus, Trash2, Edit, Mail, Phone, Building } from 'lucide-react';
 import { useAuth } from '@/contexts/AuthContext';
+import { supabase } from '@/integrations/supabase/client';
 import { toast } from 'sonner';
-import ContactForm from '@/components/contacts/ContactForm';
-import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from '@/components/ui/alert-dialog';
+import { Avatar, AvatarFallback } from '@/components/ui/avatar';
+import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
+
+interface Contact {
+  id: string;
+  name: string;
+  email: string;
+  title: string;
+  phone: string;
+  company: string;
+  role: string;
+  created_by: string;
+  created_at: string;
+}
 
 const ContactsPage: React.FC = () => {
-  const [searchQuery, setSearchQuery] = useState('');
-  const [orgFilter, setOrgFilter] = useState('all');
-  const [roleFilter, setRoleFilter] = useState('all');
   const [contacts, setContacts] = useState<Contact[]>([]);
+  const [searchQuery, setSearchQuery] = useState('');
   const [isLoading, setIsLoading] = useState(true);
-  const [organizations, setOrganizations] = useState<string[]>([]);
-  const [roles, setRoles] = useState<string[]>([]);
-  const [addDialogOpen, setAddDialogOpen] = useState(false);
-  const [editDialogOpen, setEditDialogOpen] = useState(false);
-  const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
-  const [currentContact, setCurrentContact] = useState<Contact | null>(null);
   const { isAdmin } = useAuth();
   
-  // Fetch contacts data
+  useEffect(() => {
+    fetchContacts();
+  }, []);
+  
   const fetchContacts = async () => {
-    setIsLoading(true);
     try {
+      setIsLoading(true);
       const { data, error } = await supabase
         .from('contacts')
         .select('*')
         .order('name');
         
       if (error) throw error;
-      
-      if (data) {
-        setContacts(data as Contact[]);
-        
-        // Extract unique organizations and roles for filters
-        const orgs = Array.from(new Set(data.map(contact => contact.company).filter(Boolean)));
-        const rolesList = Array.from(new Set(data.map(contact => contact.role).filter(Boolean)));
-        
-        setOrganizations(orgs as string[]);
-        setRoles(rolesList as string[]);
-      }
+      setContacts(data || []);
     } catch (error) {
       console.error('Error fetching contacts:', error);
       toast.error('Failed to load contacts');
@@ -74,39 +63,49 @@ const ContactsPage: React.FC = () => {
     }
   };
   
-  useEffect(() => {
-    fetchContacts();
-  }, []);
+  const filteredContacts = contacts.filter(contact => 
+    contact.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
+    contact.email?.toLowerCase().includes(searchQuery.toLowerCase()) ||
+    contact.company?.toLowerCase().includes(searchQuery.toLowerCase()) ||
+    contact.title?.toLowerCase().includes(searchQuery.toLowerCase())
+  );
   
-  // Filter contacts based on current filters
-  const filteredContacts = contacts.filter(contact => {
-    const matchesSearch = contact.name.toLowerCase().includes(searchQuery.toLowerCase()) || 
-                        (contact.email && contact.email.toLowerCase().includes(searchQuery.toLowerCase()));
-    const matchesOrg = orgFilter === 'all' || contact.company === orgFilter;
-    const matchesRole = roleFilter === 'all' || contact.role === roleFilter;
-    
-    return matchesSearch && matchesOrg && matchesRole;
-  });
-  
-  const handleDeleteContact = async () => {
-    if (!currentContact) return;
-    
-    try {
-      const { error } = await supabase
-        .from('contacts')
-        .delete()
-        .eq('id', currentContact.id);
-        
-      if (error) throw error;
-      
-      setContacts(contacts.filter(c => c.id !== currentContact.id));
-      toast.success('Contact deleted successfully');
-      setDeleteDialogOpen(false);
-    } catch (error: any) {
-      console.error('Error deleting contact:', error);
-      toast.error('Failed to delete contact');
-    }
+  const getInitials = (name: string) => {
+    return name
+      .split(' ')
+      .map(part => part[0])
+      .join('')
+      .toUpperCase()
+      .substring(0, 2);
   };
+  
+  const getColorForLetter = (letter: string) => {
+    const colors = [
+      'bg-red-100 text-red-800',
+      'bg-yellow-100 text-yellow-800',
+      'bg-green-100 text-green-800',
+      'bg-blue-100 text-blue-800',
+      'bg-indigo-100 text-indigo-800',
+      'bg-purple-100 text-purple-800',
+      'bg-pink-100 text-pink-800'
+    ];
+    
+    const index = letter.charCodeAt(0) % colors.length;
+    return colors[index];
+  };
+  
+  // Group contacts by first letter of name
+  const groupedContacts = filteredContacts.reduce((acc, contact) => {
+    const firstLetter = contact.name[0].toUpperCase();
+    if (!acc[firstLetter]) {
+      acc[firstLetter] = [];
+    }
+    acc[firstLetter].push(contact);
+    return acc;
+  }, {} as Record<string, Contact[]>);
+  
+  // Sort the letters
+  const sortedLetters = Object.keys(groupedContacts).sort();
   
   return (
     <div className="space-y-6">
@@ -114,214 +113,199 @@ const ContactsPage: React.FC = () => {
         <div>
           <h1 className="text-2xl font-bold tracking-tight">Contact Directory</h1>
           <p className="text-muted-foreground">
-            Directory of all project team members and stakeholders
+            Access committee member and stakeholder contact information
           </p>
         </div>
         
         {isAdmin() && (
-          <Dialog open={addDialogOpen} onOpenChange={setAddDialogOpen}>
-            <DialogTrigger asChild>
-              <Button className="bg-zarfuel-blue hover:bg-zarfuel-blue/90">
-                <Plus className="h-4 w-4 mr-2" />
-                Add Contact
-              </Button>
-            </DialogTrigger>
-            <DialogContent className="sm:max-w-[550px]">
-              <DialogHeader>
-                <DialogTitle>Add New Contact</DialogTitle>
-                <DialogDescription>
-                  Add a new contact to the directory
-                </DialogDescription>
-              </DialogHeader>
-              <ContactForm 
-                onSuccess={() => {
-                  setAddDialogOpen(false);
-                  fetchContacts();
-                }} 
-              />
-            </DialogContent>
-          </Dialog>
+          <Button className="bg-zarfuel-blue hover:bg-zarfuel-blue/90">
+            <Plus className="h-4 w-4 mr-2" />
+            Add Contact
+          </Button>
         )}
       </div>
       
-      {/* Filters */}
-      <Card>
-        <CardHeader>
-          <CardTitle>Find Contacts</CardTitle>
-          <CardDescription>Search for contacts by name or email, or filter by organization or role</CardDescription>
-        </CardHeader>
-        <CardContent>
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-            <div className="relative">
-              <Search className="absolute left-2 top-2.5 h-4 w-4 text-muted-foreground" />
-              <Input
-                placeholder="Search contacts..."
-                className="pl-8"
-                value={searchQuery}
-                onChange={(e) => setSearchQuery(e.target.value)}
-              />
+      {/* Search */}
+      <div className="flex">
+        <div className="relative flex-1">
+          <Search className="absolute left-2 top-2.5 h-4 w-4 text-muted-foreground" />
+          <Input
+            placeholder="Search contacts..."
+            className="pl-8"
+            value={searchQuery}
+            onChange={(e) => setSearchQuery(e.target.value)}
+          />
+        </div>
+      </div>
+      
+      <Tabs defaultValue="table" className="space-y-4">
+        <TabsList>
+          <TabsTrigger value="table">Table View</TabsTrigger>
+          <TabsTrigger value="cards">Cards View</TabsTrigger>
+        </TabsList>
+        
+        <TabsContent value="table" className="space-y-4">
+          <Card>
+            <CardContent className="p-0">
+              {isLoading ? (
+                <div className="flex justify-center py-12">
+                  <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-zarfuel-blue"></div>
+                </div>
+              ) : filteredContacts.length === 0 ? (
+                <div className="text-center py-12">
+                  <p className="text-muted-foreground">No contacts found</p>
+                </div>
+              ) : (
+                <Table>
+                  <TableHeader>
+                    <TableRow>
+                      <TableHead>Name</TableHead>
+                      <TableHead>Title</TableHead>
+                      <TableHead>Company</TableHead>
+                      <TableHead>Email</TableHead>
+                      <TableHead>Phone</TableHead>
+                      <TableHead>Role</TableHead>
+                      {isAdmin() && <TableHead className="text-right">Actions</TableHead>}
+                    </TableRow>
+                  </TableHeader>
+                  <TableBody>
+                    {filteredContacts.map(contact => (
+                      <TableRow key={contact.id}>
+                        <TableCell className="font-medium">
+                          <div className="flex items-center">
+                            <Avatar className="h-8 w-8 mr-2">
+                              <AvatarFallback>{getInitials(contact.name)}</AvatarFallback>
+                            </Avatar>
+                            {contact.name}
+                          </div>
+                        </TableCell>
+                        <TableCell>{contact.title || '-'}</TableCell>
+                        <TableCell>{contact.company || '-'}</TableCell>
+                        <TableCell>
+                          {contact.email ? (
+                            <a href={`mailto:${contact.email}`} className="text-blue-600 hover:underline flex items-center">
+                              <Mail className="h-3 w-3 mr-1" />
+                              {contact.email}
+                            </a>
+                          ) : '-'}
+                        </TableCell>
+                        <TableCell>
+                          {contact.phone ? (
+                            <a href={`tel:${contact.phone}`} className="text-blue-600 hover:underline flex items-center">
+                              <Phone className="h-3 w-3 mr-1" />
+                              {contact.phone}
+                            </a>
+                          ) : '-'}
+                        </TableCell>
+                        <TableCell>{contact.role || '-'}</TableCell>
+                        {isAdmin() && (
+                          <TableCell className="text-right">
+                            <div className="flex justify-end space-x-1">
+                              <Button variant="ghost" size="icon">
+                                <Edit className="h-4 w-4" />
+                              </Button>
+                              <Button variant="ghost" size="icon" className="text-destructive">
+                                <Trash2 className="h-4 w-4" />
+                              </Button>
+                            </div>
+                          </TableCell>
+                        )}
+                      </TableRow>
+                    ))}
+                  </TableBody>
+                </Table>
+              )}
+            </CardContent>
+          </Card>
+        </TabsContent>
+        
+        <TabsContent value="cards" className="space-y-4">
+          {isLoading ? (
+            <div className="flex justify-center py-12">
+              <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-zarfuel-blue"></div>
             </div>
-            
-            <Select value={orgFilter} onValueChange={setOrgFilter}>
-              <SelectTrigger>
-                <SelectValue placeholder="Filter by organization" />
-              </SelectTrigger>
-              <SelectContent>
-                <SelectItem value="all">All Organizations</SelectItem>
-                {organizations.map(org => (
-                  <SelectItem key={org} value={org}>{org}</SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
-            
-            <Select value={roleFilter} onValueChange={setRoleFilter}>
-              <SelectTrigger>
-                <SelectValue placeholder="Filter by role" />
-              </SelectTrigger>
-              <SelectContent>
-                <SelectItem value="all">All Roles</SelectItem>
-                {roles.map(role => (
-                  <SelectItem key={role} value={role}>{role}</SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
-          </div>
-        </CardContent>
-      </Card>
-      
-      {/* Contacts Grid */}
-      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-        {filteredContacts.length > 0 ? (
-          filteredContacts.map((contact) => (
-            <Card key={contact.id}>
-              <CardContent className="pt-6">
-                <div className="flex flex-col items-center text-center mb-4">
-                  <div className="flex items-center justify-center h-20 w-20 rounded-full bg-muted mb-4 text-2xl font-semibold text-zarfuel-blue">
-                    {contact.name.split(' ').map(part => part[0]).join('')}
+          ) : filteredContacts.length === 0 ? (
+            <div className="text-center py-12">
+              <p className="text-muted-foreground">No contacts found</p>
+            </div>
+          ) : (
+            <div className="space-y-6">
+              {sortedLetters.map(letter => (
+                <div key={letter} className="space-y-2">
+                  <div className={`inline-flex items-center justify-center h-8 w-8 rounded-full ${getColorForLetter(letter)} font-bold`}>
+                    {letter}
                   </div>
-                  <div className="flex items-center">
-                    <h3 className="text-lg font-semibold">{contact.name}</h3>
-                    {isAdmin() && (
-                      <DropdownMenu>
-                        <DropdownMenuTrigger asChild>
-                          <Button variant="ghost" size="sm" className="h-8 w-8 p-0 ml-2">
-                            <MoreHorizontal className="h-4 w-4" />
-                          </Button>
-                        </DropdownMenuTrigger>
-                        <DropdownMenuContent align="end">
-                          <DropdownMenuItem 
-                            onClick={() => {
-                              setCurrentContact(contact);
-                              setEditDialogOpen(true);
-                            }}
-                          >
-                            <Edit className="mr-2 h-4 w-4" />
-                            Edit
-                          </DropdownMenuItem>
-                          <DropdownMenuItem
-                            className="text-destructive"
-                            onClick={() => {
-                              setCurrentContact(contact);
-                              setDeleteDialogOpen(true);
-                            }}
-                          >
-                            <Trash2 className="mr-2 h-4 w-4" />
-                            Delete
-                          </DropdownMenuItem>
-                        </DropdownMenuContent>
-                      </DropdownMenu>
-                    )}
+                  
+                  <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4 mt-2">
+                    {groupedContacts[letter].map(contact => (
+                      <Card key={contact.id} className="overflow-hidden">
+                        <CardHeader className="pb-2">
+                          <div className="flex items-center">
+                            <Avatar className="h-10 w-10 mr-3">
+                              <AvatarFallback>{getInitials(contact.name)}</AvatarFallback>
+                            </Avatar>
+                            <div>
+                              <CardTitle className="text-lg">{contact.name}</CardTitle>
+                              {contact.title && (
+                                <p className="text-sm text-muted-foreground">{contact.title}</p>
+                              )}
+                            </div>
+                          </div>
+                        </CardHeader>
+                        <CardContent>
+                          <div className="space-y-2 text-sm">
+                            {contact.company && (
+                              <div className="flex items-center">
+                                <Building className="h-4 w-4 mr-2 text-muted-foreground" />
+                                <span>{contact.company}</span>
+                              </div>
+                            )}
+                            
+                            {contact.email && (
+                              <div className="flex items-center">
+                                <Mail className="h-4 w-4 mr-2 text-muted-foreground" />
+                                <a href={`mailto:${contact.email}`} className="text-blue-600 hover:underline">
+                                  {contact.email}
+                                </a>
+                              </div>
+                            )}
+                            
+                            {contact.phone && (
+                              <div className="flex items-center">
+                                <Phone className="h-4 w-4 mr-2 text-muted-foreground" />
+                                <a href={`tel:${contact.phone}`} className="text-blue-600 hover:underline">
+                                  {contact.phone}
+                                </a>
+                              </div>
+                            )}
+                            
+                            {contact.role && (
+                              <div className="mt-2 pt-2 border-t text-sm text-muted-foreground">
+                                Role: {contact.role}
+                              </div>
+                            )}
+                          </div>
+                          
+                          {isAdmin() && (
+                            <div className="flex justify-end mt-4">
+                              <Button variant="ghost" size="sm" className="h-8 w-8 p-0">
+                                <Edit className="h-4 w-4" />
+                              </Button>
+                              <Button variant="ghost" size="sm" className="h-8 w-8 p-0 text-destructive">
+                                <Trash2 className="h-4 w-4" />
+                              </Button>
+                            </div>
+                          )}
+                        </CardContent>
+                      </Card>
+                    ))}
                   </div>
-                  <p className="text-muted-foreground">{contact.title}</p>
                 </div>
-                
-                <div className="space-y-3 mt-6">
-                  {contact.email && (
-                    <div className="flex items-center">
-                      <Mail className="h-4 w-4 text-muted-foreground mr-2" />
-                      <a href={`mailto:${contact.email}`} className="text-sm hover:underline">
-                        {contact.email}
-                      </a>
-                    </div>
-                  )}
-                  {contact.phone && (
-                    <div className="flex items-center">
-                      <Phone className="h-4 w-4 text-muted-foreground mr-2" />
-                      <a href={`tel:${contact.phone.replace(/\s+/g, '')}`} className="text-sm hover:underline">
-                        {contact.phone}
-                      </a>
-                    </div>
-                  )}
-                  {contact.company && (
-                    <div className="flex items-center">
-                      <Building className="h-4 w-4 text-muted-foreground mr-2" />
-                      <span className="text-sm">{contact.company}</span>
-                    </div>
-                  )}
-                  {contact.role && (
-                    <div className="flex items-center">
-                      <User className="h-4 w-4 text-muted-foreground mr-2" />
-                      <span className="text-sm">{contact.role}</span>
-                    </div>
-                  )}
-                </div>
-              </CardContent>
-            </Card>
-          ))
-        ) : (
-          <div className="col-span-full text-center py-12">
-            <User className="mx-auto h-12 w-12 text-muted-foreground" />
-            <h3 className="mt-4 text-lg font-medium">No contacts found</h3>
-            <p className="text-sm text-muted-foreground mt-2">
-              No contacts match your current search criteria
-            </p>
-          </div>
-        )}
-      </div>
-      
-      {/* Edit Dialog */}
-      <Dialog open={editDialogOpen} onOpenChange={setEditDialogOpen}>
-        <DialogContent className="sm:max-w-[550px]">
-          <DialogHeader>
-            <DialogTitle>Edit Contact</DialogTitle>
-            <DialogDescription>
-              Update contact information
-            </DialogDescription>
-          </DialogHeader>
-          {currentContact && (
-            <ContactForm 
-              initialData={currentContact}
-              mode="edit"
-              onSuccess={() => {
-                setEditDialogOpen(false);
-                fetchContacts();
-              }} 
-            />
+              ))}
+            </div>
           )}
-        </DialogContent>
-      </Dialog>
-      
-      {/* Delete Confirmation Dialog */}
-      <AlertDialog open={deleteDialogOpen} onOpenChange={setDeleteDialogOpen}>
-        <AlertDialogContent>
-          <AlertDialogHeader>
-            <AlertDialogTitle>Are you sure?</AlertDialogTitle>
-            <AlertDialogDescription>
-              This will permanently delete {currentContact?.name}'s contact information.
-              This action cannot be undone.
-            </AlertDialogDescription>
-          </AlertDialogHeader>
-          <AlertDialogFooter>
-            <AlertDialogCancel>Cancel</AlertDialogCancel>
-            <AlertDialogAction
-              className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
-              onClick={handleDeleteContact}
-            >
-              Delete
-            </AlertDialogAction>
-          </AlertDialogFooter>
-        </AlertDialogContent>
-      </AlertDialog>
+        </TabsContent>
+      </Tabs>
     </div>
   );
 };

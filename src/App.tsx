@@ -22,6 +22,7 @@ import ProfilePage from "@/pages/ProfilePage";
 import UsersPage from "@/pages/UsersPage";
 import CalendarPage from "@/pages/CalendarPage";
 import MeetingsPage from "@/pages/MeetingsPage";
+import ForumPage from "@/pages/ForumPage";
 import Unauthorized from "@/pages/Unauthorized";
 import NotFound from "@/pages/NotFound";
 
@@ -58,6 +59,7 @@ const App = () => (
                 <Route path="risks" element={<RiskManagementPage />} />
                 <Route path="documents" element={<DocumentsPage />} />
                 <Route path="contacts" element={<ContactsPage />} />
+                <Route path="forum" element={<ForumPage />} />
                 <Route path="profile" element={<ProfilePage />} />
                 <Route path="users" element={
                   <ProtectedRoute requiresAdmin>

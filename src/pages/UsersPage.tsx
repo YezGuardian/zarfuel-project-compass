@@ -23,7 +23,7 @@ import { useAuth } from '@/contexts/AuthContext';
 import { Navigate } from 'react-router-dom';
 
 const UsersPage: React.FC = () => {
-  const { isAdmin } = useAuth();
+  const { isAdmin, isSuperAdmin } = useAuth();
   const [dialogOpen, setDialogOpen] = useState(false);
   
   // Redirect non-admin users
@@ -47,7 +47,7 @@ const UsersPage: React.FC = () => {
             <TabsTrigger value="invitations">Invitations</TabsTrigger>
           </TabsList>
           <div className="mt-6 mb-4 flex justify-end">
-            <Dialog open={dialogOpen} onOpenChange={setDialogOpen}>
+            <Dialog open={dialogOpen} onOpenChange={isSuperAdmin() ? setDialogOpen : undefined}>
               <DialogTrigger asChild>
                 <Button>
                   <PlusCircle className="h-4 w-4 mr-2" />
@@ -66,7 +66,7 @@ const UsersPage: React.FC = () => {
             </Dialog>
           </div>
           <TabsContent value="users" className="space-y-4">
-            <UsersList />
+            <UsersList isSuperAdmin={isSuperAdmin()} />
           </TabsContent>
           <TabsContent value="invitations" className="space-y-4">
             <InvitationsList />
