@@ -97,10 +97,11 @@ const UsersList: React.FC<UsersListProps> = ({ isSuperAdmin }) => {
           formattedInviter = null;
         } else if (user.inviter && typeof user.inviter === 'object') {
           // We have valid inviter data
+          // Use optional chaining to safely access properties that might be null
           formattedInviter = {
-            first_name: user.inviter.first_name,
-            last_name: user.inviter.last_name,
-            email: user.inviter.email
+            first_name: user.inviter?.first_name || null,
+            last_name: user.inviter?.last_name || null,
+            email: user.inviter?.email || ''
           };
         }
         

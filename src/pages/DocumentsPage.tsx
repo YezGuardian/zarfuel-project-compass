@@ -80,10 +80,11 @@ const DocumentsPage: React.FC = () => {
         // Ensure uploader is properly typed
         let uploader = null;
         if (doc.uploader && typeof doc.uploader === 'object' && !('error' in doc.uploader)) {
+          // Use optional chaining to safely access properties that might be null
           uploader = {
-            first_name: doc.uploader.first_name || '',
-            last_name: doc.uploader.last_name || '',
-            email: doc.uploader.email
+            first_name: doc.uploader?.first_name || null,
+            last_name: doc.uploader?.last_name || null,
+            email: doc.uploader?.email || ''
           };
         }
         
