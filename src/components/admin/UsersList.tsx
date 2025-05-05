@@ -92,17 +92,22 @@ const UsersList: React.FC<UsersListProps> = ({ isSuperAdmin }) => {
       const transformedData: UserProfile[] = (data || []).map(user => {
         // Fix the inviter property by providing a properly shaped object or null
         let formattedInviter = null;
-        if (user.inviter && typeof user.inviter === 'object' && 'error' in user.inviter) {
-          // Handle error case - just return null for inviter
-          formattedInviter = null;
-        } else if (user.inviter && typeof user.inviter === 'object') {
-          // We have valid inviter data
-          // Use optional chaining to safely access properties that might be null
-          formattedInviter = {
-            first_name: user.inviter?.first_name || null,
-            last_name: user.inviter?.last_name || null,
-            email: user.inviter?.email || ''
-          };
+        
+        // First check if user.inviter exists at all
+        if (user.inviter) {
+          // Then check if it's an object with an error property
+          if (typeof user.inviter === 'object' && 'error' in user.inviter) {
+            // Handle error case - just return null for inviter
+            formattedInviter = null;
+          } else if (typeof user.inviter === 'object') {
+            // We have valid inviter data
+            // Use optional chaining to safely access properties that might be null
+            formattedInviter = {
+              first_name: user.inviter?.first_name || null,
+              last_name: user.inviter?.last_name || null,
+              email: user.inviter?.email || ''
+            };
+          }
         }
         
         return {
