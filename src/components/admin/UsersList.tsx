@@ -69,6 +69,8 @@ const UsersList: React.FC<UsersListProps> = ({ isSuperAdmin }) => {
   const [deleteUser, setDeleteUser] = useState<UserProfile | null>(null);
   const [editUserRole, setEditUserRole] = useState('');
   const [isProcessing, setIsProcessing] = useState(false);
+  const [editDialogOpen, setEditDialogOpen] = useState(false);
+  const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
   
   const { user: currentUser } = useAuth();
   
@@ -88,7 +90,8 @@ const UsersList: React.FC<UsersListProps> = ({ isSuperAdmin }) => {
       // Transform data to match UserProfile type
       const transformedData: UserProfile[] = (data || []).map(user => ({
         ...user,
-        last_sign_in_at: null // Add the missing property
+        last_sign_in_at: null, // Add the missing property
+        inviter: user.inviter || null // Handle potential null inviter
       }));
 
       setUsers(transformedData);

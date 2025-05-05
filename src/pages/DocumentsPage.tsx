@@ -75,7 +75,7 @@ const DocumentsPage: React.FC = () => {
         uploaded_by: doc.uploaded_by,
         folder_id: doc.folder_id,
         downloaded_by: doc.downloaded_by || [],
-        uploader: doc.uploader
+        uploader: doc.uploader || null
       }));
       
       setDocuments(transformedData);
@@ -134,10 +134,11 @@ const DocumentsPage: React.FC = () => {
         
       if (data) {
         // Update the downloaded_by array
-        if (user) {
-          const newDownloadedBy = document.downloaded_by 
-            ? [...document.downloaded_by, user.id]
-            : [user.id];
+        if (user && document.downloaded_by) {
+          const newDownloadedBy = [
+            ...document.downloaded_by, 
+            user.id
+          ];
             
           await supabase
             .from('documents')

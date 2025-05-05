@@ -1,3 +1,4 @@
+
 export type Status = 'complete' | 'inprogress' | 'notstarted' | 'ongoing';
 
 export type Task = {
@@ -109,11 +110,13 @@ export type Document = {
   category: string;
   created_at: string;
   uploaded_by?: string;
+  folder_id?: string;
+  downloaded_by?: any[] | null; // Added to fix type issues
   uploader?: {
     first_name: string;
     last_name: string;
     email: string;
-  };
+  } | null;
 };
 
 export type NotificationType = 'task_created' | 'task_updated' | 'comment_added' | 'meeting_scheduled' | 'document_uploaded' | string;
