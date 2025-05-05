@@ -35,7 +35,7 @@ export const useTasks = () => {
       if (tasksError) throw tasksError;
       
       // Transform tasks to match our Task type
-      const formattedTasks = tasksData.map(task => {
+      const formattedTasks = tasksData.map((task: any) => {
         // Use the progressMap to determine progress based on status
         const progressValue = progressMap[task.status as keyof typeof progressMap] || 0;
         
@@ -47,7 +47,8 @@ export const useTasks = () => {
           progress: progressValue,
           // Add progress_summary if it doesn't exist
           progress_summary: task.progress_summary || '',
-          duration: task.duration || '' // Handle the duration field explicitly
+          // Handle the duration field explicitly
+          duration: task.duration || ''
         };
       });
       
@@ -55,9 +56,9 @@ export const useTasks = () => {
       
       // Extract unique teams
       const allTeams = new Set<string>();
-      formattedTasks.forEach(task => {
+      formattedTasks.forEach((task: any) => {
         if (task.responsible_teams && Array.isArray(task.responsible_teams)) {
-          task.responsible_teams.forEach(team => allTeams.add(team));
+          task.responsible_teams.forEach((team: string) => allTeams.add(team));
         }
       });
 

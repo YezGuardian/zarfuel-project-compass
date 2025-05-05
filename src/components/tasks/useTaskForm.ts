@@ -112,23 +112,41 @@ export const useTaskForm = ({ initialData, mode = 'create', onSuccess }: UseTask
       // Always set responsible_teams from our state
       values.responsible_teams = selectedTeams;
       
-      // Calculate progress based on status
-      const progress = progressMap[values.status as keyof typeof progressMap] || 0;
+      // Ensure title is provided (required by the database)
+      if (!values.title) {
+        throw new Error("Task title is required");
+      }
       
       if (mode === 'create') {
-        // Create new task with progress value derived from status
+        // Create new task
         const { error } = await supabase.from('tasks').insert({
-          ...values,
+          title: values.title,
+          description: values.description,
+          phase_id: values.phase_id,
+          responsible_teams: values.responsible_teams,
+          start_date: values.start_date,
+          end_date: values.end_date,
+          status: values.status,
+          progress_summary: values.progress_summary || '',
+          duration: values.duration || '',
           created_by: user?.id,
           updated_by: user?.id,
         });
         
         if (error) throw error;
       } else if (initialData?.id) {
-        // Update existing task with progress value derived from status
+        // Update existing task
         const { error } = await supabase.from('tasks')
           .update({
-            ...values,
+            title: values.title,
+            description: values.description,
+            phase_id: values.phase_id,
+            responsible_teams: values.responsible_teams,
+            start_date: values.start_date,
+            end_date: values.end_date,
+            status: values.status,
+            progress_summary: values.progress_summary || '',
+            duration: values.duration || '',
             updated_by: user?.id,
           })
           .eq('id', initialData.id);
