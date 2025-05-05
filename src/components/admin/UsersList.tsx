@@ -1,3 +1,4 @@
+
 import React, { useEffect, useState } from 'react';
 import { 
   Card, 
@@ -254,7 +255,7 @@ const UsersList: React.FC<UsersListProps> = ({ isSuperAdmin }) => {
                     <TableCell>
                       {user.inviter ? (
                         <span className="text-sm">
-                          {user.inviter?.first_name || ''} {user.inviter?.last_name || ''}
+                          {user.inviter.first_name || ''} {user.inviter.last_name || ''}
                         </span>
                       ) : (
                         '-'
