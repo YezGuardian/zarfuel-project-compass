@@ -116,19 +116,19 @@ export const useTaskForm = ({ initialData, mode = 'create', onSuccess }: UseTask
       const progress = progressMap[values.status as keyof typeof progressMap] || 0;
       
       if (mode === 'create') {
+        // Create new task with progress value derived from status
         const { error } = await supabase.from('tasks').insert({
           ...values,
-          progress,
           created_by: user?.id,
           updated_by: user?.id,
         });
         
         if (error) throw error;
       } else if (initialData?.id) {
+        // Update existing task with progress value derived from status
         const { error } = await supabase.from('tasks')
           .update({
             ...values,
-            progress,
             updated_by: user?.id,
           })
           .eq('id', initialData.id);

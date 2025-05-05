@@ -220,7 +220,7 @@ const TaskForm: React.FC<TaskFormProps> = ({
             render={({ field }) => (
               <TaskDatePicker
                 date={field.value}
-                onSelect={field.onChange}
+                onSelect={(date) => field.onChange(date)}
                 label="Start Date"
                 disabled={isSubmitting}
               />
@@ -233,7 +233,7 @@ const TaskForm: React.FC<TaskFormProps> = ({
             render={({ field }) => (
               <TaskDatePicker
                 date={field.value}
-                onSelect={field.onChange}
+                onSelect={(date) => field.onChange(date)}
                 label="End Date"
                 disabled={isSubmitting}
               />

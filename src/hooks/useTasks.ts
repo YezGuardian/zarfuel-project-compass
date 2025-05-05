@@ -47,7 +47,7 @@ export const useTasks = () => {
           progress: progressValue,
           // Add progress_summary if it doesn't exist
           progress_summary: task.progress_summary || '',
-          duration: task.duration || '' // Add duration field
+          duration: task.duration || '' // Handle the duration field explicitly
         };
       });
       

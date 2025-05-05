@@ -18,7 +18,7 @@ import {
 import { cn } from '@/lib/utils';
 
 interface TaskDatePickerProps {
-  date: Date | undefined;
+  date: string | Date | undefined | null;
   onSelect: (date: Date | undefined) => void;
   label: string;
   disabled?: boolean;
@@ -30,6 +30,9 @@ const TaskDatePicker: React.FC<TaskDatePickerProps> = ({
   label,
   disabled = false
 }) => {
+  // Convert string date to Date object if needed
+  const dateValue = date ? (typeof date === 'string' ? new Date(date) : date) : undefined;
+  
   return (
     <FormItem className="flex flex-col">
       <FormLabel>{label}</FormLabel>
@@ -44,8 +47,8 @@ const TaskDatePicker: React.FC<TaskDatePickerProps> = ({
               )}
               disabled={disabled}
             >
-              {date ? (
-                format(date, "PPP")
+              {dateValue ? (
+                format(dateValue, "PPP")
               ) : (
                 <span>Pick a date</span>
               )}
@@ -56,7 +59,7 @@ const TaskDatePicker: React.FC<TaskDatePickerProps> = ({
         <PopoverContent className="w-auto p-0" align="start">
           <Calendar
             mode="single"
-            selected={date}
+            selected={dateValue}
             onSelect={onSelect}
             disabled={disabled}
             initialFocus
