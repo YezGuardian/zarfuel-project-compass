@@ -333,7 +333,7 @@ const DocumentsPage: React.FC = () => {
                       </p>
                       {document.uploader && (
                         <p className="text-xs text-muted-foreground mt-1">
-                          Uploaded by: {document.uploader.first_name} {document.uploader.last_name}
+                          Uploaded by: {document.uploader?.first_name || ''} {document.uploader?.last_name || ''}
                         </p>
                       )}
                     </div>

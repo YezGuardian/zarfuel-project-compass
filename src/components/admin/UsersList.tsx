@@ -1,4 +1,3 @@
-
 import React, { useEffect, useState } from 'react';
 import { 
   Card, 
@@ -188,7 +187,7 @@ const UsersList: React.FC<UsersListProps> = ({ isSuperAdmin }) => {
     }
   };
   
-  const getInitials = (firstName: string, lastName: string) => {
+  const getInitials = (firstName: string | null, lastName: string | null) => {
     const firstInitial = firstName ? firstName.charAt(0).toUpperCase() : '';
     const lastInitial = lastName ? lastName.charAt(0).toUpperCase() : '';
     return firstInitial + lastInitial || '?';
@@ -255,7 +254,7 @@ const UsersList: React.FC<UsersListProps> = ({ isSuperAdmin }) => {
                     <TableCell>
                       {user.inviter ? (
                         <span className="text-sm">
-                          {user.inviter.first_name || ''} {user.inviter.last_name || ''}
+                          {user.inviter?.first_name || ''} {user.inviter?.last_name || ''}
                         </span>
                       ) : (
                         '-'
