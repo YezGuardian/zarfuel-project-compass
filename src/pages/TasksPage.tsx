@@ -31,6 +31,7 @@ const TasksPage: React.FC = () => {
   const [editDialogOpen, setEditDialogOpen] = useState(false);
   const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
   const [currentTask, setCurrentTask] = useState<Task | null>(null);
+  const [selectedPhaseId, setSelectedPhaseId] = useState<string | null>(null);
   const [isProcessing, setIsProcessing] = useState(false);
   
   const { isAdmin } = useAuth();
@@ -127,6 +128,11 @@ const TasksPage: React.FC = () => {
     }
   };
   
+  const handleAddTaskForPhase = (phaseId: string) => {
+    setSelectedPhaseId(phaseId);
+    setAddTaskDialogOpen(true);
+  };
+  
   return (
     <div className="space-y-6">
       <div className="flex justify-between items-start">
@@ -148,7 +154,10 @@ const TasksPage: React.FC = () => {
             </Button>
             <Button 
               className="bg-zarfuel-blue hover:bg-zarfuel-blue/90"
-              onClick={() => setAddTaskDialogOpen(true)}
+              onClick={() => {
+                setSelectedPhaseId(null);
+                setAddTaskDialogOpen(true);
+              }}
             >
               <Plus className="h-4 w-4 mr-2" />
               Add Task
@@ -189,6 +198,7 @@ const TasksPage: React.FC = () => {
           handleEditTask={handleEditTask}
           handleDeleteTaskClick={handleDeleteTaskClick}
           handlePhaseSuccess={handlePhaseSuccess}
+          onAddTask={handleAddTaskForPhase}
         />
       ) : (
         <KanbanBoard
@@ -212,6 +222,7 @@ const TasksPage: React.FC = () => {
         task={currentTask}
         mode={addTaskDialogOpen ? 'create' : 'edit'}
         onSuccess={handleTaskSuccess}
+        initialPhaseId={selectedPhaseId}
       />
       
       {/* Add Phase Dialog */}

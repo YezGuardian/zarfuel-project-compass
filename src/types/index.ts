@@ -10,9 +10,10 @@ export type Task = {
   responsible_teams?: string[];
   start_date?: string;
   end_date?: string;
+  duration?: string; // Added duration field
   status: Status;
   progress: number;
-  progress_summary: string; // Added progress_summary to fix errors
+  progress_summary: string;
   created_at: string;
   updated_at: string;
   created_by?: string;
@@ -111,7 +112,7 @@ export type Document = {
   created_at: string;
   uploaded_by?: string;
   folder_id?: string;
-  downloaded_by: any[] | null; // Now it's consistently defined as an array
+  downloaded_by: any[] | null;
   uploader?: {
     first_name: string | null;
     last_name: string | null;

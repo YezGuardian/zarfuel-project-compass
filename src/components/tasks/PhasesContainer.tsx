@@ -3,6 +3,8 @@ import React from 'react';
 import { Task, Phase } from '@/types';
 import PhaseActions from '@/components/tasks/PhaseActions';
 import TaskTable from '@/components/tasks/TaskTable';
+import { Button } from '@/components/ui/button';
+import { Plus } from 'lucide-react';
 
 interface PhasesContainerProps {
   phases: Phase[];
@@ -12,6 +14,7 @@ interface PhasesContainerProps {
   handleEditTask: (task: Task) => void;
   handleDeleteTaskClick: (task: Task) => void;
   handlePhaseSuccess: () => void;
+  onAddTask: (phaseId: string) => void;
 }
 
 const PhasesContainer: React.FC<PhasesContainerProps> = ({
@@ -21,7 +24,8 @@ const PhasesContainer: React.FC<PhasesContainerProps> = ({
   calculatePhaseProgress,
   handleEditTask,
   handleDeleteTaskClick,
-  handlePhaseSuccess
+  handlePhaseSuccess,
+  onAddTask
 }) => {
   return (
     <>
@@ -35,13 +39,26 @@ const PhasesContainer: React.FC<PhasesContainerProps> = ({
               <h2 className="text-xl font-semibold">
                 PHASE {phase.position}: {phase.name}
               </h2>
-              {isAdmin && (
-                <PhaseActions 
-                  phase={phase} 
-                  onSuccess={handlePhaseSuccess}
-                  tasksExist={phaseTasks.length > 0}
-                />
-              )}
+              <div className="flex items-center space-x-2">
+                {isAdmin && (
+                  <Button 
+                    variant="outline"
+                    size="sm"
+                    onClick={() => onAddTask(phase.id)}
+                    className="flex items-center"
+                  >
+                    <Plus className="h-4 w-4 mr-2" />
+                    Add Task
+                  </Button>
+                )}
+                {isAdmin && (
+                  <PhaseActions 
+                    phase={phase} 
+                    onSuccess={handlePhaseSuccess}
+                    tasksExist={phaseTasks.length > 0}
+                  />
+                )}
+              </div>
             </div>
             <div className="flex items-center mb-4">
               <div className="text-sm font-medium mr-4">{phaseProgress}% Complete</div>

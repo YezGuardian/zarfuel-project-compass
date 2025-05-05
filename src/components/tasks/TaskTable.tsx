@@ -48,6 +48,28 @@ const TaskTable: React.FC<TaskTableProps> = ({
     setDetailsOpen(true);
   };
   
+  // Sort tasks first by status priority, then by end date
+  const sortedTasks = [...tasks].sort((a, b) => {
+    // First sort by status priority: notstarted -> inprogress -> ongoing -> complete
+    const statusPriority = {
+      'notstarted': 0,
+      'inprogress': 1,
+      'ongoing': 2,
+      'complete': 3
+    };
+    
+    const statusComparison = (statusPriority[a.status as keyof typeof statusPriority] || 0) - 
+                           (statusPriority[b.status as keyof typeof statusPriority] || 0);
+    
+    if (statusComparison !== 0) return statusComparison;
+    
+    // Then sort by end date (oldest last)
+    if (!a.end_date && !b.end_date) return 0;
+    if (!a.end_date) return -1;
+    if (!b.end_date) return 1;
+    return new Date(a.end_date).getTime() - new Date(b.end_date).getTime();
+  });
+  
   return (
     <>
       <Card>
@@ -75,15 +97,15 @@ const TaskTable: React.FC<TaskTableProps> = ({
                 </tr>
               </thead>
               <tbody>
-                {tasks.length > 0 ? (
-                  tasks.map((task) => (
+                {sortedTasks.length > 0 ? (
+                  sortedTasks.map((task) => (
                     <tr key={task.id} 
-                        className="border-b last:border-0 hover:bg-muted/30 cursor-pointer"
+                        className="border-b last:border-0 hover:bg-blue-50 dark:hover:bg-blue-900/20 cursor-pointer transition-colors"
                         onClick={() => handleViewTask(task)}>
                       {showPhaseColumn && (
                         <td className="px-4 py-3 text-sm">{task.phase}</td>
                       )}
-                      <td className="px-4 py-3 text-sm font-medium">{task.title}</td>
+                      <td className="px-4 py-3 text-sm font-bold">{task.title}</td>
                       <td className="px-4 py-3 text-sm">
                         {task.responsible_teams?.join(', ') || 'N/A'}
                       </td>
@@ -91,8 +113,14 @@ const TaskTable: React.FC<TaskTableProps> = ({
                         {task.description || 'N/A'}
                       </td>
                       <td className="px-4 py-3 text-sm">
-                        {task.start_date ? new Date(task.start_date).toLocaleDateString() : 'N/A'} - 
-                        {task.end_date ? new Date(task.end_date).toLocaleDateString() : 'N/A'}
+                        {task.start_date || task.end_date ? (
+                          <>
+                            {task.start_date ? new Date(task.start_date).toLocaleDateString() : 'N/A'} - 
+                            {task.end_date ? new Date(task.end_date).toLocaleDateString() : 'N/A'}
+                          </>
+                        ) : (
+                          task.duration || 'N/A'
+                        )}
                       </td>
                       <td className="px-4 py-3 text-sm max-w-[200px] truncate">
                         {task.progress_summary || 'N/A'}
@@ -155,7 +183,7 @@ const TaskTable: React.FC<TaskTableProps> = ({
             {viewTask && (
               <div className="space-y-4 mt-4">
                 <div>
-                  <h3 className="text-lg font-semibold">{viewTask.title}</h3>
+                  <h3 className="text-lg font-bold">{viewTask.title}</h3>
                   <div className="flex items-center mt-1">
                     <TaskStatusBadge status={viewTask.status} />
                   </div>
@@ -176,8 +204,14 @@ const TaskTable: React.FC<TaskTableProps> = ({
                 <div>
                   <h4 className="text-sm font-medium text-muted-foreground">Timeline</h4>
                   <p>
-                    {viewTask.start_date ? new Date(viewTask.start_date).toLocaleDateString() : 'No start date'} - 
-                    {viewTask.end_date ? new Date(viewTask.end_date).toLocaleDateString() : 'No end date'}
+                    {viewTask.start_date || viewTask.end_date ? (
+                      <>
+                        {viewTask.start_date ? new Date(viewTask.start_date).toLocaleDateString() : 'No start date'} - 
+                        {viewTask.end_date ? new Date(viewTask.end_date).toLocaleDateString() : 'No end date'}
+                      </>
+                    ) : (
+                      viewTask.duration || 'No timeline specified'
+                    )}
                   </p>
                 </div>
                 

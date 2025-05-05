@@ -1,23 +1,35 @@
 
 import { z } from 'zod';
-import { Status } from '@/types';
 
 export const progressMap = {
-  'notstarted': 0,
-  'inprogress': 50,
-  'ongoing': 75,
-  'complete': 100
+  complete: 100,
+  inprogress: 50,
+  notstarted: 0,
+  ongoing: 75,
 };
 
 export const taskFormSchema = z.object({
-  title: z.string().min(1, 'Task name is required'),
+  title: z.string().min(1, { message: "Task title is required" }),
   description: z.string().optional(),
-  phase_id: z.string().min(1, 'Phase is required'),
+  phase_id: z.string().min(1, { message: "Phase is required" }),
   responsible_teams: z.array(z.string()).optional(),
-  start_date: z.date().optional().nullable(),
-  end_date: z.date().optional().nullable(),
+  start_date: z.string().optional().nullable(),
+  end_date: z.string().optional().nullable(),
+  duration: z.string().optional(),
   status: z.enum(['notstarted', 'inprogress', 'ongoing', 'complete']),
-  progress_summary: z.string().optional()
+  progress_summary: z.string().optional(),
 });
 
 export type TaskFormValues = z.infer<typeof taskFormSchema>;
+
+export const defaultValues: Partial<TaskFormValues> = {
+  title: '',
+  description: '',
+  phase_id: '',
+  responsible_teams: [],
+  start_date: null,
+  end_date: null,
+  duration: '',
+  status: 'notstarted',
+  progress_summary: '',
+};

@@ -3,48 +3,49 @@ import React from 'react';
 import {
   Dialog,
   DialogContent,
-  DialogDescription,
   DialogHeader,
   DialogTitle,
 } from '@/components/ui/dialog';
-import TaskForm from '@/components/tasks/TaskForm';
-import { Task } from '@/types';
 import { ScrollArea } from '@/components/ui/scroll-area';
+import TaskForm from './TaskForm';
+import { Task } from '@/types';
 
 interface AddEditTaskDialogProps {
   open: boolean;
   onOpenChange: (open: boolean) => void;
   task: Task | null;
   mode: 'create' | 'edit';
-  onSuccess: () => void;
+  onSuccess?: () => void;
+  initialPhaseId?: string | null;
 }
 
-const AddEditTaskDialog: React.FC<AddEditTaskDialogProps> = ({
-  open,
+const AddEditTaskDialog: React.FC<AddEditTaskDialogProps> = ({ 
+  open, 
   onOpenChange,
   task,
   mode,
-  onSuccess
+  onSuccess,
+  initialPhaseId
 }) => {
+  // If initialPhaseId is provided and mode is create, update the task with it
+  const initialData = mode === 'create' && initialPhaseId ? 
+    { ...task, phase_id: initialPhaseId } as Task : 
+    task;
+
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="sm:max-w-[600px] max-h-[85vh]">
+      <DialogContent className="sm:max-w-[600px] max-h-[85vh] overflow-hidden">
         <DialogHeader>
-          <DialogTitle>
-            {mode === 'create' ? 'Create New Task' : 'Edit Task'}
-          </DialogTitle>
-          <DialogDescription>
-            {mode === 'create' ? 'Add a new task to the project' : 'Update task details'}
-          </DialogDescription>
+          <DialogTitle>{mode === 'create' ? 'Create New Task' : 'Edit Task'}</DialogTitle>
         </DialogHeader>
-        <ScrollArea className="max-h-[calc(85vh-120px)] pr-4">
-          {(mode === 'create' || (mode === 'edit' && task)) && (
-            <TaskForm
-              onSuccess={onSuccess}
-              initialData={mode === 'edit' ? task : undefined}
+        <ScrollArea className="max-h-[calc(85vh-80px)] pb-6">
+          <div className="p-1">
+            <TaskForm 
               mode={mode}
+              initialData={initialData}
+              onSuccess={onSuccess}
             />
-          )}
+          </div>
         </ScrollArea>
       </DialogContent>
     </Dialog>

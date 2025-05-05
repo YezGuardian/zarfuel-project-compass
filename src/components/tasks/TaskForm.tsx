@@ -42,6 +42,7 @@ const TaskForm: React.FC<TaskFormProps> = ({
 
   const [newTeam, setNewTeam] = useState('');
   const [isAddingTeam, setIsAddingTeam] = useState(false);
+  const [filteredTeamSuggestions, setFilteredTeamSuggestions] = useState<string[]>([]);
   
   const handleAddTeam = () => {
     if (newTeam.trim()) {
@@ -49,6 +50,30 @@ const TaskForm: React.FC<TaskFormProps> = ({
       setNewTeam('');
     }
     setIsAddingTeam(false);
+    setFilteredTeamSuggestions([]);
+  };
+  
+  const handleNewTeamChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const value = e.target.value;
+    setNewTeam(value);
+    
+    // Filter team suggestions based on input
+    if (value.trim()) {
+      const suggestions = teams.filter(team => 
+        team.toLowerCase().includes(value.toLowerCase()) && 
+        !selectedTeams.includes(team)
+      );
+      setFilteredTeamSuggestions(suggestions);
+    } else {
+      setFilteredTeamSuggestions([]);
+    }
+  };
+  
+  const selectTeamSuggestion = (team: string) => {
+    toggleTeam(team);
+    setNewTeam('');
+    setIsAddingTeam(false);
+    setFilteredTeamSuggestions([]);
   };
   
   return (
@@ -132,10 +157,10 @@ const TaskForm: React.FC<TaskFormProps> = ({
                       Add Team
                     </Button>
                   ) : (
-                    <div className="flex items-center space-x-2">
+                    <div className="relative flex items-center space-x-2">
                       <Input
                         value={newTeam}
-                        onChange={(e) => setNewTeam(e.target.value)}
+                        onChange={handleNewTeamChange}
                         placeholder="New team name"
                         className="h-9 w-[150px]"
                         autoFocus
@@ -156,11 +181,29 @@ const TaskForm: React.FC<TaskFormProps> = ({
                         onClick={() => {
                           setIsAddingTeam(false);
                           setNewTeam('');
+                          setFilteredTeamSuggestions([]);
                         }}
                         disabled={isSubmitting}
                       >
                         Cancel
                       </Button>
+                      
+                      {/* Team suggestions dropdown */}
+                      {filteredTeamSuggestions.length > 0 && (
+                        <div className="absolute top-full left-0 z-10 mt-1 w-[150px] bg-white dark:bg-gray-800 shadow-lg rounded-md border overflow-hidden">
+                          <div className="max-h-[120px] overflow-y-auto">
+                            {filteredTeamSuggestions.map(team => (
+                              <div 
+                                key={team}
+                                className="px-3 py-2 hover:bg-muted cursor-pointer"
+                                onClick={() => selectTeamSuggestion(team)}
+                              >
+                                {team}
+                              </div>
+                            ))}
+                          </div>
+                        </div>
+                      )}
                     </div>
                   )}
                 </div>
@@ -197,6 +240,24 @@ const TaskForm: React.FC<TaskFormProps> = ({
             )}
           />
         </div>
+        
+        <FormField
+          control={form.control}
+          name="duration"
+          render={({ field }) => (
+            <FormItem>
+              <FormLabel>Duration</FormLabel>
+              <FormControl>
+                <Input 
+                  placeholder="e.g., 2 weeks, 3 days, etc." 
+                  {...field} 
+                  disabled={isSubmitting} 
+                />
+              </FormControl>
+              <FormMessage />
+            </FormItem>
+          )}
+        />
         
         <FormField
           control={form.control}

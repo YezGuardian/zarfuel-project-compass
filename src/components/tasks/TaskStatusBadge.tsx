@@ -18,19 +18,19 @@ const TaskStatusBadge: React.FC<TaskStatusBadgeProps> = ({
   const statusConfig = {
     complete: {
       label: 'Complete',
-      color: 'bg-green-500 text-white',
+      color: 'bg-green-500 text-white', // Green for completed tasks
     },
     inprogress: {
       label: 'In Progress',
-      color: 'bg-blue-500 text-white',
+      color: 'bg-orange-500 text-white', // Orange for in progress tasks
     },
     notstarted: {
       label: 'Not Started',
-      color: 'bg-slate-500 text-white',
+      color: 'bg-red-500 text-white', // Red for not started tasks
     },
     ongoing: {
       label: 'Ongoing',
-      color: 'bg-amber-500 text-white',
+      color: 'bg-blue-500 text-white', // Blue for ongoing tasks
     },
   };
 
