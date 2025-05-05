@@ -307,38 +307,22 @@ const TasksPage: React.FC = () => {
       
       {/* Edit Phase Dialog */}
       <Dialog open={editPhaseDialogOpen} onOpenChange={setEditPhaseDialogOpen}>
-        <DialogContent className="sm:max-w-[425px] max-h-[85vh] overflow-hidden">
-          <DialogHeader>
-            <DialogTitle>Edit Phase</DialogTitle>
-            <DialogDescription>
-              Update the phase name. Click save when you're done.
-            </DialogDescription>
-          </DialogHeader>
-          <EditPhaseDialog 
-            phase={{ id: currentPhaseId || '', name: currentPhaseName, position: 0, project_id: '', created_at: '', updated_at: '' }}
-            onSubmit={handleEditPhaseSubmit}
-            open={editPhaseDialogOpen}
-            onOpenChange={setEditPhaseDialogOpen}
-          />
-        </DialogContent>
+        <EditPhaseDialog 
+          phase={{ id: currentPhaseId || '', name: currentPhaseName, position: 0, project_id: '', created_at: '', updated_at: '' }}
+          onSubmit={handleEditPhaseSubmit}
+          open={editPhaseDialogOpen}
+          onOpenChange={setEditPhaseDialogOpen}
+        />
       </Dialog>
       
       {/* Delete Phase Dialog */}
       <Dialog open={deletePhaseDialogOpen} onOpenChange={setDeletePhaseDialogOpen}>
-        <DialogContent className="sm:max-w-[425px] max-h-[85vh] overflow-hidden">
-          <DialogHeader>
-            <DialogTitle>Delete Phase</DialogTitle>
-            <DialogDescription>
-              Are you sure you want to delete this phase? This action cannot be undone.
-            </DialogDescription>
-          </DialogHeader>
-          <DeletePhaseDialog 
-            phase={{ id: currentPhaseId || '', name: currentPhaseName, position: 0, project_id: '', created_at: '', updated_at: '' }}
-            onSubmit={handleConfirmPhaseDelete}
-            open={deletePhaseDialogOpen}
-            onOpenChange={setDeletePhaseDialogOpen}
-          />
-        </DialogContent>
+        <DeletePhaseDialog 
+          phase={{ id: currentPhaseId || '', name: currentPhaseName, position: 0, project_id: '', created_at: '', updated_at: '' }}
+          onSubmit={handleConfirmPhaseDelete}
+          open={deletePhaseDialogOpen}
+          onOpenChange={setDeletePhaseDialogOpen}
+        />
       </Dialog>
       
       {/* Delete Task Dialog */}

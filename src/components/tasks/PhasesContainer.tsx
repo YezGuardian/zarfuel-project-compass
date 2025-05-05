@@ -1,10 +1,11 @@
-
 import React from 'react';
 import { Phase, Task } from '@/types';
 import { Card, CardContent } from '@/components/ui/card';
 import { PhaseHeader } from './PhaseHeader';
 import PhaseProgress from './PhaseProgress';
 import TaskTable from './TaskTable';
+import EditPhaseDialog from '@/components/tasks/EditPhaseDialog';
+import DeletePhaseDialog from '@/components/tasks/DeletePhaseDialog';
 
 interface PhasesContainerProps {
   phases: Phase[];
@@ -93,27 +94,27 @@ const PhasesContainer: React.FC<PhasesContainerProps> = ({
 
       {editPhase && (
         <EditPhaseDialog
-          open={editPhaseDialogOpen}
-          onOpenChange={setEditPhaseDialogOpen}
           phase={editPhase}
           onSubmit={(name) => {
             // Handle edit phase logic here
             handlePhaseSuccess();
             setEditPhaseDialogOpen(false);
           }}
+          open={editPhaseDialogOpen}
+          onOpenChange={setEditPhaseDialogOpen}
         />
       )}
 
       {deletePhase && (
         <DeletePhaseDialog
-          open={deletePhaseDialogOpen}
-          onOpenChange={setDeletePhaseDialogOpen}
           phase={deletePhase}
           onSubmit={() => {
             // Handle delete phase logic here
             handlePhaseSuccess();
             setDeletePhaseDialogOpen(false);
           }}
+          open={deletePhaseDialogOpen}
+          onOpenChange={setDeletePhaseDialogOpen}
         />
       )}
     </div>

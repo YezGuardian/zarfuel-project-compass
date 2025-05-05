@@ -1,4 +1,3 @@
-
 import React, { useEffect, useState } from 'react';
 import { 
   Card, 
@@ -188,6 +187,7 @@ const UsersList: React.FC<UsersListProps> = ({ isSuperAdmin }) => {
     }
   };
   
+  // Update the getInitials function to handle null values
   const getInitials = (firstName: string | null, lastName: string | null) => {
     const firstInitial = firstName ? firstName.charAt(0).toUpperCase() : '';
     const lastInitial = lastName ? lastName.charAt(0).toUpperCase() : '';
