@@ -113,8 +113,8 @@ export type Document = {
   folder_id?: string;
   downloaded_by: any[] | null; // Now it's consistently defined as an array
   uploader?: {
-    first_name: string;
-    last_name: string;
+    first_name: string | null;
+    last_name: string | null;
     email: string;
   } | null;
 };
