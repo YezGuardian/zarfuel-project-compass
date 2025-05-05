@@ -1,4 +1,3 @@
-
 import React, { useState } from 'react';
 import { 
   Card, 
@@ -16,7 +15,7 @@ import {
   TableRow 
 } from '@/components/ui/table';
 import { Badge } from '@/components/ui/badge';
-import { riskData } from '@/data/mockData';
+import { risks } from '@/data/mockData';
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle, DialogFooter } from '@/components/ui/dialog';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { Input } from '@/components/ui/input';
@@ -26,21 +25,13 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { Plus, Edit, Trash2 } from 'lucide-react';
 import { useAuth } from '@/contexts/AuthContext';
 import { toast } from 'sonner';
-
-interface Risk {
-  id: string;
-  name: string;
-  category: string;
-  impact: 'low' | 'medium' | 'high' | 'critical';
-  likelihood: 'low' | 'medium' | 'high';
-  status: 'identified' | 'mitigated' | 'ongoing';
-  description: string;
-  mitigation_strategy: string;
-  responsible_person: string;
-}
+import { Risk, mapMockRiskToAppRisk } from '@/types/risk';
 
 const RiskManagementPage: React.FC = () => {
-  const [risks, setRisks] = useState<Risk[]>(riskData);
+  // Convert mock risks to the format expected by our component
+  const initialRisks: Risk[] = risks.map(mapMockRiskToAppRisk);
+  
+  const [risksData, setRisksData] = useState<Risk[]>(initialRisks);
   const [editingRisk, setEditingRisk] = useState<Risk | null>(null);
   const [addRiskDialogOpen, setAddRiskDialogOpen] = useState(false);
   const [editRiskDialogOpen, setEditRiskDialogOpen] = useState(false);
@@ -59,8 +50,8 @@ const RiskManagementPage: React.FC = () => {
   const { isAdmin } = useAuth();
   
   // Calculate the percentage of mitigated risks
-  const mitigatedRisks = risks.filter(risk => risk.status === 'mitigated');
-  const mitigatedPercentage = Math.round((mitigatedRisks.length / risks.length) * 100) || 0;
+  const mitigatedRisks = risksData.filter(risk => risk.status === 'mitigated');
+  const mitigatedPercentage = Math.round((mitigatedRisks.length / risksData.length) * 100) || 0;
   
   const getImpactBadge = (impact: string) => {
     switch (impact) {
@@ -111,7 +102,7 @@ const RiskManagementPage: React.FC = () => {
       ...newRisk
     };
     
-    setRisks([...risks, risk]);
+    setRisksData([...risksData, risk]);
     setAddRiskDialogOpen(false);
     setNewRisk({
       name: '',
@@ -129,7 +120,7 @@ const RiskManagementPage: React.FC = () => {
   const handleEditRisk = () => {
     if (!editingRisk) return;
     
-    setRisks(risks.map(risk => risk.id === editingRisk.id ? editingRisk : risk));
+    setRisksData(risksData.map(risk => risk.id === editingRisk.id ? editingRisk : risk));
     setEditRiskDialogOpen(false);
     setEditingRisk(null);
     toast.success('Risk updated successfully');
@@ -138,7 +129,7 @@ const RiskManagementPage: React.FC = () => {
   const handleDeleteRisk = () => {
     if (!editingRisk) return;
     
-    setRisks(risks.filter(risk => risk.id !== editingRisk.id));
+    setRisksData(risksData.filter(risk => risk.id !== editingRisk.id));
     setDeleteRiskDialogOpen(false);
     setEditingRisk(null);
     toast.success('Risk deleted successfully');
@@ -185,7 +176,7 @@ const RiskManagementPage: React.FC = () => {
             <div className="grid grid-cols-3 gap-4">
               <div className="border rounded-md p-3 text-center">
                 <p className="text-sm text-muted-foreground mb-1">Total Risks</p>
-                <p className="text-2xl font-bold">{risks.length}</p>
+                <p className="text-2xl font-bold">{risksData.length}</p>
               </div>
               <div className="border rounded-md p-3 text-center">
                 <p className="text-sm text-muted-foreground mb-1">Mitigated</p>
@@ -193,7 +184,7 @@ const RiskManagementPage: React.FC = () => {
               </div>
               <div className="border rounded-md p-3 text-center">
                 <p className="text-sm text-muted-foreground mb-1">Outstanding</p>
-                <p className="text-2xl font-bold text-yellow-600">{risks.length - mitigatedRisks.length}</p>
+                <p className="text-2xl font-bold text-yellow-600">{risksData.length - mitigatedRisks.length}</p>
               </div>
             </div>
           </div>
@@ -220,7 +211,7 @@ const RiskManagementPage: React.FC = () => {
                 </TableRow>
               </TableHeader>
               <TableBody>
-                {risks.map(risk => (
+                {risksData.map(risk => (
                   <TableRow key={risk.id}>
                     <TableCell className="font-medium">{risk.name}</TableCell>
                     <TableCell>{risk.category}</TableCell>
