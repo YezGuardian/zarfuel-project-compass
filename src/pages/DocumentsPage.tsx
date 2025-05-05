@@ -84,11 +84,12 @@ const DocumentsPage: React.FC = () => {
         if (doc.uploader) {
           // Then check if it's an object without an error property
           if (typeof doc.uploader === 'object' && !('error' in doc.uploader)) {
-            // Use optional chaining to safely access properties that might be null
+            // Cast to a safe object type to avoid TypeScript errors
+            const uploaderObj = doc.uploader as Record<string, any>;
             uploader = {
-              first_name: doc.uploader?.first_name || null,
-              last_name: doc.uploader?.last_name || null,
-              email: doc.uploader?.email || ''
+              first_name: uploaderObj.first_name || null,
+              last_name: uploaderObj.last_name || null,
+              email: uploaderObj.email || ''
             };
           }
         }

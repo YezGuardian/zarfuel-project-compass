@@ -1,4 +1,3 @@
-
 import React, { useEffect, useState } from 'react';
 import { 
   Card, 
@@ -96,16 +95,13 @@ const UsersList: React.FC<UsersListProps> = ({ isSuperAdmin }) => {
         // First check if user.inviter exists at all
         if (user.inviter) {
           // Then check if it's an object with an error property
-          if (typeof user.inviter === 'object' && 'error' in user.inviter) {
-            // Handle error case - just return null for inviter
-            formattedInviter = null;
-          } else if (typeof user.inviter === 'object') {
+          if (typeof user.inviter === 'object' && !('error' in user.inviter)) {
             // We have valid inviter data
-            // Use optional chaining to safely access properties that might be null
+            const inviterObj = user.inviter as Record<string, any>;
             formattedInviter = {
-              first_name: user.inviter?.first_name || null,
-              last_name: user.inviter?.last_name || null,
-              email: user.inviter?.email || ''
+              first_name: inviterObj.first_name || null,
+              last_name: inviterObj.last_name || null,
+              email: inviterObj.email || ''
             };
           }
         }
