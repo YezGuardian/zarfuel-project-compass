@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect } from 'react';
 import { Calendar } from '@/components/ui/calendar';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
@@ -43,6 +42,9 @@ type CalendarItem = {
   location?: string;
   isMeeting?: boolean;
 };
+
+// Update TaskStatus type
+import { Status as TaskStatus } from '@/types';
 
 const CalendarPage: React.FC = () => {
   const [selectedDate, setSelectedDate] = useState<Date>(new Date());
@@ -260,7 +262,7 @@ const CalendarPage: React.FC = () => {
                       <div className="space-y-2">
                         <h4 className="font-medium text-lg">{selectedItem.title}</h4>
                         {selectedItem.isTask && (
-                          <StatusBadge status={selectedItem.status || ''} />
+                          <StatusBadge status={selectedItem.status as TaskStatus || 'notstarted'} />
                         )}
                         {selectedItem.isMeeting && (
                           <div className="inline-flex items-center px-2 py-1 rounded-full text-xs font-medium bg-blue-100 text-blue-800">
@@ -314,7 +316,7 @@ const CalendarPage: React.FC = () => {
                           <div className="flex justify-between">
                             <div className="font-medium">{item.title}</div>
                             {item.isTask ? (
-                              <StatusBadge status={item.status || ''} />
+                              <StatusBadge status={item.status as TaskStatus || 'notstarted'} />
                             ) : (
                               <div className="text-xs px-2 py-1 rounded-full bg-blue-100 text-blue-800">
                                 {item.isMeeting ? 'Meeting' : 'Event'}
@@ -369,7 +371,7 @@ const CalendarPage: React.FC = () => {
                         <div className="flex justify-between">
                           <span className="font-medium">{item.title}</span>
                           {item.isTask ? (
-                            <StatusBadge status={item.status || ''} />
+                            <StatusBadge status={item.status as TaskStatus || 'notstarted'} />
                           ) : (
                             <span className="text-xs px-2 py-1 rounded-full bg-blue-100 text-blue-800">
                               {item.isMeeting ? 'Meeting' : 'Event'}

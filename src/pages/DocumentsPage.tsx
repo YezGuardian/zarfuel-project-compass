@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect } from 'react';
 import { 
   Card, 
@@ -64,7 +63,22 @@ const DocumentsPage: React.FC = () => {
         
       if (error) throw error;
       
-      setDocuments(data || []);
+      // Transform data to match Document type
+      const transformedData: Document[] = (data || []).map(doc => ({
+        id: doc.id,
+        file_name: doc.file_name,
+        file_type: doc.file_type,
+        file_size: doc.file_size,
+        file_path: doc.file_path,
+        category: doc.category,
+        created_at: doc.created_at,
+        uploaded_by: doc.uploaded_by,
+        folder_id: doc.folder_id,
+        downloaded_by: doc.downloaded_by || [],
+        uploader: doc.uploader
+      }));
+      
+      setDocuments(transformedData);
       
       // Extract unique categories
       const uniqueCategories = Array.from(new Set((data || []).map(doc => doc.category)));

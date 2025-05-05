@@ -1,4 +1,3 @@
-
 import React, { useEffect, useState } from 'react';
 import { 
   Card, 
@@ -47,6 +46,11 @@ type UserProfile = {
   position: string | null;
   last_sign_in_at: string | null;
   invited_by: string | null;
+  company?: string | null;
+  title?: string | null;
+  updated_at?: string;
+  created_at?: string;
+  phone?: string | null;
   inviter?: {
     first_name: string;
     last_name: string;
@@ -63,8 +67,6 @@ const UsersList: React.FC<UsersListProps> = ({ isSuperAdmin }) => {
   const [loading, setLoading] = useState<boolean>(true);
   const [editUser, setEditUser] = useState<UserProfile | null>(null);
   const [deleteUser, setDeleteUser] = useState<UserProfile | null>(null);
-  const [editDialogOpen, setEditDialogOpen] = useState(false);
-  const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
   const [editUserRole, setEditUserRole] = useState('');
   const [isProcessing, setIsProcessing] = useState(false);
   
@@ -83,7 +85,13 @@ const UsersList: React.FC<UsersListProps> = ({ isSuperAdmin }) => {
         throw error;
       }
 
-      setUsers(data || []);
+      // Transform data to match UserProfile type
+      const transformedData: UserProfile[] = (data || []).map(user => ({
+        ...user,
+        last_sign_in_at: null // Add the missing property
+      }));
+
+      setUsers(transformedData);
     } catch (error: any) {
       console.error('Error fetching users:', error);
       toast.error('Failed to load users');

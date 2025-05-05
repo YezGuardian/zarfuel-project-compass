@@ -1,4 +1,3 @@
-
 export type Status = 'complete' | 'inprogress' | 'notstarted' | 'ongoing';
 
 export type Task = {
