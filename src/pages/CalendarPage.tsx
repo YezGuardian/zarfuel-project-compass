@@ -1,3 +1,4 @@
+
 import React, { useState, useEffect } from 'react';
 import { Calendar } from '@/components/ui/calendar';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
@@ -11,9 +12,9 @@ import { ScrollArea } from '@/components/ui/scroll-area';
 import { Separator } from '@/components/ui/separator';
 import { Button } from '@/components/ui/button';
 import { useAuth } from '@/contexts/AuthContext';
-import { format, isToday, isSameMonth, parseISO, isAfter, isBefore, isSameDay } from 'date-fns';
+import { format, isToday, isTomorrow, addDays, isSameMonth, parseISO, isAfter, isBefore, isSameDay } from 'date-fns';
 import { CalendarClock, Plus } from 'lucide-react';
-import { Task } from '@/types';
+import { Task, Status } from '@/types';
 import { supabase } from '@/integrations/supabase/client';
 import { toast } from 'sonner';
 import EventForm from '@/components/calendar/EventForm';
@@ -28,6 +29,7 @@ interface Event {
   end_time: string;
   is_meeting: boolean;
   location?: string;
+  created_by?: string;
 }
 
 type CalendarItem = {
@@ -37,14 +39,13 @@ type CalendarItem = {
   start_time: string;
   end_time?: string;
   isTask?: boolean;
+  isTaskStart?: boolean;
+  isTaskEnd?: boolean;
   status?: string;
   taskId?: string;
   location?: string;
   isMeeting?: boolean;
 };
-
-// Update TaskStatus type
-import { Status as TaskStatus } from '@/types';
 
 const CalendarPage: React.FC = () => {
   const [selectedDate, setSelectedDate] = useState<Date>(new Date());
@@ -53,7 +54,9 @@ const CalendarPage: React.FC = () => {
   const [dayEvents, setDayEvents] = useState<CalendarItem[]>([]);
   const [monthItems, setMonthItems] = useState<CalendarItem[]>([]);
   const [selectedItem, setSelectedItem] = useState<CalendarItem | null>(null);
-  const { isAdmin } = useAuth();
+  const [monthName, setMonthName] = useState<string>(format(new Date(), 'MMMM yyyy'));
+  const [monthNameClicked, setMonthNameClicked] = useState(false);
+  const { isAdmin, user } = useAuth();
   const { tasks } = useTasks();
   
   useEffect(() => {
@@ -64,6 +67,7 @@ const CalendarPage: React.FC = () => {
     // Update items when selectedDate changes
     const currentMonth = selectedDate.getMonth();
     const currentYear = selectedDate.getFullYear();
+    setMonthName(format(selectedDate, 'MMMM yyyy'));
     
     // Combine events and tasks for current month
     const combinedItems: CalendarItem[] = [];
@@ -73,7 +77,7 @@ const CalendarPage: React.FC = () => {
       const startDate = parseISO(event.start_time);
       if (isSameMonth(startDate, selectedDate)) {
         combinedItems.push({
-          id: event.id,
+          id: `event-${event.id}`,
           title: event.title,
           description: event.description,
           start_time: event.start_time,
@@ -84,17 +88,35 @@ const CalendarPage: React.FC = () => {
       }
     });
     
-    // Add tasks with due dates
+    // Add tasks with start dates
     tasks.forEach(task => {
+      if (task.start_date) {
+        const startDate = parseISO(task.start_date);
+        if (isSameMonth(startDate, selectedDate)) {
+          combinedItems.push({
+            id: `task-start-${task.id}`,
+            title: `${task.title} (Start)`,
+            description: task.description,
+            start_time: task.start_date,
+            isTask: true,
+            isTaskStart: true,
+            status: task.status,
+            taskId: task.id
+          });
+        }
+      }
+      
+      // Add tasks with end dates
       if (task.end_date) {
         const endDate = parseISO(task.end_date);
         if (isSameMonth(endDate, selectedDate)) {
           combinedItems.push({
-            id: task.id,
-            title: task.title,
+            id: `task-end-${task.id}`,
+            title: `${task.title} (End)`,
             description: task.description,
-            start_time: task.end_date, // Using end date for tasks
+            start_time: task.end_date,
             isTask: true,
+            isTaskEnd: true,
             status: task.status,
             taskId: task.id
           });
@@ -104,14 +126,20 @@ const CalendarPage: React.FC = () => {
     
     setMonthItems(combinedItems);
     
-    // Set day events for selected date
-    const selectedDayItems = combinedItems.filter(item => {
-      const itemDate = parseISO(item.start_time);
-      return isSameDay(itemDate, selectedDate);
-    });
-    
-    setDayEvents(selectedDayItems);
-  }, [selectedDate, events, tasks]);
+    // Set day events for selected date or all month events if month name clicked
+    if (monthNameClicked) {
+      setDayEvents(combinedItems.sort((a, b) => 
+        new Date(a.start_time).getTime() - new Date(b.start_time).getTime()
+      ));
+    } else {
+      const selectedDayItems = combinedItems.filter(item => {
+        const itemDate = parseISO(item.start_time);
+        return isSameDay(itemDate, selectedDate);
+      });
+      
+      setDayEvents(selectedDayItems);
+    }
+  }, [selectedDate, events, tasks, monthNameClicked]);
   
   const fetchEvents = async () => {
     try {
@@ -131,6 +159,60 @@ const CalendarPage: React.FC = () => {
   const handleDateSelect = (date: Date | undefined) => {
     if (date) {
       setSelectedDate(date);
+      setMonthNameClicked(false);
+    }
+  };
+  
+  const handleCreateEvent = async (eventData: any) => {
+    try {
+      // Make sure we set the current user as created_by
+      if (user) {
+        eventData.created_by = user.id;
+      }
+      
+      const { data, error } = await supabase
+        .from('events')
+        .insert([eventData])
+        .select()
+        .single();
+        
+      if (error) throw error;
+      
+      fetchEvents();
+      setDialogOpen(false);
+      toast.success('Event created successfully');
+      
+      // Handle notifications here
+      if (eventData.participants && eventData.participants.length > 0) {
+        for (const participantId of eventData.participants) {
+          await createNotification(
+            participantId,
+            'event',
+            `You have been invited to: ${eventData.title}`,
+            `/calendar`
+          );
+        }
+      }
+      
+      return true;
+    } catch (error: any) {
+      console.error('Error creating event:', error);
+      toast.error(error.message || 'Failed to create event');
+      return false;
+    }
+  };
+  
+  const createNotification = async (userId: string, type: string, content: string, link: string) => {
+    try {
+      const { error } = await supabase
+        .from('notifications')
+        .insert([
+          { user_id: userId, type, content, link }
+        ]);
+      
+      if (error) throw error;
+    } catch (error) {
+      console.error('Error creating notification:', error);
     }
   };
   
@@ -147,7 +229,14 @@ const CalendarPage: React.FC = () => {
       daysWithEvents.add(format(parseISO(event.start_time), 'yyyy-MM-dd'));
     });
     
-    // Add task due dates
+    // Add task start dates
+    tasks.forEach(task => {
+      if (task.start_date) {
+        daysWithEvents.add(format(parseISO(task.start_date), 'yyyy-MM-dd'));
+      }
+    });
+    
+    // Add task end dates
     tasks.forEach(task => {
       if (task.end_date) {
         daysWithEvents.add(format(parseISO(task.end_date), 'yyyy-MM-dd'));
@@ -167,7 +256,7 @@ const CalendarPage: React.FC = () => {
       const startDate = parseISO(event.start_time);
       if (isAfter(startDate, now)) {
         upcomingItems.push({
-          id: event.id,
+          id: `event-${event.id}`,
           title: event.title,
           description: event.description,
           start_time: event.start_time,
@@ -178,17 +267,37 @@ const CalendarPage: React.FC = () => {
       }
     });
     
-    // Add upcoming tasks
+    // Add upcoming task start dates
+    tasks.forEach(task => {
+      if (task.start_date) {
+        const startDate = parseISO(task.start_date);
+        if (isAfter(startDate, now)) {
+          upcomingItems.push({
+            id: `task-start-${task.id}`,
+            title: `${task.title} (Start)`,
+            description: task.description,
+            start_time: task.start_date,
+            isTask: true,
+            isTaskStart: true,
+            status: task.status,
+            taskId: task.id
+          });
+        }
+      }
+    });
+    
+    // Add upcoming task end dates
     tasks.forEach(task => {
       if (task.end_date) {
         const endDate = parseISO(task.end_date);
         if (isAfter(endDate, now)) {
           upcomingItems.push({
-            id: task.id,
-            title: task.title,
+            id: `task-end-${task.id}`,
+            title: `${task.title} (End)`,
             description: task.description,
             start_time: task.end_date,
             isTask: true,
+            isTaskEnd: true,
             status: task.status,
             taskId: task.id
           });
@@ -200,6 +309,10 @@ const CalendarPage: React.FC = () => {
     return upcomingItems.sort((a, b) => 
       parseISO(a.start_time).getTime() - parseISO(b.start_time).getTime()
     ).slice(0, 5); // Limit to 5 items
+  };
+  
+  const handleMonthNameClick = () => {
+    setMonthNameClicked(true);
   };
   
   return (
@@ -232,11 +345,17 @@ const CalendarPage: React.FC = () => {
           <CardContent>
             <div className="flex flex-col lg:flex-row gap-6">
               <div className="flex-1">
+                <div 
+                  className="text-lg font-medium mb-2 text-center cursor-pointer hover:underline" 
+                  onClick={handleMonthNameClick}
+                >
+                  {monthName}
+                </div>
                 <Calendar
                   mode="single"
                   selected={selectedDate}
                   onSelect={handleDateSelect}
-                  className="rounded-md border"
+                  className="rounded-md border pointer-events-auto"
                   modifiers={{
                     eventDay: (date) => 
                       getDaysWithEvents().has(format(date, 'yyyy-MM-dd')),
@@ -252,7 +371,9 @@ const CalendarPage: React.FC = () => {
               <div className="flex-1">
                 <div className="mb-4">
                   <h3 className="text-lg font-medium">
-                    {selectedItem ? "Item Details" : `Calendar Items for ${format(selectedDate, 'MMMM yyyy')}`}
+                    {selectedItem ? "Item Details" : monthNameClicked 
+                      ? `All Items for ${monthName}` 
+                      : `Calendar Items for ${format(selectedDate, 'PPP')}`}
                   </h3>
                 </div>
                 
@@ -262,11 +383,21 @@ const CalendarPage: React.FC = () => {
                       <div className="space-y-2">
                         <h4 className="font-medium text-lg">{selectedItem.title}</h4>
                         {selectedItem.isTask && (
-                          <StatusBadge status={selectedItem.status as TaskStatus || 'notstarted'} />
+                          <StatusBadge status={selectedItem.status as Status || 'notstarted'} />
                         )}
                         {selectedItem.isMeeting && (
                           <div className="inline-flex items-center px-2 py-1 rounded-full text-xs font-medium bg-blue-100 text-blue-800">
                             Meeting
+                          </div>
+                        )}
+                        {selectedItem.isTaskStart && (
+                          <div className="inline-flex items-center px-2 py-1 rounded-full text-xs font-medium bg-yellow-100 text-yellow-800">
+                            Starting Date
+                          </div>
+                        )}
+                        {selectedItem.isTaskEnd && (
+                          <div className="inline-flex items-center px-2 py-1 rounded-full text-xs font-medium bg-purple-100 text-purple-800">
+                            Ending Date
                           </div>
                         )}
                       </div>
@@ -310,13 +441,16 @@ const CalendarPage: React.FC = () => {
                       {dayEvents.map(item => (
                         <div 
                           key={item.id} 
-                          className="p-3 border rounded-md cursor-pointer hover:border-primary"
+                          className={`p-3 border rounded-md cursor-pointer hover:border-primary ${
+                            item.isTaskStart ? 'border-yellow-300 border-l-4' : 
+                            item.isTaskEnd ? 'border-purple-400 border-l-4' : ''
+                          }`}
                           onClick={() => setSelectedItem(item)}
                         >
                           <div className="flex justify-between">
                             <div className="font-medium">{item.title}</div>
                             {item.isTask ? (
-                              <StatusBadge status={item.status as TaskStatus || 'notstarted'} />
+                              <StatusBadge status={item.status as Status || 'notstarted'} />
                             ) : (
                               <div className="text-xs px-2 py-1 rounded-full bg-blue-100 text-blue-800">
                                 {item.isMeeting ? 'Meeting' : 'Event'}
@@ -336,7 +470,7 @@ const CalendarPage: React.FC = () => {
                         No items scheduled for {format(selectedDate, 'PPP')}
                       </p>
                       <p className="text-sm mt-2">
-                        Select a day with events to view details
+                        Select a day with events or click on the month name to view all events
                       </p>
                     </div>
                   ) : (
@@ -371,13 +505,23 @@ const CalendarPage: React.FC = () => {
                         <div className="flex justify-between">
                           <span className="font-medium">{item.title}</span>
                           {item.isTask ? (
-                            <StatusBadge status={item.status as TaskStatus || 'notstarted'} />
+                            <StatusBadge status={item.status as Status || 'notstarted'} />
                           ) : (
                             <span className="text-xs px-2 py-1 rounded-full bg-blue-100 text-blue-800">
                               {item.isMeeting ? 'Meeting' : 'Event'}
                             </span>
                           )}
                         </div>
+                        {item.isTaskStart && (
+                          <div className="inline-flex items-center px-2 py-1 rounded-full text-xs font-medium bg-yellow-100 text-yellow-800">
+                            Starting Date
+                          </div>
+                        )}
+                        {item.isTaskEnd && (
+                          <div className="inline-flex items-center px-2 py-1 rounded-full text-xs font-medium bg-purple-100 text-purple-800">
+                            Ending Date
+                          </div>
+                        )}
                         <div className="text-sm text-muted-foreground">
                           {format(parseISO(item.start_time), 'PPP')}
                         </div>
@@ -409,12 +553,12 @@ const CalendarPage: React.FC = () => {
       </div>
       
       <Dialog open={dialogOpen} onOpenChange={setDialogOpen}>
-        <DialogContent className="sm:max-w-[550px] max-h-[85vh] overflow-hidden">
+        <DialogContent className="sm:max-w-[550px] max-h-[85vh] overflow-visible">
           <DialogHeader>
             <DialogTitle>Add New Event</DialogTitle>
           </DialogHeader>
-          <ScrollArea className="max-h-[calc(85vh-120px)]">
-            <EventForm onSuccess={handleCreateSuccess} />
+          <ScrollArea className="max-h-[calc(85vh-120px)] overflow-y-auto">
+            <EventForm onSuccess={handleCreateEvent} />
           </ScrollArea>
         </DialogContent>
       </Dialog>

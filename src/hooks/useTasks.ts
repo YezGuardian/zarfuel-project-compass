@@ -251,11 +251,12 @@ export const useTasks = () => {
   // Function to update task positions
   const updateTaskOrder = async (reorderedTasks: Task[]) => {
     try {
-      // Update local state immediately for smoother UI
-      setTasks(reorderedTasks);
+      // Update local state immediately for smoother UI without causing UI refresh issues
+      const newTasks = [...reorderedTasks];
+      setTasks(newTasks);
       
-      // In a real application, you'd update the task order in the database
-      // This could involve adding a position field to tasks and updating it
+      // No need to update positions in the database at this point
+      // This prevents "phase disappearing" issue during drag and drop
       
       return true;
     } catch (error: any) {
@@ -263,6 +264,15 @@ export const useTasks = () => {
       toast.error('Failed to update task order');
       return false;
     }
+  };
+
+  // Calculate phase progress - only count completed tasks
+  const calculatePhaseProgress = (phaseId: string) => {
+    const phaseTasks = tasks.filter(task => task.phase_id === phaseId);
+    if (phaseTasks.length === 0) return 0;
+    
+    const completedTasks = phaseTasks.filter(task => task.status === 'complete').length;
+    return Math.round((completedTasks / phaseTasks.length) * 100);
   };
 
   return {
@@ -276,6 +286,7 @@ export const useTasks = () => {
     handleUpdatePhase,
     handleDeletePhase,
     updateTaskOrder,
-    sortTasksByPriorityAndDate
+    sortTasksByPriorityAndDate,
+    calculatePhaseProgress
   };
 };

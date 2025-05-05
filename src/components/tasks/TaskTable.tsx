@@ -1,5 +1,5 @@
 
-import React from 'react';
+import React, { useRef, useEffect } from 'react';
 import { Task } from '@/types';
 import TaskStatusBadge from '@/components/tasks/TaskStatusBadge';
 import { MoreHorizontal, Edit, Trash2, Eye } from 'lucide-react';
@@ -45,6 +45,8 @@ const TaskTable: React.FC<TaskTableProps> = ({
 }) => {
   const [viewTask, setViewTask] = React.useState<Task | null>(null);
   const [detailsOpen, setDetailsOpen] = React.useState(false);
+  const [isDragging, setIsDragging] = React.useState(false);
+  const tableRef = useRef<HTMLTableElement>(null);
   
   const handleViewTask = (task: Task) => {
     setViewTask(task);
@@ -52,6 +54,8 @@ const TaskTable: React.FC<TaskTableProps> = ({
   };
   
   const handleDragEnd = (result: any) => {
+    setIsDragging(false);
+    
     // Dropped outside the list
     if (!result.destination || !onTaskOrderChange) {
       return;
@@ -61,7 +65,14 @@ const TaskTable: React.FC<TaskTableProps> = ({
     const [reorderedItem] = items.splice(result.source.index, 1);
     items.splice(result.destination.index, 0, reorderedItem);
 
-    onTaskOrderChange(items);
+    // Use a timeout to prevent UI freeze
+    setTimeout(() => {
+      onTaskOrderChange(items);
+    }, 0);
+  };
+
+  const handleDragStart = () => {
+    setIsDragging(true);
   };
   
   return (
@@ -74,13 +85,19 @@ const TaskTable: React.FC<TaskTableProps> = ({
           </CardDescription>
         </CardHeader>
         <CardContent>
-          <DragDropContext onDragEnd={handleDragEnd}>
+          <DragDropContext onDragEnd={handleDragEnd} onDragStart={handleDragStart}>
             <div className="overflow-x-auto">
               <Droppable droppableId="tasks-table" type="task">
                 {(provided) => (
                   <table 
                     className="w-full border-collapse"
-                    ref={provided.innerRef}
+                    ref={(node) => {
+                      // This ensures both refs are set properly
+                      provided.innerRef(node);
+                      if (tableRef.current !== node) {
+                        tableRef.current = node as HTMLTableElement;
+                      }
+                    }}
                     {...provided.droppableProps}
                   >
                     <thead>
@@ -104,7 +121,7 @@ const TaskTable: React.FC<TaskTableProps> = ({
                             {(provided, snapshot) => (
                               <tr 
                                 key={task.id} 
-                                className="border-b last:border-0 hover:bg-primary/10 cursor-pointer transition-colors"
+                                className="border-b last:border-0 hover:bg-zarfuel-blue/10 cursor-pointer transition-colors"
                                 onClick={() => handleViewTask(task)}
                                 ref={provided.innerRef}
                                 {...provided.draggableProps}
@@ -121,7 +138,7 @@ const TaskTable: React.FC<TaskTableProps> = ({
                                   {task.description || 'N/A'}
                                 </td>
                                 <td className="px-4 py-3 text-sm">
-                                  {task.start_date || task.end_date ? (
+                                  {(task.start_date || task.end_date) ? (
                                     <>
                                       {task.start_date ? new Date(task.start_date).toLocaleDateString() : 'N/A'} - 
                                       {task.end_date ? new Date(task.end_date).toLocaleDateString() : 'N/A'}

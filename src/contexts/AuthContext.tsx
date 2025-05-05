@@ -10,7 +10,7 @@ type Profile = {
   email: string;
   first_name: string;
   last_name: string;
-  role: 'admin' | 'viewer' | 'special';
+  role: 'admin' | 'viewer' | 'special' | 'superadmin';
   organization?: string;
   position?: string;
   phone?: string;
@@ -156,7 +156,8 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     
     return (
       profile.email?.toLowerCase() === 'yezreel@whitepaperconcepts.co.za' ||
-      (profile.first_name === 'Yezreel' && profile.last_name === 'Shirinda')
+      (profile.first_name === 'Yezreel' && profile.last_name === 'Shirinda') ||
+      profile.role === 'superadmin'
     );
   };
 

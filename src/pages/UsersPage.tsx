@@ -66,7 +66,7 @@ const UsersPage: React.FC = () => {
             </Dialog>
           </div>
           <TabsContent value="users" className="space-y-4">
-            <UsersList isSuperAdmin={isSuperAdmin()} />
+            <UsersList />
           </TabsContent>
           <TabsContent value="invitations" className="space-y-4">
             <InvitationsList />

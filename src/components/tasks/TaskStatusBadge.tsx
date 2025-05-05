@@ -1,48 +1,59 @@
 
 import React from 'react';
-import { Badge } from '@/components/ui/badge';
 import { Status } from '@/types';
+import { Badge } from '@/components/ui/badge';
 import { cn } from '@/lib/utils';
 
 interface TaskStatusBadgeProps {
   status: Status;
-  showLabel?: boolean;
-  className?: string;
+  size?: 'sm' | 'default' | 'lg';
 }
 
-const TaskStatusBadge: React.FC<TaskStatusBadgeProps> = ({ 
-  status, 
-  showLabel = true,
-  className
-}) => {
-  // Updated color scheme to match the Overview Page
-  const statusConfig = {
-    complete: {
-      label: 'Complete',
-      color: 'bg-green-500 text-white', // Green for completed tasks
-    },
-    ongoing: {
-      label: 'Ongoing',
-      color: 'bg-blue-500 text-white', // Blue for ongoing tasks
-    },
-    inprogress: {
-      label: 'In Progress',
-      color: 'bg-orange-500 text-white', // Orange for in progress tasks
-    },
-    notstarted: {
-      label: 'Not Started',
-      color: 'bg-red-500 text-white', // Red for not started tasks
+const TaskStatusBadge: React.FC<TaskStatusBadgeProps> = ({ status, size = 'default' }) => {
+  const getStatusConfig = (status: Status) => {
+    switch (status) {
+      case 'complete':
+        return {
+          label: 'Completed',
+          className: 'bg-green-500 hover:bg-green-600 text-white',
+        };
+      case 'ongoing':
+        return {
+          label: 'Ongoing',
+          className: 'bg-blue-500 hover:bg-blue-600 text-white',
+        };
+      case 'inprogress':
+        return {
+          label: 'In Progress',
+          className: 'bg-orange-500 hover:bg-orange-600 text-white',
+        };
+      case 'notstarted':
+        return {
+          label: 'Not Started',
+          className: 'bg-red-500 hover:bg-red-600 text-white',
+        };
+      default:
+        return {
+          label: status.replace(/_/g, ' '),
+          className: 'bg-gray-500 hover:bg-gray-600 text-white',
+        };
     }
   };
 
-  const config = statusConfig[status] || {
-    label: status.replace('_', ' ').charAt(0).toUpperCase() + status.replace('_', ' ').slice(1),
-    color: 'bg-gray-500 text-white',
+  const { label, className } = getStatusConfig(status);
+
+  const sizeClasses = {
+    sm: 'px-2 py-0.5 text-xs',
+    default: 'px-2.5 py-0.5 text-xs',
+    lg: 'px-3 py-1 text-sm',
   };
 
   return (
-    <Badge className={cn(config.color, className)}>
-      {showLabel ? config.label : ''}
+    <Badge
+      variant="outline"
+      className={cn(className, sizeClasses[size])}
+    >
+      {label}
     </Badge>
   );
 };

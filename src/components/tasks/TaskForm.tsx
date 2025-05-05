@@ -212,6 +212,27 @@ const TaskForm: React.FC<TaskFormProps> = ({
           )}
         />
         
+        <FormField
+          control={form.control}
+          name="duration"
+          render={({ field }) => (
+            <FormItem>
+              <FormLabel>Duration</FormLabel>
+              <FormControl>
+                <Input 
+                  placeholder="e.g., 2 weeks, 3 days, etc." 
+                  {...field} 
+                  disabled={isSubmitting} 
+                />
+              </FormControl>
+              <FormMessage />
+              <p className="text-xs text-muted-foreground mt-1">
+                This will be displayed if no start/end dates are provided
+              </p>
+            </FormItem>
+          )}
+        />
+
         <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
           <FormField
             control={form.control}
@@ -239,27 +260,6 @@ const TaskForm: React.FC<TaskFormProps> = ({
             )}
           />
         </div>
-        
-        <FormField
-          control={form.control}
-          name="duration"
-          render={({ field }) => (
-            <FormItem>
-              <FormLabel>Duration</FormLabel>
-              <FormControl>
-                <Input 
-                  placeholder="e.g., 2 weeks, 3 days, etc." 
-                  {...field} 
-                  disabled={isSubmitting} 
-                />
-              </FormControl>
-              <FormMessage />
-              <p className="text-xs text-muted-foreground mt-1">
-                This will be displayed if no start/end dates are provided
-              </p>
-            </FormItem>
-          )}
-        />
         
         <FormField
           control={form.control}

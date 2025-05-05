@@ -5,8 +5,9 @@ import { Card, CardContent } from '@/components/ui/card';
 import { PhaseHeader } from './PhaseHeader';
 import PhaseProgress from './PhaseProgress';
 import TaskTable from './TaskTable';
-import EditPhaseDialog from '@/components/tasks/EditPhaseDialog';
-import DeletePhaseDialog from '@/components/tasks/DeletePhaseDialog';
+import EditPhaseDialog from './EditPhaseDialog';
+import DeletePhaseDialog from './DeletePhaseDialog';
+import { Dialog, DialogContent } from '@/components/ui/dialog';
 
 interface PhasesContainerProps {
   phases: Phase[];
@@ -93,30 +94,36 @@ const PhasesContainer: React.FC<PhasesContainerProps> = ({
         );
       })}
 
+      {/* Edit Phase Dialog */}
       {editPhase && (
-        <EditPhaseDialog
-          phase={editPhase}
-          onSubmit={(name) => {
-            // Handle edit phase logic here
-            handlePhaseSuccess();
-            setEditPhaseDialogOpen(false);
-          }}
-          open={editPhaseDialogOpen}
-          onOpenChange={setEditPhaseDialogOpen}
-        />
+        <Dialog open={editPhaseDialogOpen} onOpenChange={setEditPhaseDialogOpen}>
+          <DialogContent>
+            <EditPhaseDialog
+              phase={editPhase}
+              onSubmit={(name) => {
+                // Handle edit phase logic here
+                handlePhaseSuccess();
+                setEditPhaseDialogOpen(false);
+              }}
+            />
+          </DialogContent>
+        </Dialog>
       )}
 
+      {/* Delete Phase Dialog */}
       {deletePhase && (
-        <DeletePhaseDialog
-          phase={deletePhase}
-          onSubmit={() => {
-            // Handle delete phase logic here
-            handlePhaseSuccess();
-            setDeletePhaseDialogOpen(false);
-          }}
-          open={deletePhaseDialogOpen}
-          onOpenChange={setDeletePhaseDialogOpen}
-        />
+        <Dialog open={deletePhaseDialogOpen} onOpenChange={setDeletePhaseDialogOpen}>
+          <DialogContent>
+            <DeletePhaseDialog
+              phase={deletePhase}
+              onSubmit={() => {
+                // Handle delete phase logic here
+                handlePhaseSuccess();
+                setDeletePhaseDialogOpen(false);
+              }}
+            />
+          </DialogContent>
+        </Dialog>
       )}
     </div>
   );

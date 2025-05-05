@@ -1,11 +1,121 @@
 
 project_id = "auswnhnpeetphmlqtecs"
+
 [api]
 enabled = true
-[functions]
+port = 54321
+schemas = ["public", "storage", "graphql_public"]
+
+[db]
+port = 54322
+shadow_port = 54320
+major_version = 15
+
+[db.pooler]
+enabled = false
+port = 54329
+pool_mode = "transaction"
+default_pool_size = 15
+max_client_conn = 100
+
 [realtime]
 enabled = true
-[db]
-major_version = 15
+
+[studio]
+enabled = true
+port = 54323
+api_url = "http://127.0.0.1"
+
+[inbucket]
+enabled = true
+port = 54324
+
 [storage]
+enabled = true
+file_size_limit = "50MiB"
+
 [auth]
+enabled = true
+
+[auth.email]
+enabled = true
+double_confirm_changes = true
+enable_confirmations = true
+
+[auth.sms]
+enabled = true
+
+[auth.external.apple]
+enabled = false
+
+[auth.external.azure]
+enabled = false
+
+[auth.external.bitbucket]
+enabled = false
+
+[auth.external.discord]
+enabled = false
+
+[auth.external.facebook]
+enabled = false
+
+[auth.external.github]
+enabled = false
+
+[auth.external.gitlab]
+enabled = false
+
+[auth.external.google]
+enabled = false
+
+[auth.external.keycloak]
+enabled = false
+
+[auth.external.linkedin]
+enabled = false
+
+[auth.external.linkedin_oidc]
+enabled = false
+
+[auth.external.notion]
+enabled = false
+
+[auth.external.slack]
+enabled = false
+
+[auth.external.spotify]
+enabled = false
+
+[auth.external.twitch]
+enabled = false
+
+[auth.external.twitter]
+enabled = false
+
+[auth.external.workos]
+enabled = false
+
+[auth.external.zoom]
+enabled = false
+
+[analytics]
+enabled = false
+port = 54327
+
+[experimental]
+enable_management_api = true
+
+[functions]
+port = 54328
+function_timeout_seconds = 15
+
+[functions.create-notification]
+verify_jwt = false
+
+[vector]
+enabled = false
+port = 54325
+
+[edge_functions]
+enabled = true

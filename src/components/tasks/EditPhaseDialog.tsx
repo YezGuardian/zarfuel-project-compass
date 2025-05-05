@@ -1,91 +1,76 @@
-import React, { useState } from 'react';
+
+import React from 'react';
+import { Phase } from '@/types';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
-import { Label } from '@/components/ui/label';
-import { Loader2 } from 'lucide-react';
 import {
-  DialogContent,
   DialogHeader,
   DialogTitle,
   DialogDescription,
   DialogFooter,
 } from '@/components/ui/dialog';
-import { Phase } from '@/types';
-import { ScrollArea } from '@/components/ui/scroll-area';
+import { zodResolver } from '@hookform/resolvers/zod';
+import { useForm } from 'react-hook-form';
+import * as z from 'zod';
+import {
+  Form,
+  FormControl,
+  FormField,
+  FormItem,
+  FormLabel,
+  FormMessage,
+} from '@/components/ui/form';
 
-export interface EditPhaseDialogProps {
+const formSchema = z.object({
+  name: z.string().min(2, 'Phase name must be at least 2 characters'),
+});
+
+interface EditPhaseDialogProps {
   phase: Phase;
   onSubmit: (name: string) => void;
-  open: boolean;
-  onOpenChange: (open: boolean) => void;
 }
 
-const EditPhaseDialog = ({
-  phase,
-  onSubmit,
-  open,
-  onOpenChange
-}: EditPhaseDialogProps) => {
-  const [name, setName] = useState(phase.name);
-  const [isSubmitting, setIsSubmitting] = useState(false);
+const EditPhaseDialog: React.FC<EditPhaseDialogProps> = ({ phase, onSubmit }) => {
+  const form = useForm<z.infer<typeof formSchema>>({
+    resolver: zodResolver(formSchema),
+    defaultValues: {
+      name: phase.name,
+    },
+  });
 
-  const handleSubmit = async (e: React.FormEvent) => {
-    e.preventDefault();
-    if (!name.trim()) return;
-
-    setIsSubmitting(true);
-    try {
-      await onSubmit(name.trim());
-    } finally {
-      setIsSubmitting(false);
-    }
+  const handleSubmit = (values: z.infer<typeof formSchema>) => {
+    onSubmit(values.name);
   };
 
   return (
-    <DialogContent className="sm:max-w-[425px]">
-      <ScrollArea className="max-h-[80vh]">
-        <DialogHeader>
-          <DialogTitle>Edit Phase</DialogTitle>
-          <DialogDescription>
-            Update the phase name. The phase position will remain the same.
-          </DialogDescription>
-        </DialogHeader>
-
-        <form onSubmit={handleSubmit} className="space-y-4 py-4">
-          <div className="space-y-2">
-            <Label htmlFor="phase-name">Phase Name</Label>
-            <Input
-              id="phase-name"
-              placeholder="Enter phase name"
-              value={name}
-              onChange={(e) => setName(e.target.value)}
-              disabled={isSubmitting}
-            />
-          </div>
-
-          <DialogFooter>
-            <Button
-              type="button"
-              variant="outline"
-              onClick={() => onOpenChange(false)}
-              disabled={isSubmitting}
-            >
-              Cancel
-            </Button>
-            <Button type="submit" disabled={isSubmitting || !name.trim()}>
-              {isSubmitting ? (
-                <>
-                  <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                  Updating...
-                </>
-              ) : (
-                'Update Phase'
-              )}
-            </Button>
+    <>
+      <DialogHeader>
+        <DialogTitle>Edit Phase</DialogTitle>
+        <DialogDescription>
+          Update the name of this phase
+        </DialogDescription>
+      </DialogHeader>
+      <Form {...form}>
+        <form onSubmit={form.handleSubmit(handleSubmit)} className="space-y-4 pt-4">
+          <FormField
+            control={form.control}
+            name="name"
+            render={({ field }) => (
+              <FormItem>
+                <FormLabel>Phase Name</FormLabel>
+                <FormControl>
+                  <Input placeholder="Enter phase name" {...field} />
+                </FormControl>
+                <FormMessage />
+              </FormItem>
+            )}
+          />
+          <DialogFooter className="pt-4">
+            <Button type="submit">Save Changes</Button>
           </DialogFooter>
         </form>
-      </ScrollArea>
-    </DialogContent>
+      </Form>
+    </>
   );
 };
 

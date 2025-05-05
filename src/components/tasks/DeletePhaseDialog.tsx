@@ -1,75 +1,34 @@
 
-import React, { useState } from 'react';
+import React from 'react';
+import { Phase } from '@/types';
 import { Button } from '@/components/ui/button';
-import { Loader2 } from 'lucide-react';
 import {
-  DialogContent,
-  DialogDescription,
-  DialogFooter,
   DialogHeader,
   DialogTitle,
+  DialogDescription,
+  DialogFooter,
 } from '@/components/ui/dialog';
-import { Phase } from '@/types';
 
-export interface DeletePhaseDialogProps {
+interface DeletePhaseDialogProps {
   phase: Phase;
   onSubmit: () => void;
-  open: boolean;
-  onOpenChange: (open: boolean) => void;
 }
 
-const DeletePhaseDialog = ({
-  phase,
-  onSubmit,
-  open,
-  onOpenChange
-}: DeletePhaseDialogProps) => {
-  const [isSubmitting, setIsSubmitting] = useState(false);
-
-  const handleSubmit = async () => {
-    if (isSubmitting) return;
-    
-    setIsSubmitting(true);
-    try {
-      await onSubmit();
-    } finally {
-      setIsSubmitting(false);
-    }
-  };
-
+const DeletePhaseDialog: React.FC<DeletePhaseDialogProps> = ({ phase, onSubmit }) => {
   return (
-    <DialogContent className="sm:max-w-[425px]">
+    <>
       <DialogHeader>
         <DialogTitle>Delete Phase</DialogTitle>
         <DialogDescription>
-          Are you sure you want to delete the phase <strong>{phase.name}</strong>? This action cannot be undone.
+          Are you sure you want to delete the phase "{phase.name}"? This action cannot be undone.
         </DialogDescription>
       </DialogHeader>
-
-      <DialogFooter className="mt-4">
-        <Button
-          variant="outline"
-          onClick={() => onOpenChange(false)}
-          disabled={isSubmitting}
-        >
-          Cancel
-        </Button>
-        <Button
-          variant="destructive"
-          onClick={handleSubmit}
-          disabled={isSubmitting}
-        >
-          {isSubmitting ? (
-            <>
-              <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-              Deleting...
-            </>
-          ) : (
-            'Delete Phase'
-          )}
+      <DialogFooter className="pt-4">
+        <Button variant="destructive" onClick={onSubmit}>
+          Delete Phase
         </Button>
       </DialogFooter>
-    </DialogContent>
+    </>
   );
 };
 
