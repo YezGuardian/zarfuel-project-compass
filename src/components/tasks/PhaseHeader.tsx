@@ -9,8 +9,8 @@ import {
   DropdownMenuItem,
   DropdownMenuTrigger
 } from '@/components/ui/dropdown-menu';
-import { EditPhaseDialog } from './EditPhaseDialog';
-import { DeletePhaseDialog } from './DeletePhaseDialog';
+import EditPhaseDialog from './EditPhaseDialog';
+import DeletePhaseDialog from './DeletePhaseDialog';
 
 interface PhaseHeaderProps {
   phase: Phase;

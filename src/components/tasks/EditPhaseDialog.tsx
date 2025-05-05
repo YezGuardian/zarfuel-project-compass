@@ -14,17 +14,19 @@ import {
 import { Phase } from '@/types';
 import { ScrollArea } from '@/components/ui/scroll-area';
 
-interface EditPhaseDialogProps {
+export interface EditPhaseDialogProps {
   phase: Phase;
-  onSave: (name: string) => Promise<boolean>;
-  onCancel: () => void;
+  onSubmit: (name: string) => void;
+  open: boolean;
+  onOpenChange: (open: boolean) => void;
 }
 
-const EditPhaseDialog: React.FC<EditPhaseDialogProps> = ({
+const EditPhaseDialog = ({
   phase,
-  onSave,
-  onCancel,
-}) => {
+  onSubmit,
+  open,
+  onOpenChange
+}: EditPhaseDialogProps) => {
   const [name, setName] = useState(phase.name);
   const [isSubmitting, setIsSubmitting] = useState(false);
 
@@ -34,7 +36,7 @@ const EditPhaseDialog: React.FC<EditPhaseDialogProps> = ({
 
     setIsSubmitting(true);
     try {
-      await onSave(name.trim());
+      await onSubmit(name.trim());
     } finally {
       setIsSubmitting(false);
     }
@@ -66,7 +68,7 @@ const EditPhaseDialog: React.FC<EditPhaseDialogProps> = ({
             <Button
               type="button"
               variant="outline"
-              onClick={onCancel}
+              onClick={() => onOpenChange(false)}
               disabled={isSubmitting}
             >
               Cancel

@@ -4,30 +4,34 @@ import { Button } from '@/components/ui/button';
 import { Loader2 } from 'lucide-react';
 import {
   DialogContent,
-  DialogHeader,
-  DialogTitle,
   DialogDescription,
   DialogFooter,
+  DialogHeader,
+  DialogTitle,
 } from '@/components/ui/dialog';
 import { Phase } from '@/types';
 
-interface DeletePhaseDialogProps {
+export interface DeletePhaseDialogProps {
   phase: Phase;
-  onDelete: () => Promise<boolean>;
-  onCancel: () => void;
+  onSubmit: () => void;
+  open: boolean;
+  onOpenChange: (open: boolean) => void;
 }
 
-const DeletePhaseDialog: React.FC<DeletePhaseDialogProps> = ({
+const DeletePhaseDialog = ({
   phase,
-  onDelete,
-  onCancel,
-}) => {
+  onSubmit,
+  open,
+  onOpenChange
+}: DeletePhaseDialogProps) => {
   const [isSubmitting, setIsSubmitting] = useState(false);
 
-  const handleDelete = async () => {
+  const handleSubmit = async () => {
+    if (isSubmitting) return;
+    
     setIsSubmitting(true);
     try {
-      await onDelete();
+      await onSubmit();
     } finally {
       setIsSubmitting(false);
     }
@@ -38,23 +42,21 @@ const DeletePhaseDialog: React.FC<DeletePhaseDialogProps> = ({
       <DialogHeader>
         <DialogTitle>Delete Phase</DialogTitle>
         <DialogDescription>
-          Are you sure you want to delete the phase "{phase.name}"? This action cannot be undone.
-          Note that you cannot delete a phase that has tasks assigned to it.
+          Are you sure you want to delete the phase <strong>{phase.name}</strong>? This action cannot be undone.
         </DialogDescription>
       </DialogHeader>
 
       <DialogFooter className="mt-4">
         <Button
-          type="button"
           variant="outline"
-          onClick={onCancel}
+          onClick={() => onOpenChange(false)}
           disabled={isSubmitting}
         >
           Cancel
         </Button>
-        <Button 
-          variant="destructive" 
-          onClick={handleDelete}
+        <Button
+          variant="destructive"
+          onClick={handleSubmit}
           disabled={isSubmitting}
         >
           {isSubmitting ? (

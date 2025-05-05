@@ -5,8 +5,6 @@ import { Card, CardContent } from '@/components/ui/card';
 import { PhaseHeader } from './PhaseHeader';
 import PhaseProgress from './PhaseProgress';
 import TaskTable from './TaskTable';
-import EditPhaseDialog from './EditPhaseDialog';
-import DeletePhaseDialog from './DeletePhaseDialog';
 
 interface PhasesContainerProps {
   phases: Phase[];
