@@ -1,3 +1,4 @@
+
 import React, { useState, useEffect } from 'react';
 import { 
   Card, 
@@ -77,11 +78,14 @@ const DocumentsPage: React.FC = () => {
         }
         
         // Ensure uploader is properly typed
-        const uploader = doc.uploader && typeof doc.uploader !== 'string' && !doc.uploader.error ? {
-          first_name: doc.uploader.first_name || '',
-          last_name: doc.uploader.last_name || '',
-          email: doc.uploader.email
-        } : null;
+        let uploader = null;
+        if (doc.uploader && typeof doc.uploader === 'object' && !('error' in doc.uploader)) {
+          uploader = {
+            first_name: doc.uploader.first_name || '',
+            last_name: doc.uploader.last_name || '',
+            email: doc.uploader.email
+          };
+        }
         
         return {
           id: doc.id,

@@ -9,10 +9,10 @@ export interface Document {
   created_at: string;
   uploaded_by: string | null;
   folder_id?: string;
-  downloaded_by: any[] | null; // Added to fix type errors
+  downloaded_by: any[] | null; // Ensures downloaded_by is always an array or null
   uploader?: {
-    first_name: string;
-    last_name: string;
+    first_name: string | null;
+    last_name: string | null;
     email: string;
   } | null;
 }
