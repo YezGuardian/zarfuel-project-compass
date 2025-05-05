@@ -1,3 +1,4 @@
+
 import React, { useEffect, useState } from 'react';
 import { 
   Card, 
@@ -96,7 +97,7 @@ const UsersList: React.FC<UsersListProps> = ({ isSuperAdmin }) => {
         if (user.inviter) {
           // Then check if it's an object with an error property
           if (typeof user.inviter === 'object' && !('error' in user.inviter)) {
-            // We have valid inviter data
+            // We have valid inviter data - use type assertion to help TypeScript
             const inviterObj = user.inviter as Record<string, any>;
             formattedInviter = {
               first_name: inviterObj.first_name || null,
