@@ -104,7 +104,7 @@ const TaskTable: React.FC<TaskTableProps> = ({
                             {(provided, snapshot) => (
                               <tr 
                                 key={task.id} 
-                                className={`border-b last:border-0 hover:bg-zarfuel-blue/10 cursor-pointer transition-colors ${snapshot.isDragging ? 'bg-zarfuel-blue/10' : ''}`}
+                                className="border-b last:border-0 hover:bg-primary/10 cursor-pointer transition-colors"
                                 onClick={() => handleViewTask(task)}
                                 ref={provided.innerRef}
                                 {...provided.draggableProps}

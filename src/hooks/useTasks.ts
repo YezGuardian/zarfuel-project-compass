@@ -80,7 +80,7 @@ export const useTasks = () => {
   // Sort tasks by status priority and end date
   const sortTasksByPriorityAndDate = (tasks: Task[]) => {
     return [...tasks].sort((a, b) => {
-      // First sort by status priority: notstarted -> inprogress -> ongoing -> complete
+      // Updated status priority: notstarted -> inprogress -> ongoing -> complete
       const statusPriority = {
         'notstarted': 0,
         'inprogress': 1,

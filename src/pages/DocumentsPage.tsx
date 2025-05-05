@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect } from 'react';
 import { 
   Card, 
@@ -153,6 +152,19 @@ const DocumentsPage: React.FC = () => {
       default:
         return <File className="h-8 w-8 text-gray-500" />;
     }
+  };
+  
+  // Fix the TypeScript error for doc.uploader being possibly null
+  const getUploaderText = (doc: Document) => {
+    if (!doc.uploader) {
+      return 'Unknown';
+    }
+    
+    if (doc.uploader.first_name || doc.uploader.last_name) {
+      return `${doc.uploader.first_name || ''} ${doc.uploader.last_name || ''}`.trim();
+    }
+    
+    return doc.uploader.email || 'Unknown';
   };
   
   // Handle download button click
@@ -334,7 +346,7 @@ const DocumentsPage: React.FC = () => {
                       </p>
                       {document.uploader && (
                         <p className="text-xs text-muted-foreground mt-1">
-                          Uploaded by: {document.uploader.first_name || ''} {document.uploader.last_name || ''}
+                          Uploaded by: {getUploaderText(document)}
                         </p>
                       )}
                     </div>
