@@ -1,3 +1,4 @@
+
 import React, { useEffect, useState } from 'react';
 import { 
   Card, 
@@ -39,8 +40,8 @@ import { useAuth } from '@/contexts/AuthContext';
 type UserProfile = {
   id: string;
   email: string;
-  first_name: string;
-  last_name: string;
+  first_name: string | null;
+  last_name: string | null;
   role: string;
   organization: string | null;
   position: string | null;
@@ -52,8 +53,8 @@ type UserProfile = {
   created_at?: string;
   phone?: string | null;
   inviter?: {
-    first_name: string;
-    last_name: string;
+    first_name: string | null;
+    last_name: string | null;
     email: string;
   } | null;
 };
@@ -88,11 +89,23 @@ const UsersList: React.FC<UsersListProps> = ({ isSuperAdmin }) => {
       }
 
       // Transform data to match UserProfile type
-      const transformedData: UserProfile[] = (data || []).map(user => ({
-        ...user,
-        last_sign_in_at: null, // Add the missing property
-        inviter: user.inviter || null // Handle potential null inviter
-      }));
+      const transformedData: UserProfile[] = (data || []).map(user => {
+        // Fix the inviter property by providing a properly shaped object or null
+        let formattedInviter = null;
+        if (user.inviter && typeof user.inviter !== 'string' && !user.inviter.error) {
+          formattedInviter = {
+            first_name: user.inviter.first_name,
+            last_name: user.inviter.last_name,
+            email: user.inviter.email
+          };
+        }
+        
+        return {
+          ...user,
+          last_sign_in_at: null,
+          inviter: formattedInviter
+        };
+      });
 
       setUsers(transformedData);
     } catch (error: any) {

@@ -111,7 +111,7 @@ export type Document = {
   created_at: string;
   uploaded_by?: string;
   folder_id?: string;
-  downloaded_by?: any[] | null; // Added to fix type issues
+  downloaded_by: any[] | null; // Now it's consistently defined as an array
   uploader?: {
     first_name: string;
     last_name: string;

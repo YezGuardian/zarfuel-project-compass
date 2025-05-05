@@ -64,19 +64,39 @@ const DocumentsPage: React.FC = () => {
       if (error) throw error;
       
       // Transform data to match Document type
-      const transformedData: Document[] = (data || []).map(doc => ({
-        id: doc.id,
-        file_name: doc.file_name,
-        file_type: doc.file_type,
-        file_size: doc.file_size,
-        file_path: doc.file_path,
-        category: doc.category,
-        created_at: doc.created_at,
-        uploaded_by: doc.uploaded_by,
-        folder_id: doc.folder_id,
-        downloaded_by: doc.downloaded_by || [],
-        uploader: doc.uploader || null
-      }));
+      const transformedData: Document[] = (data || []).map(doc => {
+        // Ensure downloaded_by is always an array
+        let downloadedBy: any[] = [];
+        if (doc.downloaded_by) {
+          if (Array.isArray(doc.downloaded_by)) {
+            downloadedBy = doc.downloaded_by;
+          } else {
+            // If it's not an array, create a new array with the value (if it's not null)
+            downloadedBy = (doc.downloaded_by !== null) ? [doc.downloaded_by] : [];
+          }
+        }
+        
+        // Ensure uploader is properly typed
+        const uploader = doc.uploader && typeof doc.uploader !== 'string' && !doc.uploader.error ? {
+          first_name: doc.uploader.first_name || '',
+          last_name: doc.uploader.last_name || '',
+          email: doc.uploader.email
+        } : null;
+        
+        return {
+          id: doc.id,
+          file_name: doc.file_name,
+          file_type: doc.file_type,
+          file_size: doc.file_size,
+          file_path: doc.file_path,
+          category: doc.category,
+          created_at: doc.created_at,
+          uploaded_by: doc.uploaded_by,
+          folder_id: doc.folder_id,
+          downloaded_by: downloadedBy,
+          uploader: uploader
+        };
+      });
       
       setDocuments(transformedData);
       
