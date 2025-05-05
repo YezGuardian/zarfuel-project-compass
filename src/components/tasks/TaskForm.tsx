@@ -1,5 +1,5 @@
 
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Textarea } from '@/components/ui/textarea';
@@ -37,12 +37,14 @@ const TaskForm: React.FC<TaskFormProps> = ({
     selectedTeams,
     isSubmitting,
     toggleTeam,
-    onSubmit
+    onSubmit,
+    filterTeamSuggestions,
+    teamSuggestions,
+    setTeamSuggestions
   } = useTaskForm({ initialData, mode, onSuccess });
 
   const [newTeam, setNewTeam] = useState('');
   const [isAddingTeam, setIsAddingTeam] = useState(false);
-  const [filteredTeamSuggestions, setFilteredTeamSuggestions] = useState<string[]>([]);
   
   const handleAddTeam = () => {
     if (newTeam.trim()) {
@@ -50,7 +52,7 @@ const TaskForm: React.FC<TaskFormProps> = ({
       setNewTeam('');
     }
     setIsAddingTeam(false);
-    setFilteredTeamSuggestions([]);
+    setTeamSuggestions([]);
   };
   
   const handleNewTeamChange = (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -59,13 +61,10 @@ const TaskForm: React.FC<TaskFormProps> = ({
     
     // Filter team suggestions based on input
     if (value.trim()) {
-      const suggestions = teams.filter(team => 
-        team.toLowerCase().includes(value.toLowerCase()) && 
-        !selectedTeams.includes(team)
-      );
-      setFilteredTeamSuggestions(suggestions);
+      const suggestions = filterTeamSuggestions(value);
+      setTeamSuggestions(suggestions);
     } else {
-      setFilteredTeamSuggestions([]);
+      setTeamSuggestions([]);
     }
   };
   
@@ -73,7 +72,7 @@ const TaskForm: React.FC<TaskFormProps> = ({
     toggleTeam(team);
     setNewTeam('');
     setIsAddingTeam(false);
-    setFilteredTeamSuggestions([]);
+    setTeamSuggestions([]);
   };
   
   return (
@@ -181,7 +180,7 @@ const TaskForm: React.FC<TaskFormProps> = ({
                         onClick={() => {
                           setIsAddingTeam(false);
                           setNewTeam('');
-                          setFilteredTeamSuggestions([]);
+                          setTeamSuggestions([]);
                         }}
                         disabled={isSubmitting}
                       >
@@ -189,10 +188,10 @@ const TaskForm: React.FC<TaskFormProps> = ({
                       </Button>
                       
                       {/* Team suggestions dropdown */}
-                      {filteredTeamSuggestions.length > 0 && (
+                      {teamSuggestions.length > 0 && (
                         <div className="absolute top-full left-0 z-10 mt-1 w-[150px] bg-white dark:bg-gray-800 shadow-lg rounded-md border overflow-hidden">
                           <div className="max-h-[120px] overflow-y-auto">
-                            {filteredTeamSuggestions.map(team => (
+                            {teamSuggestions.map(team => (
                               <div 
                                 key={team}
                                 className="px-3 py-2 hover:bg-muted cursor-pointer"
@@ -255,6 +254,9 @@ const TaskForm: React.FC<TaskFormProps> = ({
                 />
               </FormControl>
               <FormMessage />
+              <p className="text-xs text-muted-foreground mt-1">
+                This will be displayed if no start/end dates are provided
+              </p>
             </FormItem>
           )}
         />

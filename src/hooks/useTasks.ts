@@ -52,7 +52,9 @@ export const useTasks = () => {
         };
       });
       
-      setTasks(formattedTasks as unknown as Task[]);
+      // Sort tasks by status priority and end date
+      const sortedTasks = sortTasksByPriorityAndDate(formattedTasks);
+      setTasks(sortedTasks);
       
       // Extract unique teams
       const allTeams = new Set<string>();
@@ -74,6 +76,33 @@ export const useTasks = () => {
       setIsLoading(false);
     }
   }, []);
+
+  // Sort tasks by status priority and end date
+  const sortTasksByPriorityAndDate = (tasks: Task[]) => {
+    return [...tasks].sort((a, b) => {
+      // First sort by status priority: notstarted -> inprogress -> ongoing -> complete
+      const statusPriority = {
+        'notstarted': 0,
+        'inprogress': 1,
+        'ongoing': 2,
+        'complete': 3
+      };
+      
+      const statusComparison = 
+        (statusPriority[a.status as keyof typeof statusPriority] || 0) - 
+        (statusPriority[b.status as keyof typeof statusPriority] || 0);
+      
+      if (statusComparison !== 0) return statusComparison;
+      
+      // Then sort by end date (oldest first)
+      if (!a.end_date && !b.end_date) return 0;
+      if (!a.end_date) return 1;
+      if (!b.end_date) return -1;
+      
+      // Sort by end date (oldest first)
+      return new Date(a.end_date).getTime() - new Date(b.end_date).getTime();
+    });
+  };
 
   useEffect(() => {
     fetchData();
@@ -208,11 +237,30 @@ export const useTasks = () => {
         
       if (error) throw error;
       
+      // Update tasks locally to prevent freezing
       setTasks(tasks.filter(t => t.id !== taskId));
+      toast.success('Task deleted successfully');
       return true;
     } catch (error: any) {
       console.error('Error deleting task:', error);
       toast.error('Failed to delete task');
+      return false;
+    }
+  };
+  
+  // Function to update task positions
+  const updateTaskOrder = async (reorderedTasks: Task[]) => {
+    try {
+      // Update local state immediately for smoother UI
+      setTasks(reorderedTasks);
+      
+      // In a real application, you'd update the task order in the database
+      // This could involve adding a position field to tasks and updating it
+      
+      return true;
+    } catch (error: any) {
+      console.error('Error updating task order:', error);
+      toast.error('Failed to update task order');
       return false;
     }
   };
@@ -226,6 +274,8 @@ export const useTasks = () => {
     handleDeleteTask,
     handleCreatePhase,
     handleUpdatePhase,
-    handleDeletePhase
+    handleDeletePhase,
+    updateTaskOrder,
+    sortTasksByPriorityAndDate
   };
 };

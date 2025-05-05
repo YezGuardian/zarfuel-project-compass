@@ -1,5 +1,5 @@
 
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { Button } from '@/components/ui/button';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from '@/components/ui/dialog';
 import { ScrollArea } from '@/components/ui/scroll-area';
@@ -16,6 +16,8 @@ import AddPhaseDialog from '@/components/tasks/AddPhaseDialog';
 import DeleteTaskDialog from '@/components/tasks/DeleteTaskDialog';
 import PhasesContainer from '@/components/tasks/PhasesContainer';
 import { supabase } from '@/integrations/supabase/client';
+import EditPhaseDialog from '@/components/tasks/EditPhaseDialog';
+import DeletePhaseDialog from '@/components/tasks/DeletePhaseDialog';
 
 const TasksPage: React.FC = () => {
   // State for filters
@@ -30,12 +32,16 @@ const TasksPage: React.FC = () => {
   const [addPhaseDialogOpen, setAddPhaseDialogOpen] = useState(false);
   const [editDialogOpen, setEditDialogOpen] = useState(false);
   const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
+  const [editPhaseDialogOpen, setEditPhaseDialogOpen] = useState(false);
+  const [deletePhaseDialogOpen, setDeletePhaseDialogOpen] = useState(false);
   const [currentTask, setCurrentTask] = useState<Task | null>(null);
   const [selectedPhaseId, setSelectedPhaseId] = useState<string | null>(null);
+  const [currentPhaseId, setCurrentPhaseId] = useState<string | null>(null);
+  const [currentPhaseName, setCurrentPhaseName] = useState('');
   const [isProcessing, setIsProcessing] = useState(false);
   
   const { isAdmin } = useAuth();
-  const { tasks, phases, teams, isLoading, fetchData, handleDeleteTask } = useTasks();
+  const { tasks, phases, teams, isLoading, fetchData, handleDeleteTask, handleCreatePhase, handleUpdatePhase, handleDeletePhase, updateTaskOrder } = useTasks();
   
   // Filter tasks based on current filters
   const filteredTasks = tasks.filter(task => {
@@ -133,6 +139,59 @@ const TasksPage: React.FC = () => {
     setAddTaskDialogOpen(true);
   };
   
+  const handleEditPhase = (phaseId: string, phaseName: string) => {
+    setCurrentPhaseId(phaseId);
+    setCurrentPhaseName(phaseName);
+    setEditPhaseDialogOpen(true);
+  };
+  
+  const handleEditPhaseSubmit = async (name: string) => {
+    if (!currentPhaseId || isProcessing) return;
+    
+    try {
+      setIsProcessing(true);
+      const success = await handleUpdatePhase(currentPhaseId, name);
+      if (success) {
+        setEditPhaseDialogOpen(false);
+        toast.success('Phase updated successfully');
+        fetchData();
+      }
+    } catch (error) {
+      console.error('Error updating phase:', error);
+      toast.error('Failed to update phase');
+    } finally {
+      setIsProcessing(false);
+    }
+  };
+  
+  const handleDeletePhaseClick = (phaseId: string) => {
+    setCurrentPhaseId(phaseId);
+    setDeletePhaseDialogOpen(true);
+  };
+  
+  const handleConfirmPhaseDelete = async () => {
+    if (!currentPhaseId || isProcessing) return;
+    
+    try {
+      setIsProcessing(true);
+      const success = await handleDeletePhase(currentPhaseId);
+      if (success) {
+        setDeletePhaseDialogOpen(false);
+        toast.success('Phase deleted successfully');
+        fetchData();
+      }
+    } catch (error) {
+      console.error('Error deleting phase:', error);
+      toast.error('Failed to delete phase');
+    } finally {
+      setIsProcessing(false);
+    }
+  };
+  
+  const handleTaskOrderChange = async (reorderedTasks: Task[]) => {
+    await updateTaskOrder(reorderedTasks);
+  };
+  
   return (
     <div className="space-y-6">
       <div className="flex justify-between items-start">
@@ -199,6 +258,7 @@ const TasksPage: React.FC = () => {
           handleDeleteTaskClick={handleDeleteTaskClick}
           handlePhaseSuccess={handlePhaseSuccess}
           onAddTask={handleAddTaskForPhase}
+          onTaskOrderChange={handleTaskOrderChange}
         />
       ) : (
         <KanbanBoard
@@ -207,6 +267,9 @@ const TasksPage: React.FC = () => {
           isAdmin={isAdmin()}
           onEdit={handleEditTask}
           onDelete={handleDeleteTaskClick}
+          onAddTask={handleAddTaskForPhase}
+          onEditPhase={handleEditPhase}
+          onDeletePhase={handleDeletePhaseClick}
         />
       )}
       
@@ -243,7 +306,43 @@ const TasksPage: React.FC = () => {
         </DialogContent>
       </Dialog>
       
-      {/* Delete Confirmation Dialog */}
+      {/* Edit Phase Dialog */}
+      <Dialog open={editPhaseDialogOpen} onOpenChange={setEditPhaseDialogOpen}>
+        <DialogContent className="sm:max-w-[425px] max-h-[85vh] overflow-hidden">
+          <DialogHeader>
+            <DialogTitle>Edit Phase</DialogTitle>
+            <DialogDescription>
+              Update the phase name. Click save when you're done.
+            </DialogDescription>
+          </DialogHeader>
+          <EditPhaseDialog 
+            phase={{ id: currentPhaseId || '', name: currentPhaseName, position: 0, project_id: '', created_at: '', updated_at: '' }}
+            onSubmit={handleEditPhaseSubmit}
+            open={editPhaseDialogOpen}
+            onOpenChange={setEditPhaseDialogOpen}
+          />
+        </DialogContent>
+      </Dialog>
+      
+      {/* Delete Phase Dialog */}
+      <Dialog open={deletePhaseDialogOpen} onOpenChange={setDeletePhaseDialogOpen}>
+        <DialogContent className="sm:max-w-[425px] max-h-[85vh] overflow-hidden">
+          <DialogHeader>
+            <DialogTitle>Delete Phase</DialogTitle>
+            <DialogDescription>
+              Are you sure you want to delete this phase? This action cannot be undone.
+            </DialogDescription>
+          </DialogHeader>
+          <DeletePhaseDialog 
+            phase={{ id: currentPhaseId || '', name: currentPhaseName, position: 0, project_id: '', created_at: '', updated_at: '' }}
+            onSubmit={handleConfirmPhaseDelete}
+            open={deletePhaseDialogOpen}
+            onOpenChange={setDeletePhaseDialogOpen}
+          />
+        </DialogContent>
+      </Dialog>
+      
+      {/* Delete Task Dialog */}
       <DeleteTaskDialog
         open={deleteDialogOpen}
         onOpenChange={setDeleteDialogOpen}

@@ -19,6 +19,7 @@ export const useTaskForm = ({ initialData, mode = 'create', onSuccess }: UseTask
   const [teams, setTeams] = useState<string[]>([]);
   const [selectedTeams, setSelectedTeams] = useState<string[]>([]);
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const [teamSuggestions, setTeamSuggestions] = useState<string[]>([]);
   
   const { user } = useAuth();
 
@@ -104,6 +105,15 @@ export const useTaskForm = ({ initialData, mode = 'create', onSuccess }: UseTask
       : [...selectedTeams, team]
     );
   };
+  
+  const filterTeamSuggestions = (query: string) => {
+    if (!query.trim()) return [];
+    
+    return teams.filter(team => 
+      team.toLowerCase().includes(query.toLowerCase()) && 
+      !selectedTeams.includes(team)
+    );
+  };
 
   const onSubmit = async (values: TaskFormValues) => {
     try {
@@ -134,6 +144,14 @@ export const useTaskForm = ({ initialData, mode = 'create', onSuccess }: UseTask
         });
         
         if (error) throw error;
+        
+        // Send notification about new task creation
+        await supabase.rpc('create_notification', {
+          p_user_id: user?.id,
+          p_type: 'task_created',
+          p_content: `New task "${values.title}" has been created`,
+          p_link: '/tasks'
+        });
       } else if (initialData?.id) {
         // Update existing task
         const { error } = await supabase.from('tasks')
@@ -152,6 +170,14 @@ export const useTaskForm = ({ initialData, mode = 'create', onSuccess }: UseTask
           .eq('id', initialData.id);
         
         if (error) throw error;
+        
+        // Send notification about task update
+        await supabase.rpc('create_notification', {
+          p_user_id: user?.id,
+          p_type: 'task_updated',
+          p_content: `Task "${values.title}" has been updated`,
+          p_link: '/tasks'
+        });
       }
       
       // Reset form
@@ -179,5 +205,8 @@ export const useTaskForm = ({ initialData, mode = 'create', onSuccess }: UseTask
     isSubmitting,
     toggleTeam,
     onSubmit,
+    filterTeamSuggestions,
+    setTeamSuggestions,
+    teamSuggestions
   };
 };

@@ -1,10 +1,12 @@
 
 import React from 'react';
-import { Task, Phase } from '@/types';
-import PhaseActions from '@/components/tasks/PhaseActions';
-import TaskTable from '@/components/tasks/TaskTable';
-import { Button } from '@/components/ui/button';
-import { Plus } from 'lucide-react';
+import { Phase, Task } from '@/types';
+import { Card, CardContent } from '@/components/ui/card';
+import { PhaseHeader } from './PhaseHeader';
+import PhaseProgress from './PhaseProgress';
+import TaskTable from './TaskTable';
+import EditPhaseDialog from './EditPhaseDialog';
+import DeletePhaseDialog from './DeletePhaseDialog';
 
 interface PhasesContainerProps {
   phases: Phase[];
@@ -14,7 +16,8 @@ interface PhasesContainerProps {
   handleEditTask: (task: Task) => void;
   handleDeleteTaskClick: (task: Task) => void;
   handlePhaseSuccess: () => void;
-  onAddTask: (phaseId: string) => void;
+  onAddTask?: (phaseId: string) => void;
+  onTaskOrderChange?: (tasks: Task[]) => void;
 }
 
 const PhasesContainer: React.FC<PhasesContainerProps> = ({
@@ -25,62 +28,97 @@ const PhasesContainer: React.FC<PhasesContainerProps> = ({
   handleEditTask,
   handleDeleteTaskClick,
   handlePhaseSuccess,
-  onAddTask
+  onAddTask,
+  onTaskOrderChange
 }) => {
+  const [editPhase, setEditPhase] = React.useState<Phase | null>(null);
+  const [deletePhase, setDeletePhase] = React.useState<Phase | null>(null);
+  const [editPhaseDialogOpen, setEditPhaseDialogOpen] = React.useState(false);
+  const [deletePhaseDialogOpen, setDeletePhaseDialogOpen] = React.useState(false);
+
+  // Filter phases that have matching tasks (or include all phases if no tasks are filtered)
+  const filteredPhaseIds = new Set(filteredTasks.map(task => task.phase_id));
+  const visiblePhases = phases.filter(phase => 
+    filteredTasks.length === 0 || filteredPhaseIds.has(phase.id)
+  );
+
+  const handleEditPhaseClick = (id: string, name: string) => {
+    const phase = phases.find(p => p.id === id);
+    if (phase) {
+      setEditPhase(phase);
+      setEditPhaseDialogOpen(true);
+    }
+  };
+
+  const handleDeletePhaseClick = (id: string) => {
+    const phase = phases.find(p => p.id === id);
+    if (phase) {
+      setDeletePhase(phase);
+      setDeletePhaseDialogOpen(true);
+    }
+  };
+
   return (
-    <>
-      {phases.map(phase => {
+    <div className="space-y-6">
+      {visiblePhases.map((phase) => {
         const phaseTasks = filteredTasks.filter(task => task.phase_id === phase.id);
-        const phaseProgress = calculatePhaseProgress(phase.id);
-        
+        const progress = calculatePhaseProgress(phase.id);
+
         return (
-          <div key={phase.id} className="mb-8">
-            <div className="flex justify-between items-center mb-4">
-              <h2 className="text-xl font-semibold">
-                PHASE {phase.position}: {phase.name}
-              </h2>
-              <div className="flex items-center space-x-2">
-                {isAdmin && (
-                  <Button 
-                    variant="outline"
-                    size="sm"
-                    onClick={() => onAddTask(phase.id)}
-                    className="flex items-center"
-                  >
-                    <Plus className="h-4 w-4 mr-2" />
-                    Add Task
-                  </Button>
-                )}
-                {isAdmin && (
-                  <PhaseActions 
-                    phase={phase} 
-                    onSuccess={handlePhaseSuccess}
-                    tasksExist={phaseTasks.length > 0}
-                  />
-                )}
-              </div>
-            </div>
-            <div className="flex items-center mb-4">
-              <div className="text-sm font-medium mr-4">{phaseProgress}% Complete</div>
-              <div className="w-48 bg-muted rounded-full h-2.5">
-                <div 
-                  className="h-2.5 rounded-full bg-primary" 
-                  style={{ width: `${phaseProgress}%` }}
-                ></div>
-              </div>
-            </div>
-            
-            <TaskTable 
-              tasks={phaseTasks}
-              isAdmin={isAdmin}
-              onEdit={handleEditTask}
-              onDelete={handleDeleteTaskClick}
-              showPhaseColumn={false}
-            />
-          </div>
+          <Card key={phase.id} className="overflow-hidden">
+            <CardContent className="p-4 space-y-4">
+              <PhaseHeader
+                phase={phase}
+                onEdit={handleEditPhaseClick}
+                onDelete={handleDeletePhaseClick}
+                tasksCount={phaseTasks.length}
+                isAdmin={isAdmin}
+                onAddTask={onAddTask}
+              />
+              
+              <PhaseProgress progress={progress} />
+              
+              {phaseTasks.length > 0 && (
+                <TaskTable
+                  tasks={phaseTasks}
+                  isAdmin={isAdmin}
+                  onEdit={handleEditTask}
+                  onDelete={handleDeleteTaskClick}
+                  showPhaseColumn={false}
+                  onTaskOrderChange={onTaskOrderChange}
+                />
+              )}
+            </CardContent>
+          </Card>
         );
       })}
-    </>
+
+      {editPhase && (
+        <EditPhaseDialog
+          open={editPhaseDialogOpen}
+          onOpenChange={setEditPhaseDialogOpen}
+          phase={editPhase}
+          onSubmit={(name) => {
+            // Handle edit phase logic here
+            handlePhaseSuccess();
+            setEditPhaseDialogOpen(false);
+          }}
+        />
+      )}
+
+      {deletePhase && (
+        <DeletePhaseDialog
+          open={deletePhaseDialogOpen}
+          onOpenChange={setDeletePhaseDialogOpen}
+          phase={deletePhase}
+          onSubmit={() => {
+            // Handle delete phase logic here
+            handlePhaseSuccess();
+            setDeletePhaseDialogOpen(false);
+          }}
+        />
+      )}
+    </div>
   );
 };
 

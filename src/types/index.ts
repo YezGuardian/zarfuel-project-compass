@@ -8,8 +8,8 @@ export type Task = {
   phase_id: string;
   phase?: string; // For display purposes
   responsible_teams?: string[];
-  start_date?: string;
-  end_date?: string;
+  start_date?: string | null;
+  end_date?: string | null;
   duration?: string; // Added duration field
   status: Status;
   progress: number;

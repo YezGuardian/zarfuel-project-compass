@@ -15,10 +15,15 @@ const TaskStatusBadge: React.FC<TaskStatusBadgeProps> = ({
   showLabel = true,
   className
 }) => {
+  // Updated color scheme to match the Overview Page
   const statusConfig = {
     complete: {
       label: 'Complete',
       color: 'bg-green-500 text-white', // Green for completed tasks
+    },
+    ongoing: {
+      label: 'Ongoing',
+      color: 'bg-blue-500 text-white', // Blue for ongoing tasks
     },
     inprogress: {
       label: 'In Progress',
@@ -27,15 +32,11 @@ const TaskStatusBadge: React.FC<TaskStatusBadgeProps> = ({
     notstarted: {
       label: 'Not Started',
       color: 'bg-red-500 text-white', // Red for not started tasks
-    },
-    ongoing: {
-      label: 'Ongoing',
-      color: 'bg-blue-500 text-white', // Blue for ongoing tasks
-    },
+    }
   };
 
   const config = statusConfig[status] || {
-    label: status.charAt(0).toUpperCase() + status.slice(1),
+    label: status.replace('_', ' ').charAt(0).toUpperCase() + status.replace('_', ' ').slice(1),
     color: 'bg-gray-500 text-white',
   };
 

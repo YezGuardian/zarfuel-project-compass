@@ -4,7 +4,7 @@ import { DragDropContext, Droppable, Draggable } from '@hello-pangea/dnd';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Task, Phase } from '@/types';
 import { Button } from '@/components/ui/button';
-import { Edit, Trash2, MoreHorizontal } from 'lucide-react';
+import { Edit, Trash2, MoreHorizontal, Plus } from 'lucide-react';
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -18,26 +18,36 @@ interface KanbanBoardProps {
   isAdmin: boolean;
   onEdit: (task: Task) => void;
   onDelete: (task: Task) => void;
+  onAddTask?: (phaseId: string) => void;
+  onEditPhase?: (id: string, name: string) => void;
+  onDeletePhase?: (id: string) => void;
 }
 
 const getStatusColor = (status: string) => {
   switch (status) {
     case 'complete':
-      return 'bg-status-complete text-white';
-    case 'in_progress':
-      return 'bg-status-inprogress text-white';
-    case 'not_started':
-      return 'bg-status-notstarted';
-    case 'blocked':
-      return 'bg-status-blocked text-white';
-    case 'pending':
-      return 'bg-status-pending';
+      return 'bg-green-500 text-white';
+    case 'ongoing':
+      return 'bg-blue-500 text-white';
+    case 'inprogress':
+      return 'bg-orange-500 text-white';
+    case 'notstarted':
+      return 'bg-red-500 text-white';
     default:
       return 'bg-slate-200';
   }
 };
 
-const KanbanBoard: React.FC<KanbanBoardProps> = ({ phases, tasksByPhase, isAdmin, onEdit, onDelete }) => {
+const KanbanBoard: React.FC<KanbanBoardProps> = ({ 
+  phases, 
+  tasksByPhase, 
+  isAdmin, 
+  onEdit, 
+  onDelete, 
+  onAddTask,
+  onEditPhase,
+  onDeletePhase 
+}) => {
   const onDragEnd = (result: any) => {
     // Implement drag and drop functionality if needed
     console.log('Drag ended', result);
@@ -58,26 +68,38 @@ const KanbanBoard: React.FC<KanbanBoardProps> = ({ phases, tasksByPhase, isAdmin
                   </span>
                 </CardTitle>
                 {isAdmin && (
-                  <DropdownMenu>
-                    <DropdownMenuTrigger asChild>
-                      <Button variant="ghost" size="sm" className="h-8 w-8 p-0">
-                        <MoreHorizontal className="h-4 w-4" />
-                      </Button>
-                    </DropdownMenuTrigger>
-                    <DropdownMenuContent align="end">
-                      <DropdownMenuItem onClick={() => {/* Edit phase */}}>
-                        <Edit className="mr-2 h-4 w-4" />
-                        Edit Phase
-                      </DropdownMenuItem>
-                      <DropdownMenuItem
-                        className="text-destructive"
-                        onClick={() => {/* Delete phase */}}
+                  <div className="flex items-center">
+                    {onAddTask && (
+                      <Button 
+                        variant="ghost" 
+                        size="sm" 
+                        className="h-8 px-2 text-muted-foreground hover:text-foreground mr-1"
+                        onClick={() => onAddTask(phase.id)}
                       >
-                        <Trash2 className="mr-2 h-4 w-4" />
-                        Delete Phase
-                      </DropdownMenuItem>
-                    </DropdownMenuContent>
-                  </DropdownMenu>
+                        <Plus className="h-4 w-4" />
+                      </Button>
+                    )}
+                    <DropdownMenu>
+                      <DropdownMenuTrigger asChild>
+                        <Button variant="ghost" size="sm" className="h-8 w-8 p-0">
+                          <MoreHorizontal className="h-4 w-4" />
+                        </Button>
+                      </DropdownMenuTrigger>
+                      <DropdownMenuContent align="end">
+                        <DropdownMenuItem onClick={() => onEditPhase?.(phase.id, phase.name)}>
+                          <Edit className="mr-2 h-4 w-4" />
+                          Edit Phase
+                        </DropdownMenuItem>
+                        <DropdownMenuItem
+                          className="text-destructive"
+                          onClick={() => onDeletePhase?.(phase.id)}
+                        >
+                          <Trash2 className="mr-2 h-4 w-4" />
+                          Delete Phase
+                        </DropdownMenuItem>
+                      </DropdownMenuContent>
+                    </DropdownMenu>
+                  </div>
                 )}
               </CardHeader>
               <CardContent className="px-3 py-2">
@@ -90,14 +112,14 @@ const KanbanBoard: React.FC<KanbanBoardProps> = ({ phases, tasksByPhase, isAdmin
                     >
                       {tasksByPhase[phase.id]?.map((task, index) => (
                         <Draggable key={task.id} draggableId={task.id} index={index}>
-                          {(provided) => (
+                          {(provided, snapshot) => (
                             <div
                               ref={provided.innerRef}
                               {...provided.draggableProps}
                               {...provided.dragHandleProps}
-                              className={`border rounded p-3 cursor-pointer hover:border-primary ${getStatusColor(task.status)}`}
+                              className={`border rounded p-3 cursor-pointer hover:bg-zarfuel-blue/10 ${getStatusColor(task.status)}`}
                             >
-                              <h4 className="font-medium">{task.title}</h4>
+                              <h4 className="font-bold">{task.title}</h4>
                               <div className="flex justify-between items-center mt-2">
                                 <div className="text-xs px-2 py-1 rounded">
                                   {task.status.replace('_', ' ')}

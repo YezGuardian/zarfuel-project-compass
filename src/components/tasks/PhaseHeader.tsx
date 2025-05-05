@@ -1,49 +1,76 @@
 
 import React, { useState } from 'react';
+import { Phase, Task } from '@/types';
+import { Edit, Trash2, MoreHorizontal, Plus } from 'lucide-react';
 import { Button } from '@/components/ui/button';
-import { Edit, Trash2, MoreHorizontal } from 'lucide-react';
 import {
   DropdownMenu,
   DropdownMenuContent,
   DropdownMenuItem,
   DropdownMenuTrigger
 } from '@/components/ui/dropdown-menu';
-import { Phase } from '@/types';
-import { Dialog } from '@/components/ui/dialog';
-import EditPhaseDialog from './EditPhaseDialog';
-import DeletePhaseDialog from './DeletePhaseDialog';
+import { EditPhaseDialog } from './EditPhaseDialog';
+import { DeletePhaseDialog } from './DeletePhaseDialog';
 
 interface PhaseHeaderProps {
   phase: Phase;
+  onEdit: (id: string, name: string) => void;
+  onDelete: (id: string) => void;
   tasksCount: number;
   isAdmin: boolean;
-  onEdit: (phaseId: string, name: string) => Promise<boolean>;
-  onDelete: (phaseId: string) => Promise<boolean>;
+  onAddTask?: (phaseId: string) => void;
 }
 
-const PhaseHeader: React.FC<PhaseHeaderProps> = ({ 
+export function PhaseHeader({ 
   phase, 
-  tasksCount,
+  onEdit, 
+  onDelete, 
+  tasksCount, 
   isAdmin,
-  onEdit,
-  onDelete
-}) => {
+  onAddTask
+}: PhaseHeaderProps) {
   const [editDialogOpen, setEditDialogOpen] = useState(false);
   const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
 
+  const handleEditSubmit = (name: string) => {
+    onEdit(phase.id, name);
+    setEditDialogOpen(false);
+  };
+
+  const handleDeleteSubmit = () => {
+    onDelete(phase.id);
+    setDeleteDialogOpen(false);
+  };
+  
+  const handleAddTask = () => {
+    if (onAddTask) {
+      onAddTask(phase.id);
+    }
+  };
+
   return (
-    <>
-      <div className="flex items-center justify-between">
-        <div className="flex items-center space-x-2">
-          <h3 className="text-base font-medium">
-            PHASE {phase.position}: {phase.name} 
-            <span className="text-xs bg-muted rounded-full px-2 py-1 ml-2">
-              {tasksCount}
-            </span>
-          </h3>
-        </div>
-        
-        {isAdmin && (
+    <div className="flex justify-between items-center py-2">
+      <div>
+        <h3 className="font-medium">
+          PHASE {phase.position}: {phase.name}
+          <span className="text-xs rounded-full bg-muted px-2 py-0.5 ml-2">
+            {tasksCount}
+          </span>
+        </h3>
+      </div>
+      {isAdmin && (
+        <div className="flex space-x-2">
+          {onAddTask && (
+            <Button 
+              variant="ghost" 
+              size="sm" 
+              className="h-8 px-2 text-muted-foreground hover:text-foreground"
+              onClick={handleAddTask}
+            >
+              <Plus className="h-4 w-4 mr-1" />
+              Add Task
+            </Button>
+          )}
           <DropdownMenu>
             <DropdownMenuTrigger asChild>
               <Button variant="ghost" size="sm" className="h-8 w-8 p-0">
@@ -64,34 +91,24 @@ const PhaseHeader: React.FC<PhaseHeaderProps> = ({
               </DropdownMenuItem>
             </DropdownMenuContent>
           </DropdownMenu>
-        )}
-      </div>
+        </div>
+      )}
 
-      <Dialog open={editDialogOpen} onOpenChange={setEditDialogOpen}>
-        <EditPhaseDialog 
-          phase={phase} 
-          onSave={async (name) => {
-            const success = await onEdit(phase.id, name);
-            if (success) setEditDialogOpen(false);
-            return success;
-          }}
-          onCancel={() => setEditDialogOpen(false)}
-        />
-      </Dialog>
+      {/* Edit Phase Dialog */}
+      <EditPhaseDialog
+        open={editDialogOpen}
+        onOpenChange={setEditDialogOpen}
+        phase={phase}
+        onSubmit={handleEditSubmit}
+      />
 
-      <Dialog open={deleteDialogOpen} onOpenChange={setDeleteDialogOpen}>
-        <DeletePhaseDialog
-          phase={phase}
-          onDelete={async () => {
-            const success = await onDelete(phase.id);
-            if (success) setDeleteDialogOpen(false);
-            return success;
-          }}
-          onCancel={() => setDeleteDialogOpen(false)}
-        />
-      </Dialog>
-    </>
+      {/* Delete Phase Dialog */}
+      <DeletePhaseDialog
+        open={deleteDialogOpen}
+        onOpenChange={setDeleteDialogOpen}
+        phase={phase}
+        onSubmit={handleDeleteSubmit}
+      />
+    </div>
   );
-};
-
-export default PhaseHeader;
+}
