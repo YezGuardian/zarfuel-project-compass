@@ -34,7 +34,7 @@ const TaskStatusBadge: React.FC<TaskStatusBadgeProps> = ({ status, size = 'defau
         };
       default:
         return {
-          label: status.replace(/_/g, ' '),
+          label: status ? String(status).replace(/_/g, ' ') : 'Unknown',
           className: 'bg-gray-500 hover:bg-gray-600 text-white',
         };
     }

@@ -12,7 +12,11 @@ const PhaseProgress: React.FC<PhaseProgressProps> = ({ progress }) => {
       <div className="flex justify-between text-sm">
         <span className="text-muted-foreground">{progress}% completed</span>
       </div>
-      <Progress value={progress} className="h-2 bg-gray-200" indicatorClassName="bg-green-500" />
+      <Progress 
+        value={progress} 
+        className="h-2 bg-gray-200" 
+        indicatorClassName={progress > 0 ? "bg-green-500" : ""}
+      />
     </div>
   );
 };
