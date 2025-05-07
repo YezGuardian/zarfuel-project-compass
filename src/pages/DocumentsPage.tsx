@@ -1,3 +1,4 @@
+
 import React, { useState, useEffect } from 'react';
 import { 
   Card, 
@@ -93,8 +94,15 @@ const DocumentsPage: React.FC = () => {
         const typedDocuments: Document[] = documentsData?.map(doc => {
           // Handle the case where uploader might be null or an error object
           let uploaderValue: Document['uploader'] = null;
-          if (doc.uploader && typeof doc.uploader === 'object' && doc.uploader !== null && !('error' in doc.uploader)) {
-            uploaderValue = doc.uploader as Document['uploader'];
+          if (doc.uploader && typeof doc.uploader === 'object' && doc.uploader !== null && 
+              !('error' in doc.uploader)) {
+            // Cast uploader to the correct type after verifying it's safe
+            const uploader = doc.uploader as {
+              first_name: string | null;
+              last_name: string | null;
+              email: string;
+            };
+            uploaderValue = uploader;
           }
           
           return {
