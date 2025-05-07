@@ -71,6 +71,9 @@ const EditPhaseDialog: React.FC<EditPhaseDialogProps> = ({ phase, onSubmit, open
               )}
             />
             <DialogFooter className="pt-4">
+              <Button type="button" variant="outline" onClick={() => onOpenChange(false)} className="mr-2">
+                Cancel
+              </Button>
               <Button type="submit">Save Changes</Button>
             </DialogFooter>
           </form>

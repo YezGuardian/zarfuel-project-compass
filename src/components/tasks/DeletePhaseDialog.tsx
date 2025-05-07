@@ -29,6 +29,9 @@ const DeletePhaseDialog: React.FC<DeletePhaseDialogProps> = ({ phase, onSubmit, 
           </DialogDescription>
         </DialogHeader>
         <DialogFooter className="pt-4">
+          <Button variant="outline" onClick={() => onOpenChange(false)} className="mr-2">
+            Cancel
+          </Button>
           <Button variant="destructive" onClick={onSubmit}>
             Delete Phase
           </Button>

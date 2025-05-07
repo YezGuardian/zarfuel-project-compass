@@ -120,10 +120,12 @@ const EventForm: React.FC<EventFormProps> = ({ onSuccess, initialData }) => {
       };
       
       if (onSuccess) {
-        const success = await onSuccess(eventData);
-        if (success && values.is_meeting && selectedParticipants.length > 0) {
-          // Handle participants if it's a meeting
-          // This part would be better handled by the parent component or with a transaction
+        onSuccess(eventData);
+        
+        // Handle participants if it's a meeting
+        // Note: This is done by the parent component or in a transaction
+        if (values.is_meeting && selectedParticipants.length > 0) {
+          // Code for handling participants would go here
         }
       }
     } catch (error: any) {

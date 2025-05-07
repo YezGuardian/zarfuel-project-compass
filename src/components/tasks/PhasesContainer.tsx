@@ -7,7 +7,6 @@ import PhaseProgress from './PhaseProgress';
 import TaskTable from './TaskTable';
 import EditPhaseDialog from './EditPhaseDialog';
 import DeletePhaseDialog from './DeletePhaseDialog';
-import { Dialog, DialogContent } from '@/components/ui/dialog';
 
 interface PhasesContainerProps {
   phases: Phase[];
@@ -96,34 +95,30 @@ const PhasesContainer: React.FC<PhasesContainerProps> = ({
 
       {/* Edit Phase Dialog */}
       {editPhase && (
-        <Dialog open={editPhaseDialogOpen} onOpenChange={setEditPhaseDialogOpen}>
-          <DialogContent>
-            <EditPhaseDialog
-              phase={editPhase}
-              onSubmit={(name) => {
-                // Handle edit phase logic here
-                handlePhaseSuccess();
-                setEditPhaseDialogOpen(false);
-              }}
-            />
-          </DialogContent>
-        </Dialog>
+        <EditPhaseDialog
+          phase={editPhase}
+          onSubmit={(name) => {
+            // Handle edit phase logic here
+            handlePhaseSuccess();
+            setEditPhaseDialogOpen(false);
+          }}
+          open={editPhaseDialogOpen}
+          onOpenChange={setEditPhaseDialogOpen}
+        />
       )}
 
       {/* Delete Phase Dialog */}
       {deletePhase && (
-        <Dialog open={deletePhaseDialogOpen} onOpenChange={setDeletePhaseDialogOpen}>
-          <DialogContent>
-            <DeletePhaseDialog
-              phase={deletePhase}
-              onSubmit={() => {
-                // Handle delete phase logic here
-                handlePhaseSuccess();
-                setDeletePhaseDialogOpen(false);
-              }}
-            />
-          </DialogContent>
-        </Dialog>
+        <DeletePhaseDialog
+          phase={deletePhase}
+          onSubmit={() => {
+            // Handle delete phase logic here
+            handlePhaseSuccess();
+            setDeletePhaseDialogOpen(false);
+          }}
+          open={deletePhaseDialogOpen}
+          onOpenChange={setDeletePhaseDialogOpen}
+        />
       )}
     </div>
   );

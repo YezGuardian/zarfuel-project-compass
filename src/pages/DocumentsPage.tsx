@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect } from 'react';
 import { 
   Card, 
@@ -16,21 +15,12 @@ import {
   TableRow,
 } from '@/components/ui/table';
 import { 
-  Dialog, 
-  DialogContent, 
-  DialogHeader,
-  DialogTitle, 
-  DialogDescription,
-  DialogFooter
-} from '@/components/ui/dialog';
-import { 
   DropdownMenu, 
   DropdownMenuContent, 
   DropdownMenuItem, 
   DropdownMenuTrigger 
 } from '@/components/ui/dropdown-menu';
 import { Input } from '@/components/ui/input';
-import { Label } from '@/components/ui/label';
 import { Button } from '@/components/ui/button';
 import { 
   MoreHorizontal, 
@@ -46,7 +36,6 @@ import {
 import { useAuth } from '@/contexts/AuthContext';
 import { supabase } from '@/integrations/supabase/client';
 import { toast } from 'sonner';
-import { ScrollArea } from '@/components/ui/scroll-area';
 import { format } from 'date-fns';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import CreateFolderDialog from '@/components/documents/CreateFolderDialog';
@@ -75,6 +64,7 @@ interface Document {
     last_name: string;
     email: string;
   } | null;
+  downloaded_by?: any;
 }
 
 interface User {
@@ -116,6 +106,12 @@ const DocumentsPage: React.FC = () => {
           
         if (documentsError) throw documentsError;
         
+        // Fix for TS error by ensuring the data matches Document type
+        const typedDocuments: Document[] = documentsData?.map(doc => ({
+          ...doc,
+          uploader: doc.uploader as Document['uploader'] || null
+        })) || [];
+        
         // Fetch folders
         const { data: foldersData, error: foldersError } = await supabase
           .from('folders')
@@ -131,7 +127,7 @@ const DocumentsPage: React.FC = () => {
           
         if (usersError) throw usersError;
         
-        setDocuments(documentsData || []);
+        setDocuments(typedDocuments);
         setFolders(foldersData || []);
         setUsers(usersData || []);
       } catch (error) {
@@ -176,8 +172,10 @@ const DocumentsPage: React.FC = () => {
           
         if (error) throw error;
         
-        // Update downloaded_by with current user
-        const downloadedBy = data.downloaded_by || [];
+        // Fix for TS error by handling downloaded_by array safely
+        const downloadedBy = data?.downloaded_by ? 
+          (Array.isArray(data.downloaded_by) ? data.downloaded_by : []) : [];
+        
         const newDownloadedBy = [
           ...downloadedBy, 
           { 
