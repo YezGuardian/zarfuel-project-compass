@@ -91,9 +91,9 @@ const DocumentsPage: React.FC = () => {
         
         // Fix for TS error by ensuring the data matches Document type
         const typedDocuments: Document[] = documentsData?.map(doc => {
-          // Handle the case where uploader might be an error object
+          // Handle the case where uploader might be null or an error object
           let uploaderValue: Document['uploader'] = null;
-          if (doc.uploader && typeof doc.uploader === 'object' && !('error' in doc.uploader)) {
+          if (doc.uploader && typeof doc.uploader === 'object' && doc.uploader !== null && !('error' in doc.uploader)) {
             uploaderValue = doc.uploader as Document['uploader'];
           }
           
