@@ -251,12 +251,22 @@ export const useTasks = () => {
   // Function to update task positions
   const updateTaskOrder = async (reorderedTasks: Task[]) => {
     try {
-      // Update local state immediately for smoother UI without causing UI refresh issues
-      const newTasks = [...reorderedTasks];
-      setTasks(newTasks);
+      // Verify tasks are all in the same phase
+      const firstPhaseId = reorderedTasks[0]?.phase_id;
+      const allSamePhase = reorderedTasks.every(task => task.phase_id === firstPhaseId);
       
-      // No need to update positions in the database at this point
-      // This prevents "phase disappearing" issue during drag and drop
+      if (!allSamePhase) {
+        console.warn('Cannot reorder tasks across different phases');
+        return false;
+      }
+      
+      // Update local state immediately for smoother UI
+      const updatedTasks = tasks.map(task => {
+        const reorderedTask = reorderedTasks.find(rt => rt.id === task.id);
+        return reorderedTask || task;
+      });
+      
+      setTasks(updatedTasks);
       
       return true;
     } catch (error: any) {

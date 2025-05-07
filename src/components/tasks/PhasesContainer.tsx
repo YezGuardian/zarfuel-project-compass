@@ -58,6 +58,21 @@ const PhasesContainer: React.FC<PhasesContainerProps> = ({
     }
   };
 
+  // Modify onTaskOrderChange to ensure it only reorders tasks within the same phase
+  const handleTaskOrderChange = (tasks: Task[]) => {
+    if (onTaskOrderChange) {
+      // Make sure all tasks in the array belong to the same phase
+      const firstPhaseId = tasks[0]?.phase_id;
+      const allSamePhase = tasks.every(task => task.phase_id === firstPhaseId);
+      
+      if (allSamePhase) {
+        onTaskOrderChange(tasks);
+      } else {
+        console.warn('Cannot reorder tasks across different phases');
+      }
+    }
+  };
+
   return (
     <div className="space-y-6">
       {visiblePhases.map((phase) => {
@@ -85,7 +100,7 @@ const PhasesContainer: React.FC<PhasesContainerProps> = ({
                   onEdit={handleEditTask}
                   onDelete={handleDeleteTaskClick}
                   showPhaseColumn={false}
-                  onTaskOrderChange={onTaskOrderChange}
+                  onTaskOrderChange={handleTaskOrderChange}
                 />
               )}
             </CardContent>

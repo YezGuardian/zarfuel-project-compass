@@ -36,6 +36,13 @@ export const useTaskForm = ({ initialData, mode = 'create', onSuccess }: UseTask
       : defaultValues,
   });
 
+  // Set initial selected teams when initialData changes
+  useEffect(() => {
+    if (initialData?.responsible_teams) {
+      setSelectedTeams(initialData.responsible_teams);
+    }
+  }, [initialData]);
+
   useEffect(() => {
     const fetchPhases = async () => {
       try {
@@ -82,28 +89,19 @@ export const useTaskForm = ({ initialData, mode = 'create', onSuccess }: UseTask
     
     fetchPhases();
     fetchTeams();
-    
-    // Set initial selected teams
-    if (initialData?.responsible_teams) {
-      setSelectedTeams(initialData.responsible_teams);
-    }
-  }, [initialData]);
+  }, []);
 
   const toggleTeam = (team: string) => {
     setSelectedTeams(prev => {
       const isSelected = prev.includes(team);
-      if (isSelected) {
-        return prev.filter(t => t !== team);
-      } else {
-        return [...prev, team];
-      }
+      const newTeams = isSelected 
+        ? prev.filter(t => t !== team) 
+        : [...prev, team];
+      
+      // Directly update the form value to ensure it's always in sync
+      form.setValue('responsible_teams', newTeams);
+      return newTeams;
     });
-    
-    // Update the form value
-    form.setValue('responsible_teams', selectedTeams.includes(team) 
-      ? selectedTeams.filter(t => t !== team) 
-      : [...selectedTeams, team]
-    );
   };
   
   const filterTeamSuggestions = (query: string) => {
@@ -119,31 +117,36 @@ export const useTaskForm = ({ initialData, mode = 'create', onSuccess }: UseTask
     try {
       setIsSubmitting(true);
       
-      // Always set responsible_teams from our state
-      values.responsible_teams = selectedTeams;
+      // Use the selected teams from state rather than form values
+      const submissionData = {
+        title: values.title,
+        description: values.description,
+        phase_id: values.phase_id,
+        responsible_teams: selectedTeams,
+        start_date: values.start_date,
+        end_date: values.end_date,
+        status: values.status,
+        progress_summary: values.progress_summary || '',
+        duration: values.duration || '',
+        updated_by: user?.id
+      };
       
       // Ensure title is provided (required by the database)
-      if (!values.title) {
+      if (!submissionData.title) {
         throw new Error("Task title is required");
       }
       
       if (mode === 'create') {
         // Create new task
         const { error } = await supabase.from('tasks').insert({
-          title: values.title,
-          description: values.description,
-          phase_id: values.phase_id,
-          responsible_teams: values.responsible_teams,
-          start_date: values.start_date,
-          end_date: values.end_date,
-          status: values.status,
-          progress_summary: values.progress_summary || '',
-          duration: values.duration || '',
+          ...submissionData,
           created_by: user?.id,
-          updated_by: user?.id,
         });
         
-        if (error) throw error;
+        if (error) {
+          console.error('Error creating task:', error);
+          throw error;
+        }
         
         // Send notification about new task creation
         await supabase.rpc('create_notification', {
@@ -155,21 +158,13 @@ export const useTaskForm = ({ initialData, mode = 'create', onSuccess }: UseTask
       } else if (initialData?.id) {
         // Update existing task
         const { error } = await supabase.from('tasks')
-          .update({
-            title: values.title,
-            description: values.description,
-            phase_id: values.phase_id,
-            responsible_teams: values.responsible_teams,
-            start_date: values.start_date,
-            end_date: values.end_date,
-            status: values.status,
-            progress_summary: values.progress_summary || '',
-            duration: values.duration || '',
-            updated_by: user?.id,
-          })
+          .update(submissionData)
           .eq('id', initialData.id);
         
-        if (error) throw error;
+        if (error) {
+          console.error('Error updating task:', error);
+          throw error;
+        }
         
         // Send notification about task update
         await supabase.rpc('create_notification', {
@@ -191,7 +186,7 @@ export const useTaskForm = ({ initialData, mode = 'create', onSuccess }: UseTask
       
     } catch (error: any) {
       console.error('Error submitting task:', error);
-      toast.error(`Failed to ${mode === 'create' ? 'create' : 'update'} task`);
+      toast.error(`Failed to ${mode === 'create' ? 'create' : 'update'} task: ${error.message || 'Unknown error'}`);
     } finally {
       setIsSubmitting(false);
     }

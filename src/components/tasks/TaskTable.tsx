@@ -56,8 +56,17 @@ const TaskTable: React.FC<TaskTableProps> = ({
   const handleDragEnd = (result: any) => {
     setIsDragging(false);
     
-    // Dropped outside the list
+    // Dropped outside the list or no change handler
     if (!result.destination || !onTaskOrderChange) {
+      return;
+    }
+
+    // Only reorder if all tasks are in the same phase
+    const firstPhaseId = tasks[0]?.phase_id;
+    const allTasksSamePhase = tasks.every(task => task.phase_id === firstPhaseId);
+    
+    if (!allTasksSamePhase) {
+      console.warn('Cannot reorder tasks from different phases');
       return;
     }
 

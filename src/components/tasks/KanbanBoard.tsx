@@ -49,9 +49,13 @@ const KanbanBoard: React.FC<KanbanBoardProps> = ({
   onDeletePhase 
 }) => {
   const onDragEnd = (result: any) => {
-    // Implement drag and drop functionality if needed
-    console.log('Drag ended', result);
-    // You would typically update task positions/phases here
+    // Only allow reordering within the same phase/droppable
+    if (!result.destination || result.source.droppableId !== result.destination.droppableId) {
+      return;
+    }
+    
+    console.log('Drag ended within the same phase:', result);
+    // Implementation of reordering within the same phase could be added here
   };
 
   return (
