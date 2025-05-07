@@ -172,23 +172,14 @@ const DocumentFolders: React.FC = () => {
         )}
       </Dialog>
 
-      <Dialog open={createFolderOpen} onOpenChange={setCreateFolderOpen}>
-        <DialogContent className="sm:max-w-[425px]">
-          <DialogHeader>
-            <DialogTitle>Create New Folder</DialogTitle>
-          </DialogHeader>
-          <ScrollArea className="max-h-[80vh]">
-            <CreateFolderDialog 
-              onSubmit={async (name) => {
-                const success = await handleCreateFolder(name);
-                if (success) setCreateFolderOpen(false);
-                return success;
-              }}
-              onCancel={() => setCreateFolderOpen(false)}
-            />
-          </ScrollArea>
-        </DialogContent>
-      </Dialog>
+      <CreateFolderDialog
+        open={createFolderOpen}
+        onOpenChange={setCreateFolderOpen}
+        onSuccess={(folder) => {
+          setFolders([...folders, folder]);
+          setCreateFolderOpen(false);
+        }}
+      />
     </div>
   );
 };

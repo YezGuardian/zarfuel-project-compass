@@ -40,6 +40,7 @@ import { format } from 'date-fns';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import CreateFolderDialog from '@/components/documents/CreateFolderDialog';
 import DocumentUploadDialog from '@/components/documents/DocumentUploadDialog';
+import { Document } from '@/types/document';
 
 interface Folder {
   id: string;
@@ -47,24 +48,6 @@ interface Folder {
   icon: string;
   created_at: string;
   created_by: string;
-}
-
-interface Document {
-  id: string;
-  file_name: string;
-  file_path: string;
-  file_size: number;
-  file_type: string;
-  category: string;
-  folder_id: string | null;
-  created_at: string;
-  uploaded_by: string;
-  uploader?: {
-    first_name: string;
-    last_name: string;
-    email: string;
-  } | null;
-  downloaded_by?: any;
 }
 
 interface User {

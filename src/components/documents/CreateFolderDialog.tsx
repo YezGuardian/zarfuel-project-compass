@@ -38,6 +38,7 @@ const CreateFolderDialog: React.FC<CreateFolderDialogProps> = ({
       const newFolder = { id: Date.now().toString(), name: name.trim(), icon: 'folder' };
       onSuccess(newFolder);
       setName('');
+      onOpenChange(false);
     } catch (error) {
       console.error('Error creating folder:', error);
     } finally {
@@ -46,51 +47,40 @@ const CreateFolderDialog: React.FC<CreateFolderDialogProps> = ({
   };
 
   return (
-    <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent>
-        <DialogHeader>
-          <DialogTitle>Create New Folder</DialogTitle>
-          <DialogDescription>
-            Add a new folder to organize your documents.
-          </DialogDescription>
-        </DialogHeader>
-        
-        <form onSubmit={handleSubmit} className="space-y-4 py-4">
-          <div className="space-y-2">
-            <Label htmlFor="folder-name">Folder Name</Label>
-            <Input
-              id="folder-name"
-              placeholder="Enter folder name"
-              value={name}
-              onChange={(e) => setName(e.target.value)}
-              disabled={isSubmitting}
-            />
-          </div>
+    <form onSubmit={handleSubmit} className="space-y-4 py-4">
+      <div className="space-y-2">
+        <Label htmlFor="folder-name">Folder Name</Label>
+        <Input
+          id="folder-name"
+          placeholder="Enter folder name"
+          value={name}
+          onChange={(e) => setName(e.target.value)}
+          disabled={isSubmitting}
+        />
+      </div>
 
-          <DialogFooter>
-            <Button
-              type="button"
-              variant="outline"
-              onClick={() => onOpenChange(false)}
-              disabled={isSubmitting}
-              className="mr-2"
-            >
-              Cancel
-            </Button>
-            <Button type="submit" disabled={isSubmitting || !name.trim()}>
-              {isSubmitting ? (
-                <>
-                  <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                  Creating...
-                </>
-              ) : (
-                'Create Folder'
-              )}
-            </Button>
-          </DialogFooter>
-        </form>
-      </DialogContent>
-    </Dialog>
+      <DialogFooter>
+        <Button
+          type="button"
+          variant="outline"
+          onClick={() => onOpenChange(false)}
+          disabled={isSubmitting}
+          className="mr-2"
+        >
+          Cancel
+        </Button>
+        <Button type="submit" disabled={isSubmitting || !name.trim()}>
+          {isSubmitting ? (
+            <>
+              <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+              Creating...
+            </>
+          ) : (
+            'Create Folder'
+          )}
+        </Button>
+      </DialogFooter>
+    </form>
   );
 };
 

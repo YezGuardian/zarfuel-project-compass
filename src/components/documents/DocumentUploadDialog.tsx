@@ -1,11 +1,24 @@
 
-import React, { useState, useRef } from 'react';
-import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from '@/components/ui/dialog';
+import React, { useState } from 'react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
-import { Loader2, Upload } from 'lucide-react';
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
+import { Loader2 } from 'lucide-react';
+import {
+  Dialog,
+  DialogContent,
+  DialogHeader,
+  DialogTitle,
+  DialogDescription,
+  DialogFooter,
+} from '@/components/ui/dialog';
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from '@/components/ui/select';
 import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/contexts/AuthContext';
 import { toast } from 'sonner';
@@ -13,6 +26,7 @@ import { toast } from 'sonner';
 interface Folder {
   id: string;
   name: string;
+  icon?: string;
 }
 
 interface DocumentUploadDialogProps {
@@ -22,114 +36,135 @@ interface DocumentUploadDialogProps {
   onSuccess: (document: any) => void;
 }
 
-const DocumentUploadDialog: React.FC<DocumentUploadDialogProps> = ({ 
-  open, 
-  onOpenChange, 
-  folders, 
-  onSuccess 
+const DocumentUploadDialog: React.FC<DocumentUploadDialogProps> = ({
+  open,
+  onOpenChange,
+  folders,
+  onSuccess,
 }) => {
-  const [isUploading, setIsUploading] = useState(false);
-  const [fileName, setFileName] = useState('');
-  const [selectedFolder, setSelectedFolder] = useState('');
   const { user } = useAuth();
-  const fileInputRef = useRef<HTMLInputElement>(null);
-
-  const resetForm = () => {
-    setSelectedFolder('');
-    setFileName('');
-    if (fileInputRef.current) {
-      fileInputRef.current.value = '';
-    }
-  };
+  const [file, setFile] = useState<File | null>(null);
+  const [category, setCategory] = useState('general');
+  const [folderId, setFolderId] = useState<string>('');
+  const [isSubmitting, setIsSubmitting] = useState(false);
 
   const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-    const file = e.target.files?.[0];
-    if (file) {
-      setFileName(file.name);
+    if (e.target.files && e.target.files[0]) {
+      setFile(e.target.files[0]);
     }
   };
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    const file = fileInputRef.current?.files?.[0];
-    
-    if (!file || !user) {
-      toast.error('Please select a file to upload');
-      return;
-    }
-    
-    setIsUploading(true);
-    
+    if (!file || !user) return;
+
+    setIsSubmitting(true);
     try {
-      // In a real application, we would upload the file to storage
-      // For now, we'll create a mock document
-      const mockDocument = {
-        id: Date.now().toString(),
-        file_name: file.name,
-        file_path: URL.createObjectURL(file), // For demo purposes
-        file_size: file.size,
-        file_type: file.name.split('.').pop() || 'unknown',
-        category: selectedFolder ? folders.find(f => f.id === selectedFolder)?.name || 'General' : 'General',
-        folder_id: selectedFolder || null,
-        uploaded_by: user.id,
-        created_at: new Date().toISOString(),
-        uploader: {
-          first_name: 'Current',
-          last_name: 'User',
-          email: user.email
-        }
-      };
-      
+      // Upload file to storage
+      const fileExt = file.name.split('.').pop();
+      const fileName = `${Date.now()}-${Math.random().toString(36).substring(2, 15)}.${fileExt}`;
+      const filePath = `documents/${fileName}`;
+
+      const { error: uploadError } = await supabase.storage
+        .from('project_documents')
+        .upload(filePath, file);
+
+      if (uploadError) throw uploadError;
+
+      // Get public URL
+      const { data: publicUrl } = supabase.storage
+        .from('project_documents')
+        .getPublicUrl(filePath);
+
+      // Create document record
+      const { data: documentData, error: documentError } = await supabase
+        .from('documents')
+        .insert({
+          file_name: file.name,
+          file_path: publicUrl.publicUrl,
+          file_size: file.size,
+          file_type: file.type,
+          category,
+          folder_id: folderId || null,
+          uploaded_by: user.id
+        })
+        .select(`
+          *,
+          uploader:uploaded_by(
+            first_name,
+            last_name,
+            email
+          )
+        `)
+        .single();
+
+      if (documentError) throw documentError;
+
       toast.success('Document uploaded successfully');
-      onSuccess(mockDocument);
-      resetForm();
-      onOpenChange(false);
-    } catch (error: any) {
+      onSuccess(documentData);
+    } catch (error) {
       console.error('Error uploading document:', error);
-      toast.error(error.message || 'Failed to upload document');
+      toast.error('Failed to upload document');
     } finally {
-      setIsUploading(false);
+      setIsSubmitting(false);
     }
   };
 
   return (
-    <Dialog open={open} onOpenChange={(newOpen) => {
-      if (!isUploading) {
-        onOpenChange(newOpen);
-        if (!newOpen) resetForm();
-      }
-    }}>
-      <DialogContent className="sm:max-w-[425px]">
-        <DialogHeader>
-          <DialogTitle>Upload Document</DialogTitle>
-        </DialogHeader>
-        <form onSubmit={handleSubmit} className="space-y-4">
+    <form onSubmit={handleSubmit} className="space-y-4 py-4">
+      <DialogHeader>
+        <DialogTitle>Upload Document</DialogTitle>
+        <DialogDescription>
+          Upload a new document to the repository
+        </DialogDescription>
+      </DialogHeader>
+
+      <div className="space-y-4">
+        <div className="space-y-2">
+          <Label htmlFor="file">Select File</Label>
+          <Input
+            id="file"
+            type="file"
+            onChange={handleFileChange}
+            disabled={isSubmitting}
+            required
+          />
+        </div>
+
+        <div className="space-y-2">
+          <Label htmlFor="category">Category</Label>
+          <Select
+            value={category}
+            onValueChange={setCategory}
+            disabled={isSubmitting}
+          >
+            <SelectTrigger id="category">
+              <SelectValue placeholder="Select category" />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value="general">General</SelectItem>
+              <SelectItem value="reports">Reports</SelectItem>
+              <SelectItem value="presentations">Presentations</SelectItem>
+              <SelectItem value="contracts">Contracts</SelectItem>
+              <SelectItem value="proposals">Proposals</SelectItem>
+              <SelectItem value="other">Other</SelectItem>
+            </SelectContent>
+          </Select>
+        </div>
+
+        {folders.length > 0 && (
           <div className="space-y-2">
-            <Label htmlFor="file">Document File</Label>
-            <div className="flex items-center gap-2">
-              <Input
-                id="file"
-                type="file"
-                ref={fileInputRef}
-                onChange={handleFileChange}
-                disabled={isUploading}
-                className="flex-1"
-              />
-            </div>
-          </div>
-          
-          <div className="space-y-2">
-            <Label htmlFor="folder">Folder</Label>
+            <Label htmlFor="folder">Folder (optional)</Label>
             <Select
-              value={selectedFolder}
-              onValueChange={setSelectedFolder}
-              disabled={isUploading}
+              value={folderId}
+              onValueChange={setFolderId}
+              disabled={isSubmitting}
             >
               <SelectTrigger id="folder">
-                <SelectValue placeholder="Select a folder" />
+                <SelectValue placeholder="Select folder (optional)" />
               </SelectTrigger>
               <SelectContent>
-                <SelectItem value="">No folder</SelectItem>
+                <SelectItem value="">No Folder</SelectItem>
                 {folders.map((folder) => (
                   <SelectItem key={folder.id} value={folder.id}>
                     {folder.name}
@@ -138,37 +173,31 @@ const DocumentUploadDialog: React.FC<DocumentUploadDialogProps> = ({
               </SelectContent>
             </Select>
           </div>
-          
-          <DialogFooter>
-            <Button 
-              type="button" 
-              variant="outline" 
-              onClick={() => onOpenChange(false)}
-              disabled={isUploading}
-              className="mr-2"
-            >
-              Cancel
-            </Button>
-            <Button 
-              type="submit" 
-              disabled={!fileName || isUploading}
-            >
-              {isUploading ? (
-                <>
-                  <Loader2 className="h-4 w-4 mr-2 animate-spin" />
-                  Uploading...
-                </>
-              ) : (
-                <>
-                  <Upload className="h-4 w-4 mr-2" />
-                  Upload
-                </>
-              )}
-            </Button>
-          </DialogFooter>
-        </form>
-      </DialogContent>
-    </Dialog>
+        )}
+      </div>
+
+      <DialogFooter>
+        <Button
+          type="button"
+          variant="outline"
+          onClick={() => onOpenChange(false)}
+          disabled={isSubmitting}
+          className="mr-2"
+        >
+          Cancel
+        </Button>
+        <Button type="submit" disabled={isSubmitting || !file}>
+          {isSubmitting ? (
+            <>
+              <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+              Uploading...
+            </>
+          ) : (
+            'Upload Document'
+          )}
+        </Button>
+      </DialogFooter>
+    </form>
   );
 };
 

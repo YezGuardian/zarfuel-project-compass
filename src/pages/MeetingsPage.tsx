@@ -9,6 +9,8 @@ import {
   DropdownMenuItem, 
   DropdownMenuTrigger 
 } from '@/components/ui/dropdown-menu';
+import { Input } from '@/components/ui/input';
+import { Label } from '@/components/ui/label';
 import { Plus, Users, Clock, MapPin, FileText, Download, MoreHorizontal, Edit, Trash2, Upload } from 'lucide-react';
 import { format, parseISO, isToday, isTomorrow, addDays } from 'date-fns';
 import { supabase } from '@/integrations/supabase/client';
@@ -18,7 +20,6 @@ import { useAuth } from '@/contexts/AuthContext';
 import EventForm from '@/components/calendar/EventForm';
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from '@/components/ui/alert-dialog';
 import { Badge } from '@/components/ui/badge';
-import { Input } from '@/components/ui/input';
 import { ScrollArea } from '@/components/ui/scroll-area';
 
 const MeetingsPage: React.FC = () => {

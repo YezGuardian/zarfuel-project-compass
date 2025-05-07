@@ -8,7 +8,7 @@ export interface Document {
   category: string;
   created_at: string;
   uploaded_by: string | null;
-  folder_id?: string;
+  folder_id?: string | null;
   downloaded_by: any[] | null; // Ensures downloaded_by is always an array or null
   uploader?: {
     first_name: string | null;
