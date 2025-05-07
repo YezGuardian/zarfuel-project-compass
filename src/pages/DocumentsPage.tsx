@@ -94,15 +94,12 @@ const DocumentsPage: React.FC = () => {
         const typedDocuments: Document[] = documentsData?.map(doc => {
           // Handle the case where uploader might be null or an error object
           let uploaderValue: Document['uploader'] = null;
-          if (doc.uploader && typeof doc.uploader === 'object' && doc.uploader !== null && 
-              !('error' in doc.uploader)) {
-            // Cast uploader to the correct type after verifying it's safe
-            const uploader = doc.uploader as {
-              first_name: string | null;
-              last_name: string | null;
-              email: string;
+          if (doc.uploader && typeof doc.uploader === 'object' && 'first_name' in doc.uploader) {
+            uploaderValue = {
+              first_name: doc.uploader.first_name,
+              last_name: doc.uploader.last_name,
+              email: doc.uploader.email
             };
-            uploaderValue = uploader;
           }
           
           return {
@@ -449,7 +446,7 @@ const DocumentTable: React.FC<DocumentTableProps> = ({
                   <TableCell>{formatFileSize(doc.file_size)}</TableCell>
                   <TableCell>
                     {doc.uploader ? 
-                      `${doc.uploader.first_name || ''} ${doc.uploader.last_name || ''}`.trim() || 'Unknown' : 
+                      `${doc.uploader.first_name || ''} ${doc.uploader.last_name || ''}`.trim() || doc.uploader.email : 
                       'Unknown'}
                   </TableCell>
                   <TableCell>

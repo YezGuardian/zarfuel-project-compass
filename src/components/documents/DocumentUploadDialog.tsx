@@ -111,93 +111,97 @@ const DocumentUploadDialog: React.FC<DocumentUploadDialogProps> = ({
   };
 
   return (
-    <form onSubmit={handleSubmit} className="space-y-4 py-4">
-      <DialogHeader>
-        <DialogTitle>Upload Document</DialogTitle>
-        <DialogDescription>
-          Upload a new document to the repository
-        </DialogDescription>
-      </DialogHeader>
+    <Dialog open={open} onOpenChange={onOpenChange}>
+      <DialogContent>
+        <DialogHeader>
+          <DialogTitle>Upload Document</DialogTitle>
+          <DialogDescription>
+            Upload a new document to the repository
+          </DialogDescription>
+        </DialogHeader>
+        
+        <form onSubmit={handleSubmit} className="space-y-4 pt-4">
+          <div className="space-y-4">
+            <div className="space-y-2">
+              <Label htmlFor="file">Select File</Label>
+              <Input
+                id="file"
+                type="file"
+                onChange={handleFileChange}
+                disabled={isSubmitting}
+                required
+              />
+            </div>
 
-      <div className="space-y-4">
-        <div className="space-y-2">
-          <Label htmlFor="file">Select File</Label>
-          <Input
-            id="file"
-            type="file"
-            onChange={handleFileChange}
-            disabled={isSubmitting}
-            required
-          />
-        </div>
+            <div className="space-y-2">
+              <Label htmlFor="category">Category</Label>
+              <Select
+                value={category}
+                onValueChange={setCategory}
+                disabled={isSubmitting}
+              >
+                <SelectTrigger id="category">
+                  <SelectValue placeholder="Select category" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="general">General</SelectItem>
+                  <SelectItem value="reports">Reports</SelectItem>
+                  <SelectItem value="presentations">Presentations</SelectItem>
+                  <SelectItem value="contracts">Contracts</SelectItem>
+                  <SelectItem value="proposals">Proposals</SelectItem>
+                  <SelectItem value="other">Other</SelectItem>
+                </SelectContent>
+              </Select>
+            </div>
 
-        <div className="space-y-2">
-          <Label htmlFor="category">Category</Label>
-          <Select
-            value={category}
-            onValueChange={setCategory}
-            disabled={isSubmitting}
-          >
-            <SelectTrigger id="category">
-              <SelectValue placeholder="Select category" />
-            </SelectTrigger>
-            <SelectContent>
-              <SelectItem value="general">General</SelectItem>
-              <SelectItem value="reports">Reports</SelectItem>
-              <SelectItem value="presentations">Presentations</SelectItem>
-              <SelectItem value="contracts">Contracts</SelectItem>
-              <SelectItem value="proposals">Proposals</SelectItem>
-              <SelectItem value="other">Other</SelectItem>
-            </SelectContent>
-          </Select>
-        </div>
-
-        {folders.length > 0 && (
-          <div className="space-y-2">
-            <Label htmlFor="folder">Folder (optional)</Label>
-            <Select
-              value={folderId}
-              onValueChange={setFolderId}
-              disabled={isSubmitting}
-            >
-              <SelectTrigger id="folder">
-                <SelectValue placeholder="Select folder (optional)" />
-              </SelectTrigger>
-              <SelectContent>
-                <SelectItem value="">No Folder</SelectItem>
-                {folders.map((folder) => (
-                  <SelectItem key={folder.id} value={folder.id}>
-                    {folder.name}
-                  </SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
+            {folders.length > 0 && (
+              <div className="space-y-2">
+                <Label htmlFor="folder">Folder (optional)</Label>
+                <Select
+                  value={folderId}
+                  onValueChange={setFolderId}
+                  disabled={isSubmitting}
+                >
+                  <SelectTrigger id="folder">
+                    <SelectValue placeholder="Select folder (optional)" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="">No Folder</SelectItem>
+                    {folders.map((folder) => (
+                      <SelectItem key={folder.id} value={folder.id}>
+                        {folder.name}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
+            )}
           </div>
-        )}
-      </div>
 
-      <DialogFooter>
-        <Button
-          type="button"
-          variant="outline"
-          onClick={() => onOpenChange(false)}
-          disabled={isSubmitting}
-          className="mr-2"
-        >
-          Cancel
-        </Button>
-        <Button type="submit" disabled={isSubmitting || !file}>
-          {isSubmitting ? (
-            <>
-              <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-              Uploading...
-            </>
-          ) : (
-            'Upload Document'
-          )}
-        </Button>
-      </DialogFooter>
-    </form>
+          <DialogFooter>
+            <Button
+              type="button"
+              variant="outline"
+              onClick={() => onOpenChange(false)}
+              disabled={isSubmitting}
+              className="mr-2"
+            >
+              Cancel
+            </Button>
+            <Button type="submit" disabled={isSubmitting || !file}>
+              {isSubmitting ? (
+                <>
+                  <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                  Uploading...
+                </>
+              ) : (
+                'Upload Document'
+              )}
+            </Button>
+          </DialogFooter>
+        </form>
+      </DialogContent>
+    </Dialog>
   );
 };
 
