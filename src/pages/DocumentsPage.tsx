@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect } from 'react';
 import { 
   Card, 
@@ -91,11 +90,19 @@ const DocumentsPage: React.FC = () => {
         if (documentsError) throw documentsError;
         
         // Fix for TS error by ensuring the data matches Document type
-        const typedDocuments: Document[] = documentsData?.map(doc => ({
-          ...doc,
-          downloaded_by: Array.isArray(doc.downloaded_by) ? doc.downloaded_by : (doc.downloaded_by ? [doc.downloaded_by] : []),
-          uploader: doc.uploader as Document['uploader'] || null
-        })) || [];
+        const typedDocuments: Document[] = documentsData?.map(doc => {
+          // Handle the case where uploader might be an error object
+          let uploaderValue: Document['uploader'] = null;
+          if (doc.uploader && typeof doc.uploader === 'object' && !('error' in doc.uploader)) {
+            uploaderValue = doc.uploader as Document['uploader'];
+          }
+          
+          return {
+            ...doc,
+            downloaded_by: Array.isArray(doc.downloaded_by) ? doc.downloaded_by : (doc.downloaded_by ? [doc.downloaded_by] : []),
+            uploader: uploaderValue
+          };
+        }) || [];
         
         // Fetch folders
         const { data: foldersData, error: foldersError } = await supabase
