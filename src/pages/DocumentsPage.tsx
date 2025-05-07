@@ -1,3 +1,4 @@
+
 import React, { useState, useEffect } from 'react';
 import { 
   Card, 
@@ -41,6 +42,8 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import CreateFolderDialog from '@/components/documents/CreateFolderDialog';
 import DocumentUploadDialog from '@/components/documents/DocumentUploadDialog';
 import { Document } from '@/types/document';
+import DocumentHeader from '@/components/documents/DocumentHeader';
+import DocumentFilters from '@/components/documents/DocumentFilters';
 
 interface Folder {
   id: string;
@@ -260,45 +263,13 @@ const DocumentsPage: React.FC = () => {
   
   return (
     <div className="space-y-6">
-      <div className="flex justify-between items-start">
-        <div>
-          <h1 className="text-2xl font-bold tracking-tight">Document Repository</h1>
-          <p className="text-muted-foreground">
-            Access, manage and share project documents
-          </p>
-        </div>
-        
-        <div className="flex space-x-2">
-          {isAdmin() && (
-            <Button 
-              variant="outline" 
-              onClick={() => setCreateFolderOpen(true)}
-            >
-              <FileArchive className="h-4 w-4 mr-2" />
-              New Folder
-            </Button>
-          )}
-          <Button 
-            onClick={() => setUploadDialogOpen(true)}
-            className="bg-zarfuel-blue hover:bg-zarfuel-blue/90"
-          >
-            <Upload className="h-4 w-4 mr-2" />
-            Upload Document
-          </Button>
-        </div>
-      </div>
+      <DocumentHeader 
+        isAdmin={isAdmin()} 
+        onCreateFolder={() => setCreateFolderOpen(true)} 
+        onUploadDocument={() => setUploadDialogOpen(true)} 
+      />
       
-      <div className="flex items-center space-x-4 pb-4">
-        <div className="relative flex-1 max-w-sm">
-          <Search className="absolute left-2 top-2.5 h-4 w-4 text-muted-foreground" />
-          <Input
-            placeholder="Search documents..."
-            value={searchTerm}
-            onChange={(e) => setSearchTerm(e.target.value)}
-            className="pl-8"
-          />
-        </div>
-      </div>
+      <DocumentFilters searchTerm={searchTerm} onSearchChange={setSearchTerm} />
       
       <Tabs defaultValue="all" className="space-y-4">
         <div className="flex justify-between items-center">
@@ -369,7 +340,7 @@ const DocumentsPage: React.FC = () => {
   );
 };
 
-// Document Table component
+// Document Table component - Refactored into its own component
 interface DocumentTableProps {
   documents: Document[];
   isLoading: boolean;

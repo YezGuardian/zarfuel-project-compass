@@ -1,32 +1,16 @@
+
 import React, { useState } from 'react';
-import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
-import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { budgetData } from '@/data/mockData';
-import { 
-  BarChart, 
-  Bar, 
-  XAxis, 
-  YAxis, 
-  CartesianGrid, 
-  Tooltip, 
-  Legend, 
-  ResponsiveContainer,
-  PieChart,
-  Pie,
-  Cell
-} from 'recharts';
-import { DollarSign, Edit, Plus, GripVertical } from 'lucide-react';
-import { Button } from '@/components/ui/button';
-import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from '@/components/ui/dialog';
-import { ScrollArea } from '@/components/ui/scroll-area';
-import { Input } from '@/components/ui/input';
-import { Label } from '@/components/ui/label';
+import { DragDropContext } from '@hello-pangea/dnd';
 import { toast } from 'sonner';
 import { useAuth } from '@/contexts/AuthContext';
-import StatCard from '@/components/dashboard/StatCard';
-import { DragDropContext, Droppable, Draggable } from '@hello-pangea/dnd';
+import BudgetHeader from '@/components/budget/BudgetHeader';
+import BudgetSummary from '@/components/budget/BudgetSummary';
+import BudgetCharts from '@/components/budget/BudgetCharts';
+import BudgetTable from '@/components/budget/BudgetTable';
+import BudgetCategoryDialog from '@/components/budget/BudgetCategoryDialog';
 
-interface BudgetCategory {
+export interface BudgetCategory {
   name: string;
   estimated: number;
   actual: number;
@@ -167,372 +151,52 @@ const BudgetPage: React.FC = () => {
   
   return (
     <div className="space-y-6">
-      <div className="flex justify-between items-center">
-        <div>
-          <h1 className="text-2xl font-bold tracking-tight">Budget & Financial Plan</h1>
-          <p className="text-muted-foreground">
-            Track financial allocation, spending, and projections
-          </p>
-        </div>
+      <BudgetHeader 
+        canEdit={canEdit} 
+        onAddCategory={() => setAddCategoryDialog(true)}
+      />
+      
+      <BudgetSummary 
+        totalBudget={localBudgetData.totalBudget}
+        allocated={localBudgetData.allocated}
+        spent={localBudgetData.spent}
+        remainingBudget={remainingBudget}
+        allocatedPercentage={allocatedPercentage}
+        spentPercentage={spentPercentage}
+        formatCurrency={formatCurrency}
+      />
+      
+      <DragDropContext onDragEnd={handleDragEnd}>
+        <BudgetCharts 
+          viewType={viewType} 
+          setViewType={setViewType} 
+          barChartData={barChartData}
+          pieChartData={pieChartData}
+          COLORS={COLORS}
+          formatCurrency={formatCurrency}
+        />
         
-        {canEdit && (
-          <Button 
-            onClick={() => setAddCategoryDialog(true)}
-            className="bg-zarfuel-blue hover:bg-zarfuel-blue/90"
-          >
-            <Plus className="h-4 w-4 mr-2" />
-            Add Budget Category
-          </Button>
-        )}
-      </div>
-      
-      {/* Budget Summary */}
-      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
-        <StatCard 
-          title="Total Budget" 
-          value={formatCurrency(localBudgetData.totalBudget)} 
-          icon={DollarSign}
-          colorClass="text-zarfuel-gold"
+        <BudgetTable 
+          categories={localBudgetData.categories}
+          onEditCategory={handleEditCategory}
+          formatCurrency={formatCurrency}
+          canEdit={canEdit}
         />
-        <StatCard 
-          title="Allocated" 
-          value={formatCurrency(localBudgetData.allocated)}
-          description={`${allocatedPercentage}% of total budget`}
-          icon={DollarSign}
-          colorClass="text-zarfuel-blue"
-        />
-        <StatCard 
-          title="Spent" 
-          value={formatCurrency(localBudgetData.spent)}
-          description={`${spentPercentage}% of total budget`}
-          icon={DollarSign}
-          colorClass="text-status-complete"
-        />
-        <StatCard 
-          title="Remaining" 
-          value={formatCurrency(remainingBudget)}
-          description={`${100 - spentPercentage}% of total budget`}
-          icon={DollarSign}
-          colorClass="text-status-inprogress"
-        />
-      </div>
+      </DragDropContext>
       
-      {/* Budget Details */}
-      <Tabs defaultValue="estimated" onValueChange={(value) => setViewType(value)}>
-        <TabsList className="grid w-full max-w-md grid-cols-2">
-          <TabsTrigger value="estimated">Estimated</TabsTrigger>
-          <TabsTrigger value="actual">Actual</TabsTrigger>
-        </TabsList>
-        
-        <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 mt-6">
-          {/* Bar Chart */}
-          <Card>
-            <CardHeader>
-              <CardTitle>Budget Breakdown</CardTitle>
-            </CardHeader>
-            <CardContent className="pt-0">
-              <div className="h-80">
-                <ResponsiveContainer width="100%" height="100%">
-                  <BarChart
-                    data={barChartData}
-                    margin={{ top: 20, right: 30, left: 20, bottom: 80 }}
-                  >
-                    <CartesianGrid strokeDasharray="3 3" />
-                    <XAxis dataKey="name" angle={-45} textAnchor="end" height={80} />
-                    <YAxis 
-                      tickFormatter={(value) => `R${value/1000}k`}
-                    />
-                    <Tooltip formatter={(value) => formatCurrency(value as number)} />
-                    <Bar 
-                      dataKey={viewType === 'estimated' ? 'Estimated' : 'Actual'} 
-                      fill={viewType === 'estimated' ? '#1B3555' : '#10B981'} 
-                    />
-                  </BarChart>
-                </ResponsiveContainer>
-              </div>
-              
-              {/* Color-coded legend */}
-              <div className="mt-6">
-                <div className="flex flex-wrap gap-4 justify-center">
-                  {barChartData.map((entry, index) => (
-                    <div key={index} className="flex items-center text-sm">
-                      <div 
-                        className="w-4 h-4 mr-1" 
-                        style={{ backgroundColor: COLORS[index % COLORS.length] }}
-                      ></div>
-                      <span className="mr-1">{entry.name}:</span>
-                      <span className="font-medium">
-                        {formatCurrency(viewType === 'estimated' ? entry.Estimated : entry.Actual)}
-                      </span>
-                    </div>
-                  ))}
-                </div>
-              </div>
-            </CardContent>
-          </Card>
-          
-          {/* Pie Chart */}
-          <Card>
-            <CardHeader>
-              <CardTitle>Budget Allocation</CardTitle>
-            </CardHeader>
-            <CardContent className="pt-0">
-              <div className="h-80">
-                <ResponsiveContainer width="100%" height="100%">
-                  <PieChart>
-                    <Pie
-                      data={pieChartData}
-                      cx="50%"
-                      cy="40%"
-                      outerRadius={100}
-                      fill="#8884d8"
-                      dataKey="value"
-                    >
-                      {pieChartData.map((entry, index) => (
-                        <Cell 
-                          key={`cell-${index}`} 
-                          fill={COLORS[index % COLORS.length]} 
-                        />
-                      ))}
-                    </Pie>
-                    <Tooltip formatter={(value) => formatCurrency(value as number)} />
-                  </PieChart>
-                </ResponsiveContainer>
-              </div>
-              
-              {/* Color-coded legend */}
-              <div className="mt-6">
-                <div className="grid grid-cols-2 sm:grid-cols-3 gap-4">
-                  {pieChartData.map((entry, index) => (
-                    <div key={index} className="flex items-center text-sm">
-                      <div 
-                        className="w-4 h-4 mr-1" 
-                        style={{ backgroundColor: COLORS[index % COLORS.length] }}
-                      ></div>
-                      <div className="flex flex-col">
-                        <span className="whitespace-nowrap overflow-hidden text-ellipsis max-w-[120px]">{entry.name}</span>
-                        <span className="font-medium">{Math.round((entry.value / pieChartData.reduce((sum, e) => sum + e.value, 0)) * 100)}%</span>
-                      </div>
-                    </div>
-                  ))}
-                </div>
-              </div>
-            </CardContent>
-          </Card>
-        </div>
-        
-        {/* Budget Table with Drag and Drop */}
-        <Card className="mt-6">
-          <CardHeader>
-            <CardTitle>Detailed Budget</CardTitle>
-          </CardHeader>
-          <CardContent>
-            <DragDropContext onDragEnd={handleDragEnd}>
-              <Droppable droppableId="budget-categories">
-                {(provided) => (
-                  <div 
-                    className="overflow-x-auto"
-                    {...provided.droppableProps}
-                    ref={provided.innerRef}
-                  >
-                    <table className="w-full">
-                      <thead>
-                        <tr className="border-b">
-                          {canEdit && <th className="px-2 py-3 w-8"></th>}
-                          <th className="px-4 py-3 text-left text-sm font-medium text-muted-foreground">Category</th>
-                          <th className="px-4 py-3 text-right text-sm font-medium text-muted-foreground">Estimated</th>
-                          <th className="px-4 py-3 text-right text-sm font-medium text-muted-foreground">Actual</th>
-                          <th className="px-4 py-3 text-right text-sm font-medium text-muted-foreground">Remaining</th>
-                          <th className="px-4 py-3 text-right text-sm font-medium text-muted-foreground">% Used</th>
-                          {canEdit && (
-                            <th className="px-4 py-3 text-right text-sm font-medium text-muted-foreground">Actions</th>
-                          )}
-                        </tr>
-                      </thead>
-                      <tbody>
-                        {localBudgetData.categories.map((category, index) => (
-                          <Draggable 
-                            key={category.id} 
-                            draggableId={category.id} 
-                            index={index}
-                            isDragDisabled={!canEdit}
-                          >
-                            {(provided, snapshot) => (
-                              <tr
-                                ref={provided.innerRef}
-                                {...provided.draggableProps}
-                                className={`border-b last:border-0 ${snapshot.isDragging ? 'bg-muted opacity-80' : 'hover:bg-muted/30'}`}
-                              >
-                                {canEdit && (
-                                  <td className="px-2 w-8">
-                                    <div {...provided.dragHandleProps} className="cursor-grab">
-                                      <GripVertical className="h-4 w-4 text-muted-foreground" />
-                                    </div>
-                                  </td>
-                                )}
-                                <td className="px-4 py-3 text-sm font-medium">{category.name}</td>
-                                <td className="px-4 py-3 text-sm text-right">{formatCurrency(category.estimated)}</td>
-                                <td className="px-4 py-3 text-sm text-right">{formatCurrency(category.actual)}</td>
-                                <td className="px-4 py-3 text-sm text-right">{formatCurrency(category.estimated - category.actual)}</td>
-                                <td className="px-4 py-3 text-sm text-right">
-                                  {category.estimated > 0 ? Math.round((category.actual / category.estimated) * 100) : 0}%
-                                </td>
-                                {canEdit && (
-                                  <td className="px-4 py-3 text-sm text-right">
-                                    <Button 
-                                      variant="ghost" 
-                                      size="sm" 
-                                      onClick={() => handleEditCategory(category)}
-                                      className="h-8 w-8 p-0"
-                                    >
-                                      <Edit className="h-4 w-4" />
-                                    </Button>
-                                  </td>
-                                )}
-                              </tr>
-                            )}
-                          </Draggable>
-                        ))}
-                        {provided.placeholder}
-                        <tr className="font-medium bg-slate-50">
-                          {canEdit && <td></td>}
-                          <td className="px-4 py-3">Total</td>
-                          <td className="px-4 py-3 text-right">{formatCurrency(localBudgetData.categories.reduce((sum, cat) => sum + cat.estimated, 0))}</td>
-                          <td className="px-4 py-3 text-right">{formatCurrency(localBudgetData.categories.reduce((sum, cat) => sum + cat.actual, 0))}</td>
-                          <td className="px-4 py-3 text-right">{formatCurrency(
-                            localBudgetData.categories.reduce((sum, cat) => sum + cat.estimated - cat.actual, 0)
-                          )}</td>
-                          <td className="px-4 py-3 text-right">
-                            {localBudgetData.allocated > 0 ? Math.round((localBudgetData.spent / localBudgetData.allocated) * 100) : 0}%
-                          </td>
-                          {canEdit && <td className="px-4 py-3"></td>}
-                        </tr>
-                      </tbody>
-                    </table>
-                  </div>
-                )}
-              </Droppable>
-            </DragDropContext>
-          </CardContent>
-        </Card>
-      </Tabs>
-      
-      {/* Edit Category Dialog */}
-      {editCategory && (
-        <Dialog open={editDialogOpen} onOpenChange={setEditDialogOpen}>
-          <DialogContent className="sm:max-w-[550px] max-h-[85vh] overflow-hidden">
-            <DialogHeader>
-              <DialogTitle>Edit Budget Category</DialogTitle>
-              <DialogDescription>
-                Update the budget details for {editCategory.name}
-              </DialogDescription>
-            </DialogHeader>
-            <ScrollArea className="max-h-[calc(85vh-120px)] p-1">
-              <div className="space-y-4 py-2">
-                <div className="grid grid-cols-4 items-center gap-4">
-                  <Label htmlFor="name" className="text-right">Name</Label>
-                  <Input 
-                    id="name" 
-                    value={editCategory.name} 
-                    onChange={(e) => setEditCategory({ ...editCategory, name: e.target.value })} 
-                    className="col-span-3" 
-                  />
-                </div>
-                <div className="grid grid-cols-4 items-center gap-4">
-                  <Label htmlFor="estimated" className="text-right">Estimated Budget</Label>
-                  <Input 
-                    id="estimated" 
-                    type="number" 
-                    value={editCategory.estimated} 
-                    onChange={(e) => setEditCategory({ 
-                      ...editCategory, 
-                      estimated: parseFloat(e.target.value) || 0 
-                    })} 
-                    className="col-span-3" 
-                  />
-                </div>
-                <div className="grid grid-cols-4 items-center gap-4">
-                  <Label htmlFor="actual" className="text-right">Actual Spent</Label>
-                  <Input 
-                    id="actual" 
-                    type="number" 
-                    value={editCategory.actual} 
-                    onChange={(e) => setEditCategory({ 
-                      ...editCategory, 
-                      actual: parseFloat(e.target.value) || 0 
-                    })} 
-                    className="col-span-3" 
-                  />
-                </div>
-              </div>
-            </ScrollArea>
-            <div className="flex justify-end gap-3 pt-4">
-              <Button variant="outline" onClick={() => setEditDialogOpen(false)}>Cancel</Button>
-              <Button onClick={handleSaveCategory}>Save Changes</Button>
-            </div>
-          </DialogContent>
-        </Dialog>
-      )}
-      
-      {/* Add Category Dialog */}
-      <Dialog open={addCategoryDialog} onOpenChange={setAddCategoryDialog}>
-        <DialogContent className="sm:max-w-[550px] max-h-[85vh] overflow-hidden">
-          <DialogHeader>
-            <DialogTitle>Add New Budget Category</DialogTitle>
-            <DialogDescription>
-              Create a new budget category to track expenses
-            </DialogDescription>
-          </DialogHeader>
-          <ScrollArea className="max-h-[calc(85vh-120px)] p-1">
-            <div className="space-y-4 py-2">
-              <div className="grid grid-cols-4 items-center gap-4">
-                <Label htmlFor="new-name" className="text-right">Name</Label>
-                <Input 
-                  id="new-name" 
-                  value={newCategory.name} 
-                  onChange={(e) => setNewCategory({ ...newCategory, name: e.target.value })} 
-                  className="col-span-3" 
-                />
-              </div>
-              <div className="grid grid-cols-4 items-center gap-4">
-                <Label htmlFor="new-estimated" className="text-right">Estimated Budget</Label>
-                <Input 
-                  id="new-estimated" 
-                  type="number" 
-                  value={newCategory.estimated} 
-                  onChange={(e) => setNewCategory({ 
-                    ...newCategory, 
-                    estimated: parseFloat(e.target.value) || 0 
-                  })} 
-                  className="col-span-3" 
-                />
-              </div>
-              <div className="grid grid-cols-4 items-center gap-4">
-                <Label htmlFor="new-actual" className="text-right">Actual Spent</Label>
-                <Input 
-                  id="new-actual" 
-                  type="number" 
-                  value={newCategory.actual} 
-                  onChange={(e) => setNewCategory({ 
-                    ...newCategory, 
-                    actual: parseFloat(e.target.value) || 0 
-                  })} 
-                  className="col-span-3" 
-                />
-              </div>
-            </div>
-          </ScrollArea>
-          <div className="flex justify-end gap-3 pt-4">
-            <Button variant="outline" onClick={() => setAddCategoryDialog(false)}>Cancel</Button>
-            <Button 
-              onClick={handleAddCategory}
-              disabled={!newCategory.name.trim()}
-            >
-              Add Category
-            </Button>
-          </div>
-        </DialogContent>
-      </Dialog>
+      <BudgetCategoryDialog 
+        isEdit={!!editCategory}
+        category={editCategory}
+        setCategory={setEditCategory}
+        isOpen={editDialogOpen}
+        onOpenChange={setEditDialogOpen}
+        onSave={handleSaveCategory}
+        newCategory={newCategory}
+        setNewCategory={setNewCategory}
+        isAddOpen={addCategoryDialog}
+        onAddOpenChange={setAddCategoryDialog}
+        onAdd={handleAddCategory}
+      />
     </div>
   );
 };
