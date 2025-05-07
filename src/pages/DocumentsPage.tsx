@@ -1,3 +1,4 @@
+
 import React, { useState, useEffect } from 'react';
 import { 
   Card, 
@@ -92,6 +93,7 @@ const DocumentsPage: React.FC = () => {
         // Fix for TS error by ensuring the data matches Document type
         const typedDocuments: Document[] = documentsData?.map(doc => ({
           ...doc,
+          downloaded_by: Array.isArray(doc.downloaded_by) ? doc.downloaded_by : (doc.downloaded_by ? [doc.downloaded_by] : []),
           uploader: doc.uploader as Document['uploader'] || null
         })) || [];
         
