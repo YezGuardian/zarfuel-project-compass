@@ -30,7 +30,7 @@ interface BudgetCategory {
   name: string;
   estimated: number;
   actual: number;
-  id?: string; // Adding id for drag-drop functionality
+  id: string; // Making id required instead of optional
 }
 
 const BudgetPage: React.FC = () => {
@@ -39,13 +39,18 @@ const BudgetPage: React.FC = () => {
     ...budgetData,
     categories: budgetData.categories.map((cat, index) => ({
       ...cat,
-      id: `category-${index}` // Adding unique id to each category
+      id: `category-${index}` // Ensuring each category has an id
     }))
   });
   const [editDialogOpen, setEditDialogOpen] = useState(false);
   const [editCategory, setEditCategory] = useState<BudgetCategory | null>(null);
   const [addCategoryDialog, setAddCategoryDialog] = useState(false);
-  const [newCategory, setNewCategory] = useState<BudgetCategory>({ name: '', estimated: 0, actual: 0 });
+  const [newCategory, setNewCategory] = useState<BudgetCategory>({ 
+    name: '', 
+    estimated: 0, 
+    actual: 0,
+    id: `new-category-${Date.now()}` // Adding a default ID for new categories
+  });
   
   const { isSpecial, isSuperAdmin } = useAuth();
   const canEdit = isSpecial() || isSuperAdmin();
@@ -98,7 +103,7 @@ const BudgetPage: React.FC = () => {
     if (!editCategory) return;
     
     const newCategories = localBudgetData.categories.map(cat => 
-      cat.name === editCategory.name ? editCategory : cat
+      cat.id === editCategory.id ? editCategory : cat
     );
     
     // Recalculate totals
@@ -120,7 +125,13 @@ const BudgetPage: React.FC = () => {
   const handleAddCategory = () => {
     if (!canEdit || !newCategory.name.trim()) return;
     
-    const newCategories = [...localBudgetData.categories, newCategory];
+    // Ensure the new category has a unique ID
+    const categoryWithId: BudgetCategory = {
+      ...newCategory,
+      id: `new-category-${Date.now()}`
+    };
+    
+    const newCategories = [...localBudgetData.categories, categoryWithId];
     
     // Recalculate totals
     const allocated = newCategories.reduce((sum, cat) => sum + cat.estimated, 0);
@@ -134,7 +145,7 @@ const BudgetPage: React.FC = () => {
     });
     
     setAddCategoryDialog(false);
-    setNewCategory({ name: '', estimated: 0, actual: 0 });
+    setNewCategory({ name: '', estimated: 0, actual: 0, id: `new-category-${Date.now()+1}` });
     toast.success(`Added new budget category: ${newCategory.name}`);
   };
   
@@ -341,8 +352,8 @@ const BudgetPage: React.FC = () => {
                       <tbody>
                         {localBudgetData.categories.map((category, index) => (
                           <Draggable 
-                            key={category.id || `category-${index}`} 
-                            draggableId={category.id || `category-${index}`} 
+                            key={category.id} 
+                            draggableId={category.id} 
                             index={index}
                             isDragDisabled={!canEdit}
                           >

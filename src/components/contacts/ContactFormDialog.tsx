@@ -97,11 +97,12 @@ const ContactFormDialog: React.FC<ContactFormDialogProps> = ({
         if (error) throw error;
         toast.success('Contact updated successfully');
       } else {
-        // Create new contact
+        // Create new contact - Ensure name is always included
         const { error } = await supabase
           .from('contacts')
           .insert({
             ...values,
+            name: values.name, // Explicitly ensure name is included
             created_by: user.id
           });
           
