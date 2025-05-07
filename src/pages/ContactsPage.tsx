@@ -22,6 +22,17 @@ import { supabase } from '@/integrations/supabase/client';
 import { toast } from 'sonner';
 import { Avatar, AvatarFallback } from '@/components/ui/avatar';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
+import ContactFormDialog from '@/components/contacts/ContactFormDialog';
+import { 
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from "@/components/ui/alert-dialog";
 
 interface Contact {
   id: string;
@@ -40,6 +51,14 @@ const ContactsPage: React.FC = () => {
   const [searchQuery, setSearchQuery] = useState('');
   const [isLoading, setIsLoading] = useState(true);
   const { isAdmin } = useAuth();
+  
+  // Contact form state
+  const [isFormOpen, setIsFormOpen] = useState(false);
+  const [selectedContact, setSelectedContact] = useState<Contact | null>(null);
+  
+  // Delete dialog state
+  const [isDeleteDialogOpen, setIsDeleteDialogOpen] = useState(false);
+  const [contactToDelete, setContactToDelete] = useState<Contact | null>(null);
   
   useEffect(() => {
     fetchContacts();
@@ -61,6 +80,46 @@ const ContactsPage: React.FC = () => {
     } finally {
       setIsLoading(false);
     }
+  };
+  
+  // Handle opening the edit form
+  const handleEdit = (contact: Contact) => {
+    setSelectedContact(contact);
+    setIsFormOpen(true);
+  };
+  
+  // Handle opening the add form
+  const handleAdd = () => {
+    setSelectedContact(null);
+    setIsFormOpen(true);
+  };
+  
+  // Handle contact deletion
+  const handleDelete = async () => {
+    if (!contactToDelete) return;
+    
+    try {
+      const { error } = await supabase
+        .from('contacts')
+        .delete()
+        .eq('id', contactToDelete.id);
+        
+      if (error) throw error;
+      
+      setContacts(contacts.filter(c => c.id !== contactToDelete.id));
+      toast.success('Contact deleted successfully');
+      setIsDeleteDialogOpen(false);
+      setContactToDelete(null);
+    } catch (error: any) {
+      console.error('Error deleting contact:', error);
+      toast.error(error.message || 'Failed to delete contact');
+    }
+  };
+  
+  // Open delete confirmation dialog
+  const openDeleteDialog = (contact: Contact) => {
+    setContactToDelete(contact);
+    setIsDeleteDialogOpen(true);
   };
   
   const filteredContacts = contacts.filter(contact => 
@@ -118,7 +177,10 @@ const ContactsPage: React.FC = () => {
         </div>
         
         {isAdmin() && (
-          <Button className="bg-zarfuel-blue hover:bg-zarfuel-blue/90">
+          <Button 
+            className="bg-zarfuel-blue hover:bg-zarfuel-blue/90"
+            onClick={handleAdd}
+          >
             <Plus className="h-4 w-4 mr-2" />
             Add Contact
           </Button>
@@ -201,10 +263,19 @@ const ContactsPage: React.FC = () => {
                         {isAdmin() && (
                           <TableCell className="text-right">
                             <div className="flex justify-end space-x-1">
-                              <Button variant="ghost" size="icon">
+                              <Button 
+                                variant="ghost" 
+                                size="icon"
+                                onClick={() => handleEdit(contact)}
+                              >
                                 <Edit className="h-4 w-4" />
                               </Button>
-                              <Button variant="ghost" size="icon" className="text-destructive">
+                              <Button 
+                                variant="ghost" 
+                                size="icon" 
+                                className="text-destructive"
+                                onClick={() => openDeleteDialog(contact)}
+                              >
                                 <Trash2 className="h-4 w-4" />
                               </Button>
                             </div>
@@ -288,10 +359,20 @@ const ContactsPage: React.FC = () => {
                           
                           {isAdmin() && (
                             <div className="flex justify-end mt-4">
-                              <Button variant="ghost" size="sm" className="h-8 w-8 p-0">
+                              <Button 
+                                variant="ghost" 
+                                size="sm" 
+                                className="h-8 w-8 p-0"
+                                onClick={() => handleEdit(contact)}
+                              >
                                 <Edit className="h-4 w-4" />
                               </Button>
-                              <Button variant="ghost" size="sm" className="h-8 w-8 p-0 text-destructive">
+                              <Button 
+                                variant="ghost" 
+                                size="sm" 
+                                className="h-8 w-8 p-0 text-destructive"
+                                onClick={() => openDeleteDialog(contact)}
+                              >
                                 <Trash2 className="h-4 w-4" />
                               </Button>
                             </div>
@@ -306,6 +387,33 @@ const ContactsPage: React.FC = () => {
           )}
         </TabsContent>
       </Tabs>
+      
+      {/* Contact Form Dialog */}
+      <ContactFormDialog
+        open={isFormOpen}
+        onOpenChange={setIsFormOpen}
+        contact={selectedContact}
+        onSuccess={fetchContacts}
+      />
+      
+      {/* Delete Confirmation Dialog */}
+      <AlertDialog open={isDeleteDialogOpen} onOpenChange={setIsDeleteDialogOpen}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Are you sure?</AlertDialogTitle>
+            <AlertDialogDescription>
+              This will permanently delete {contactToDelete?.name}'s contact information.
+              This action cannot be undone.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel>Cancel</AlertDialogCancel>
+            <AlertDialogAction onClick={handleDelete} className="bg-destructive text-destructive-foreground">
+              Delete
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
     </div>
   );
 };

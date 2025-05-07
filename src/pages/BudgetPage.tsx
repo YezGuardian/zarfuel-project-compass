@@ -1,4 +1,3 @@
-
 import React, { useState } from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
@@ -16,7 +15,7 @@ import {
   Pie,
   Cell
 } from 'recharts';
-import { DollarSign, Edit, Plus } from 'lucide-react';
+import { DollarSign, Edit, Plus, GripVertical } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from '@/components/ui/dialog';
 import { ScrollArea } from '@/components/ui/scroll-area';
@@ -25,16 +24,24 @@ import { Label } from '@/components/ui/label';
 import { toast } from 'sonner';
 import { useAuth } from '@/contexts/AuthContext';
 import StatCard from '@/components/dashboard/StatCard';
+import { DragDropContext, Droppable, Draggable } from '@hello-pangea/dnd';
 
 interface BudgetCategory {
   name: string;
   estimated: number;
   actual: number;
+  id?: string; // Adding id for drag-drop functionality
 }
 
 const BudgetPage: React.FC = () => {
   const [viewType, setViewType] = useState('estimated');
-  const [localBudgetData, setLocalBudgetData] = useState(budgetData);
+  const [localBudgetData, setLocalBudgetData] = useState({
+    ...budgetData,
+    categories: budgetData.categories.map((cat, index) => ({
+      ...cat,
+      id: `category-${index}` // Adding unique id to each category
+    }))
+  });
   const [editDialogOpen, setEditDialogOpen] = useState(false);
   const [editCategory, setEditCategory] = useState<BudgetCategory | null>(null);
   const [addCategoryDialog, setAddCategoryDialog] = useState(false);
@@ -58,14 +65,13 @@ const BudgetPage: React.FC = () => {
   const spentPercentage = Math.round((localBudgetData.spent / localBudgetData.totalBudget) * 100);
   const remainingBudget = localBudgetData.totalBudget - localBudgetData.spent;
   
-  // Prepare data for bar chart
+  // Prepare data for charts
   const barChartData = localBudgetData.categories.map(cat => ({
     name: cat.name,
     Estimated: cat.estimated,
     Actual: cat.actual
   }));
   
-  // Prepare data for pie chart
   const pieChartData = viewType === 'estimated' 
     ? localBudgetData.categories.map(cat => ({
         name: cat.name,
@@ -130,6 +136,22 @@ const BudgetPage: React.FC = () => {
     setAddCategoryDialog(false);
     setNewCategory({ name: '', estimated: 0, actual: 0 });
     toast.success(`Added new budget category: ${newCategory.name}`);
+  };
+  
+  // Handle drag and drop reordering
+  const handleDragEnd = (result: any) => {
+    if (!result.destination || !canEdit) return;
+    
+    const items = Array.from(localBudgetData.categories);
+    const [reorderedItem] = items.splice(result.source.index, 1);
+    items.splice(result.destination.index, 0, reorderedItem);
+    
+    setLocalBudgetData({
+      ...localBudgetData,
+      categories: items
+    });
+    
+    toast.success('Budget category order updated');
   };
   
   return (
@@ -288,65 +310,98 @@ const BudgetPage: React.FC = () => {
           </Card>
         </div>
         
-        {/* Budget Table */}
+        {/* Budget Table with Drag and Drop */}
         <Card className="mt-6">
           <CardHeader>
             <CardTitle>Detailed Budget</CardTitle>
           </CardHeader>
           <CardContent>
-            <div className="overflow-x-auto">
-              <table className="w-full">
-                <thead>
-                  <tr className="border-b">
-                    <th className="px-4 py-3 text-left text-sm font-medium text-muted-foreground">Category</th>
-                    <th className="px-4 py-3 text-right text-sm font-medium text-muted-foreground">Estimated</th>
-                    <th className="px-4 py-3 text-right text-sm font-medium text-muted-foreground">Actual</th>
-                    <th className="px-4 py-3 text-right text-sm font-medium text-muted-foreground">Remaining</th>
-                    <th className="px-4 py-3 text-right text-sm font-medium text-muted-foreground">% Used</th>
-                    {canEdit && (
-                      <th className="px-4 py-3 text-right text-sm font-medium text-muted-foreground">Actions</th>
-                    )}
-                  </tr>
-                </thead>
-                <tbody>
-                  {localBudgetData.categories.map((category, index) => (
-                    <tr key={index} className="border-b last:border-0 hover:bg-muted/30">
-                      <td className="px-4 py-3 text-sm font-medium">{category.name}</td>
-                      <td className="px-4 py-3 text-sm text-right">{formatCurrency(category.estimated)}</td>
-                      <td className="px-4 py-3 text-sm text-right">{formatCurrency(category.actual)}</td>
-                      <td className="px-4 py-3 text-sm text-right">{formatCurrency(category.estimated - category.actual)}</td>
-                      <td className="px-4 py-3 text-sm text-right">
-                        {category.estimated > 0 ? Math.round((category.actual / category.estimated) * 100) : 0}%
-                      </td>
-                      {canEdit && (
-                        <td className="px-4 py-3 text-sm text-right">
-                          <Button 
-                            variant="ghost" 
-                            size="sm" 
-                            onClick={() => handleEditCategory(category)}
-                            className="h-8 w-8 p-0"
+            <DragDropContext onDragEnd={handleDragEnd}>
+              <Droppable droppableId="budget-categories">
+                {(provided) => (
+                  <div 
+                    className="overflow-x-auto"
+                    {...provided.droppableProps}
+                    ref={provided.innerRef}
+                  >
+                    <table className="w-full">
+                      <thead>
+                        <tr className="border-b">
+                          {canEdit && <th className="px-2 py-3 w-8"></th>}
+                          <th className="px-4 py-3 text-left text-sm font-medium text-muted-foreground">Category</th>
+                          <th className="px-4 py-3 text-right text-sm font-medium text-muted-foreground">Estimated</th>
+                          <th className="px-4 py-3 text-right text-sm font-medium text-muted-foreground">Actual</th>
+                          <th className="px-4 py-3 text-right text-sm font-medium text-muted-foreground">Remaining</th>
+                          <th className="px-4 py-3 text-right text-sm font-medium text-muted-foreground">% Used</th>
+                          {canEdit && (
+                            <th className="px-4 py-3 text-right text-sm font-medium text-muted-foreground">Actions</th>
+                          )}
+                        </tr>
+                      </thead>
+                      <tbody>
+                        {localBudgetData.categories.map((category, index) => (
+                          <Draggable 
+                            key={category.id || `category-${index}`} 
+                            draggableId={category.id || `category-${index}`} 
+                            index={index}
+                            isDragDisabled={!canEdit}
                           >
-                            <Edit className="h-4 w-4" />
-                          </Button>
-                        </td>
-                      )}
-                    </tr>
-                  ))}
-                  <tr className="font-medium bg-slate-50">
-                    <td className="px-4 py-3">Total</td>
-                    <td className="px-4 py-3 text-right">{formatCurrency(localBudgetData.categories.reduce((sum, cat) => sum + cat.estimated, 0))}</td>
-                    <td className="px-4 py-3 text-right">{formatCurrency(localBudgetData.categories.reduce((sum, cat) => sum + cat.actual, 0))}</td>
-                    <td className="px-4 py-3 text-right">{formatCurrency(
-                      localBudgetData.categories.reduce((sum, cat) => sum + cat.estimated - cat.actual, 0)
-                    )}</td>
-                    <td className="px-4 py-3 text-right">
-                      {localBudgetData.allocated > 0 ? Math.round((localBudgetData.spent / localBudgetData.allocated) * 100) : 0}%
-                    </td>
-                    {canEdit && <td className="px-4 py-3"></td>}
-                  </tr>
-                </tbody>
-              </table>
-            </div>
+                            {(provided, snapshot) => (
+                              <tr
+                                ref={provided.innerRef}
+                                {...provided.draggableProps}
+                                className={`border-b last:border-0 ${snapshot.isDragging ? 'bg-muted opacity-80' : 'hover:bg-muted/30'}`}
+                              >
+                                {canEdit && (
+                                  <td className="px-2 w-8">
+                                    <div {...provided.dragHandleProps} className="cursor-grab">
+                                      <GripVertical className="h-4 w-4 text-muted-foreground" />
+                                    </div>
+                                  </td>
+                                )}
+                                <td className="px-4 py-3 text-sm font-medium">{category.name}</td>
+                                <td className="px-4 py-3 text-sm text-right">{formatCurrency(category.estimated)}</td>
+                                <td className="px-4 py-3 text-sm text-right">{formatCurrency(category.actual)}</td>
+                                <td className="px-4 py-3 text-sm text-right">{formatCurrency(category.estimated - category.actual)}</td>
+                                <td className="px-4 py-3 text-sm text-right">
+                                  {category.estimated > 0 ? Math.round((category.actual / category.estimated) * 100) : 0}%
+                                </td>
+                                {canEdit && (
+                                  <td className="px-4 py-3 text-sm text-right">
+                                    <Button 
+                                      variant="ghost" 
+                                      size="sm" 
+                                      onClick={() => handleEditCategory(category)}
+                                      className="h-8 w-8 p-0"
+                                    >
+                                      <Edit className="h-4 w-4" />
+                                    </Button>
+                                  </td>
+                                )}
+                              </tr>
+                            )}
+                          </Draggable>
+                        ))}
+                        {provided.placeholder}
+                        <tr className="font-medium bg-slate-50">
+                          {canEdit && <td></td>}
+                          <td className="px-4 py-3">Total</td>
+                          <td className="px-4 py-3 text-right">{formatCurrency(localBudgetData.categories.reduce((sum, cat) => sum + cat.estimated, 0))}</td>
+                          <td className="px-4 py-3 text-right">{formatCurrency(localBudgetData.categories.reduce((sum, cat) => sum + cat.actual, 0))}</td>
+                          <td className="px-4 py-3 text-right">{formatCurrency(
+                            localBudgetData.categories.reduce((sum, cat) => sum + cat.estimated - cat.actual, 0)
+                          )}</td>
+                          <td className="px-4 py-3 text-right">
+                            {localBudgetData.allocated > 0 ? Math.round((localBudgetData.spent / localBudgetData.allocated) * 100) : 0}%
+                          </td>
+                          {canEdit && <td className="px-4 py-3"></td>}
+                        </tr>
+                      </tbody>
+                    </table>
+                  </div>
+                )}
+              </Droppable>
+            </DragDropContext>
           </CardContent>
         </Card>
       </Tabs>
