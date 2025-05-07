@@ -147,8 +147,8 @@ const DocumentsPage: React.FC = () => {
       doc.file_name.toLowerCase().includes(searchTerm.toLowerCase()) ||
       doc.category?.toLowerCase().includes(searchTerm.toLowerCase()) ||
       doc.file_type?.toLowerCase().includes(searchTerm.toLowerCase()) ||
-      doc.uploader?.first_name?.toLowerCase().includes(searchTerm.toLowerCase()) ||
-      doc.uploader?.last_name?.toLowerCase().includes(searchTerm.toLowerCase()) ||
+      (doc.uploader?.first_name && doc.uploader.first_name.toLowerCase().includes(searchTerm.toLowerCase())) ||
+      (doc.uploader?.last_name && doc.uploader.last_name.toLowerCase().includes(searchTerm.toLowerCase())) ||
       false;
       
     const matchesFolder = selectedFolder ? doc.folder_id === selectedFolder : true;
@@ -449,7 +449,7 @@ const DocumentTable: React.FC<DocumentTableProps> = ({
                   <TableCell>{formatFileSize(doc.file_size)}</TableCell>
                   <TableCell>
                     {doc.uploader ? 
-                      `${doc.uploader.first_name || ''} ${doc.uploader.last_name || ''}` : 
+                      `${doc.uploader.first_name || ''} ${doc.uploader.last_name || ''}`.trim() || 'Unknown' : 
                       'Unknown'}
                   </TableCell>
                   <TableCell>

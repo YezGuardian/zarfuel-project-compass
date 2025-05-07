@@ -116,6 +116,7 @@ export const useTaskForm = ({ initialData, mode = 'create', onSuccess }: UseTask
   const onSubmit = async (values: TaskFormValues) => {
     try {
       setIsSubmitting(true);
+      console.log("Submitting task form with values:", values);
       
       // Use the selected teams from state rather than form values
       const submissionData = {
@@ -131,12 +132,15 @@ export const useTaskForm = ({ initialData, mode = 'create', onSuccess }: UseTask
         updated_by: user?.id
       };
       
+      console.log("Submission data prepared:", submissionData);
+      
       // Ensure title is provided (required by the database)
       if (!submissionData.title) {
         throw new Error("Task title is required");
       }
       
       if (mode === 'create') {
+        console.log("Creating new task");
         // Create new task
         const { error } = await supabase.from('tasks').insert({
           ...submissionData,
@@ -148,6 +152,8 @@ export const useTaskForm = ({ initialData, mode = 'create', onSuccess }: UseTask
           throw error;
         }
         
+        console.log("Task created successfully");
+        
         // Send notification about new task creation
         await supabase.rpc('create_notification', {
           p_user_id: user?.id,
@@ -156,6 +162,7 @@ export const useTaskForm = ({ initialData, mode = 'create', onSuccess }: UseTask
           p_link: '/tasks'
         });
       } else if (initialData?.id) {
+        console.log("Updating existing task with ID:", initialData.id);
         // Update existing task
         const { error } = await supabase.from('tasks')
           .update(submissionData)
@@ -165,6 +172,8 @@ export const useTaskForm = ({ initialData, mode = 'create', onSuccess }: UseTask
           console.error('Error updating task:', error);
           throw error;
         }
+        
+        console.log("Task updated successfully");
         
         // Send notification about task update
         await supabase.rpc('create_notification', {
@@ -183,6 +192,8 @@ export const useTaskForm = ({ initialData, mode = 'create', onSuccess }: UseTask
       
       // Call success callback
       if (onSuccess) onSuccess();
+      
+      toast.success(`Task ${mode === 'create' ? 'created' : 'updated'} successfully`);
       
     } catch (error: any) {
       console.error('Error submitting task:', error);

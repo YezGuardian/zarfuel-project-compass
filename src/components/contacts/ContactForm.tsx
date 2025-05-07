@@ -69,11 +69,16 @@ const ContactForm: React.FC<ContactFormProps> = ({
   const visibilityValue = form.watch('visibility');
   
   const onSubmit = async (values: z.infer<typeof formSchema>) => {
-    if (!user) return;
+    if (!user) {
+      toast.error('You must be logged in to save contacts');
+      return;
+    }
     
     setIsSubmitting(true);
     
     try {
+      console.log("Submitting contact form with values:", values);
+      
       if (mode === 'create') {
         // Ensure name is always included as it's required
         const contactData = {
@@ -82,21 +87,37 @@ const ContactForm: React.FC<ContactFormProps> = ({
           name: values.name, // Explicitly include name to satisfy the type checker
         };
         
-        const { error } = await supabase
+        console.log("Creating new contact:", contactData);
+        
+        const { data, error } = await supabase
           .from('contacts')
-          .insert(contactData);
+          .insert(contactData)
+          .select();
           
-        if (error) throw error;
+        if (error) {
+          console.error("Error creating contact:", error);
+          throw error;
+        }
+        
+        console.log("Contact created successfully:", data);
         toast.success('Contact created successfully');
       } else {
         if (!initialData?.id) throw new Error('Contact ID is required for updates');
         
-        const { error } = await supabase
+        console.log("Updating contact with ID:", initialData.id);
+        
+        const { data, error } = await supabase
           .from('contacts')
           .update(values)
-          .eq('id', initialData.id);
+          .eq('id', initialData.id)
+          .select();
           
-        if (error) throw error;
+        if (error) {
+          console.error("Error updating contact:", error);
+          throw error;
+        }
+        
+        console.log("Contact updated successfully:", data);
         toast.success('Contact updated successfully');
       }
       

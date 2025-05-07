@@ -58,18 +58,22 @@ const PhasesContainer: React.FC<PhasesContainerProps> = ({
     }
   };
 
-  // Modify onTaskOrderChange to ensure it only reorders tasks within the same phase
+  // Handle task order change within the same phase only
   const handleTaskOrderChange = (tasks: Task[]) => {
-    if (onTaskOrderChange) {
-      // Make sure all tasks in the array belong to the same phase
-      const firstPhaseId = tasks[0]?.phase_id;
-      const allSamePhase = tasks.every(task => task.phase_id === firstPhaseId);
-      
-      if (allSamePhase) {
-        onTaskOrderChange(tasks);
-      } else {
-        console.warn('Cannot reorder tasks across different phases');
-      }
+    // First verify all tasks are from the same phase
+    if (tasks.length <= 1) return;
+    
+    const firstPhaseId = tasks[0]?.phase_id;
+    const allSamePhase = tasks.every(task => task.phase_id === firstPhaseId);
+    
+    if (!allSamePhase) {
+      console.warn('Cannot reorder tasks across different phases');
+      return;
+    }
+    
+    // Only call the prop function if tasks are in the same phase
+    if (onTaskOrderChange && allSamePhase) {
+      onTaskOrderChange(tasks);
     }
   };
 
