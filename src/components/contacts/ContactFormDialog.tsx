@@ -1,245 +1,250 @@
 
 import React, { useState, useEffect } from 'react';
-import { z } from 'zod';
-import { zodResolver } from '@hookform/resolvers/zod';
-import { useForm } from 'react-hook-form';
-import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from '@/components/ui/dialog';
-import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from '@/components/ui/form';
-import { Input } from '@/components/ui/input';
+import {
+  Dialog,
+  DialogContent,
+  DialogHeader,
+  DialogTitle,
+  DialogDescription,
+  DialogFooter,
+} from '@/components/ui/dialog';
 import { Button } from '@/components/ui/button';
-import { Loader2 } from 'lucide-react';
+import { Label } from '@/components/ui/label';
+import { Input } from '@/components/ui/input';
+import { Tabs, TabsList, TabsTrigger, TabsContent } from '@/components/ui/tabs';
 import { toast } from 'sonner';
-import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/contexts/AuthContext';
-
-// Define the form schema with validation
-const contactFormSchema = z.object({
-  name: z.string().min(2, { message: "Name must be at least 2 characters." }),
-  email: z.string().email({ message: "Please enter a valid email." }).optional().nullable(),
-  title: z.string().optional().nullable(),
-  phone: z.string().optional().nullable(),
-  company: z.string().optional().nullable(),
-  role: z.string().optional().nullable()
-});
-
-type ContactFormValues = z.infer<typeof contactFormSchema>;
-
-interface Contact {
-  id?: string;
-  name: string;
-  email?: string | null;
-  title?: string | null;
-  phone?: string | null;
-  company?: string | null;
-  role?: string | null;
-}
+import { supabase } from '@/integrations/supabase/client';
 
 interface ContactFormDialogProps {
-  open: boolean;
-  onOpenChange: (open: boolean) => void;
-  contact?: Contact | null;
-  onSuccess?: () => void;
+  isOpen: boolean;
+  onClose: () => void;
+  contact?: {
+    id: string;
+    name: string;
+    email?: string;
+    phone?: string;
+    title?: string;
+    company?: string;
+    role?: string;
+  };
+  onSuccess: () => void;
 }
 
-const ContactFormDialog: React.FC<ContactFormDialogProps> = ({ 
-  open, 
-  onOpenChange, 
-  contact = null,
-  onSuccess 
+const ContactFormDialog: React.FC<ContactFormDialogProps> = ({
+  isOpen,
+  onClose,
+  contact,
+  onSuccess,
 }) => {
   const { user } = useAuth();
   const [isSubmitting, setIsSubmitting] = useState(false);
-  const isEditMode = Boolean(contact?.id);
-  
-  // Set up the form with default values
-  const form = useForm<ContactFormValues>({
-    resolver: zodResolver(contactFormSchema),
-    defaultValues: {
-      name: contact?.name || "",
-      email: contact?.email || "",
-      title: contact?.title || "",
-      phone: contact?.phone || "",
-      company: contact?.company || "",
-      role: contact?.role || ""
-    }
+  const [formData, setFormData] = useState({
+    name: '',
+    email: '',
+    phone: '',
+    title: '',
+    company: '',
+    role: '',
+    visibility: 'public',
+    company_visibility: 'public',
   });
-  
-  // Reset form when contact prop changes
+
   useEffect(() => {
-    if (open) {
-      form.reset({
-        name: contact?.name || "",
-        email: contact?.email || "",
-        title: contact?.title || "",
-        phone: contact?.phone || "",
-        company: contact?.company || "",
-        role: contact?.role || ""
+    if (contact) {
+      setFormData({
+        name: contact.name || '',
+        email: contact.email || '',
+        phone: contact.phone || '',
+        title: contact.title || '',
+        company: contact.company || '',
+        role: contact.role || '',
+        visibility: 'public',
+        company_visibility: 'public',
+      });
+    } else {
+      setFormData({
+        name: '',
+        email: '',
+        phone: '',
+        title: '',
+        company: '',
+        role: '',
+        visibility: 'public',
+        company_visibility: 'public',
       });
     }
-  }, [form, contact, open]);
-  
-  // Handle form submission
-  const onSubmit = async (values: ContactFormValues) => {
-    if (!user) return;
+  }, [contact, isOpen]);
+
+  const handleChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const { name, value } = e.target;
+    setFormData((prev) => ({ ...prev, [name]: value }));
+  };
+
+  const handleSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    
+    if (!formData.name) {
+      toast.error('Contact name is required');
+      return;
+    }
     
     setIsSubmitting(true);
     try {
-      if (isEditMode && contact?.id) {
+      if (contact?.id) {
         // Update existing contact
         const { error } = await supabase
           .from('contacts')
           .update({
-            ...values,
-            updated_at: new Date().toISOString()
+            name: formData.name,
+            email: formData.email || null,
+            phone: formData.phone || null,
+            title: formData.title || null,
+            company: formData.company || null,
+            role: formData.role || null,
+            visibility: formData.visibility,
+            company_visibility: formData.company_visibility,
           })
           .eq('id', contact.id);
-          
+
         if (error) throw error;
         toast.success('Contact updated successfully');
       } else {
-        // Create new contact - Ensure name is always included
-        const { error } = await supabase
-          .from('contacts')
-          .insert({
-            ...values,
-            name: values.name, // Explicitly ensure name is included
-            created_by: user.id
-          });
-          
+        // Create new contact
+        const { error } = await supabase.from('contacts').insert({
+          name: formData.name, // Ensure name is included and not optional
+          email: formData.email || null,
+          phone: formData.phone || null,
+          title: formData.title || null,
+          company: formData.company || null,
+          role: formData.role || null,
+          visibility: formData.visibility,
+          company_visibility: formData.company_visibility,
+          created_by: user?.id,
+        });
+
         if (error) throw error;
         toast.success('Contact created successfully');
       }
-      
-      onOpenChange(false);
-      if (onSuccess) onSuccess();
-      
-    } catch (error: any) {
+      onSuccess();
+      onClose();
+    } catch (error) {
       console.error('Error saving contact:', error);
-      toast.error(error.message || 'Failed to save contact');
+      toast.error('Failed to save contact');
     } finally {
       setIsSubmitting(false);
     }
   };
-  
+
   return (
-    <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="sm:max-w-[550px] max-h-[85vh] overflow-hidden">
+    <Dialog open={isOpen} onOpenChange={onClose}>
+      <DialogContent className="sm:max-w-[550px]">
         <DialogHeader>
-          <DialogTitle>{isEditMode ? 'Edit Contact' : 'Add New Contact'}</DialogTitle>
+          <DialogTitle>{contact ? 'Edit Contact' : 'Add New Contact'}</DialogTitle>
           <DialogDescription>
-            {isEditMode 
-              ? 'Update contact information in the directory.' 
-              : 'Add a new contact to the directory.'}
+            {contact
+              ? 'Update contact details in your address book'
+              : 'Add a new contact to your address book'}
           </DialogDescription>
         </DialogHeader>
-        
-        <Form {...form}>
-          <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-4">
-            <FormField
-              control={form.control}
-              name="name"
-              render={({ field }) => (
-                <FormItem>
-                  <FormLabel>Name*</FormLabel>
-                  <FormControl>
-                    <Input placeholder="Full name" {...field} disabled={isSubmitting} />
-                  </FormControl>
-                  <FormMessage />
-                </FormItem>
-              )}
-            />
-            
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-              <FormField
-                control={form.control}
-                name="email"
-                render={({ field }) => (
-                  <FormItem>
-                    <FormLabel>Email</FormLabel>
-                    <FormControl>
-                      <Input placeholder="Email address" type="email" {...field} disabled={isSubmitting} />
-                    </FormControl>
-                    <FormMessage />
-                  </FormItem>
-                )}
-              />
-              
-              <FormField
-                control={form.control}
-                name="phone"
-                render={({ field }) => (
-                  <FormItem>
-                    <FormLabel>Phone</FormLabel>
-                    <FormControl>
-                      <Input placeholder="Phone number" {...field} disabled={isSubmitting} />
-                    </FormControl>
-                    <FormMessage />
-                  </FormItem>
-                )}
-              />
-            </div>
-            
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-              <FormField
-                control={form.control}
-                name="title"
-                render={({ field }) => (
-                  <FormItem>
-                    <FormLabel>Title</FormLabel>
-                    <FormControl>
-                      <Input placeholder="Job title" {...field} disabled={isSubmitting} />
-                    </FormControl>
-                    <FormMessage />
-                  </FormItem>
-                )}
-              />
-              
-              <FormField
-                control={form.control}
-                name="company"
-                render={({ field }) => (
-                  <FormItem>
-                    <FormLabel>Company</FormLabel>
-                    <FormControl>
-                      <Input placeholder="Company name" {...field} disabled={isSubmitting} />
-                    </FormControl>
-                    <FormMessage />
-                  </FormItem>
-                )}
-              />
-            </div>
-            
-            <FormField
-              control={form.control}
-              name="role"
-              render={({ field }) => (
-                <FormItem>
-                  <FormLabel>Role</FormLabel>
-                  <FormControl>
-                    <Input placeholder="Role in project" {...field} disabled={isSubmitting} />
-                  </FormControl>
-                  <FormMessage />
-                </FormItem>
-              )}
-            />
-            
-            <div className="flex justify-end space-x-2 pt-4">
-              <Button type="button" variant="outline" onClick={() => onOpenChange(false)} disabled={isSubmitting}>
-                Cancel
-              </Button>
-              <Button type="submit" disabled={isSubmitting}>
-                {isSubmitting ? (
-                  <span className="flex items-center">
-                    <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                    {isEditMode ? 'Updating...' : 'Creating...'}
-                  </span>
-                ) : (
-                  isEditMode ? 'Update Contact' : 'Create Contact'
-                )}
-              </Button>
-            </div>
-          </form>
-        </Form>
+
+        <form onSubmit={handleSubmit} className="space-y-4">
+          <Tabs defaultValue="basic" className="w-full">
+            <TabsList className="grid w-full grid-cols-2">
+              <TabsTrigger value="basic">Basic Info</TabsTrigger>
+              <TabsTrigger value="work">Work Details</TabsTrigger>
+            </TabsList>
+
+            <TabsContent value="basic" className="space-y-4 pt-4">
+              <div className="grid grid-cols-4 items-center gap-4">
+                <Label htmlFor="name" className="text-right">
+                  Name*
+                </Label>
+                <Input
+                  id="name"
+                  name="name"
+                  value={formData.name}
+                  onChange={handleChange}
+                  className="col-span-3"
+                  required
+                />
+              </div>
+              <div className="grid grid-cols-4 items-center gap-4">
+                <Label htmlFor="email" className="text-right">
+                  Email
+                </Label>
+                <Input
+                  id="email"
+                  name="email"
+                  type="email"
+                  value={formData.email}
+                  onChange={handleChange}
+                  className="col-span-3"
+                />
+              </div>
+              <div className="grid grid-cols-4 items-center gap-4">
+                <Label htmlFor="phone" className="text-right">
+                  Phone
+                </Label>
+                <Input
+                  id="phone"
+                  name="phone"
+                  value={formData.phone}
+                  onChange={handleChange}
+                  className="col-span-3"
+                />
+              </div>
+            </TabsContent>
+
+            <TabsContent value="work" className="space-y-4 pt-4">
+              <div className="grid grid-cols-4 items-center gap-4">
+                <Label htmlFor="title" className="text-right">
+                  Title
+                </Label>
+                <Input
+                  id="title"
+                  name="title"
+                  value={formData.title}
+                  onChange={handleChange}
+                  className="col-span-3"
+                />
+              </div>
+              <div className="grid grid-cols-4 items-center gap-4">
+                <Label htmlFor="company" className="text-right">
+                  Company
+                </Label>
+                <Input
+                  id="company"
+                  name="company"
+                  value={formData.company}
+                  onChange={handleChange}
+                  className="col-span-3"
+                />
+              </div>
+              <div className="grid grid-cols-4 items-center gap-4">
+                <Label htmlFor="role" className="text-right">
+                  Role
+                </Label>
+                <Input
+                  id="role"
+                  name="role"
+                  value={formData.role}
+                  onChange={handleChange}
+                  className="col-span-3"
+                />
+              </div>
+            </TabsContent>
+          </Tabs>
+
+          <DialogFooter className="mt-6">
+            <Button type="button" variant="outline" onClick={onClose}>
+              Cancel
+            </Button>
+            <Button type="submit" disabled={isSubmitting}>
+              {isSubmitting ? 'Saving...' : contact ? 'Update Contact' : 'Add Contact'}
+            </Button>
+          </DialogFooter>
+        </form>
       </DialogContent>
     </Dialog>
   );
