@@ -17,8 +17,8 @@ import { useAuth } from '@/contexts/AuthContext';
 import { supabase } from '@/integrations/supabase/client';
 
 interface ContactFormDialogProps {
-  isOpen: boolean;
-  onClose: () => void;
+  open: boolean; // Changed from isOpen to open
+  onOpenChange: (open: boolean) => void; // Changed from onClose
   contact?: {
     id: string;
     name: string;
@@ -32,8 +32,8 @@ interface ContactFormDialogProps {
 }
 
 const ContactFormDialog: React.FC<ContactFormDialogProps> = ({
-  isOpen,
-  onClose,
+  open, // Changed from isOpen
+  onOpenChange, // Changed from onClose
   contact,
   onSuccess,
 }) => {
@@ -74,7 +74,7 @@ const ContactFormDialog: React.FC<ContactFormDialogProps> = ({
         company_visibility: 'public',
       });
     }
-  }, [contact, isOpen]);
+  }, [contact, open]); // Changed from isOpen to open
 
   const handleChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const { name, value } = e.target;
@@ -96,7 +96,7 @@ const ContactFormDialog: React.FC<ContactFormDialogProps> = ({
         const { error } = await supabase
           .from('contacts')
           .update({
-            name: formData.name,
+            name: formData.name, // Make sure name is included and not optional
             email: formData.email || null,
             phone: formData.phone || null,
             title: formData.title || null,
@@ -112,7 +112,7 @@ const ContactFormDialog: React.FC<ContactFormDialogProps> = ({
       } else {
         // Create new contact
         const { error } = await supabase.from('contacts').insert({
-          name: formData.name, // Ensure name is included and not optional
+          name: formData.name, // Make sure name is included and required
           email: formData.email || null,
           phone: formData.phone || null,
           title: formData.title || null,
@@ -127,7 +127,7 @@ const ContactFormDialog: React.FC<ContactFormDialogProps> = ({
         toast.success('Contact created successfully');
       }
       onSuccess();
-      onClose();
+      onOpenChange(false); // Changed from onClose to onOpenChange(false)
     } catch (error) {
       console.error('Error saving contact:', error);
       toast.error('Failed to save contact');
@@ -137,7 +137,7 @@ const ContactFormDialog: React.FC<ContactFormDialogProps> = ({
   };
 
   return (
-    <Dialog open={isOpen} onOpenChange={onClose}>
+    <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent className="sm:max-w-[550px]">
         <DialogHeader>
           <DialogTitle>{contact ? 'Edit Contact' : 'Add New Contact'}</DialogTitle>
@@ -237,7 +237,7 @@ const ContactFormDialog: React.FC<ContactFormDialogProps> = ({
           </Tabs>
 
           <DialogFooter className="mt-6">
-            <Button type="button" variant="outline" onClick={onClose}>
+            <Button type="button" variant="outline" onClick={() => onOpenChange(false)}>
               Cancel
             </Button>
             <Button type="submit" disabled={isSubmitting}>

@@ -8,6 +8,7 @@ import BudgetCharts from '@/components/budget/BudgetCharts';
 import BudgetTable from '@/components/budget/BudgetTable';
 import BudgetCategoryDialog from '@/components/budget/BudgetCategoryDialog';
 import { useBudget } from '@/hooks/useBudget';
+import { BudgetCategory } from '@/types/budget';
 
 const COLORS = ['#0088FE', '#00C49F', '#FFBB28', '#FF8042', '#8884d8', '#82ca9d'];
 

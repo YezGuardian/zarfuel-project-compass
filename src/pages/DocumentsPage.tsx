@@ -2,6 +2,7 @@
 import React, { useState } from 'react';
 import { useDocuments } from '@/hooks/useDocuments';
 import { useAuth } from '@/contexts/AuthContext';
+import { toast } from 'sonner'; // Add toast import
 import DocumentHeader from '@/components/documents/DocumentHeader';
 import DocumentFilters from '@/components/documents/DocumentFilters';
 import DocumentTabs from '@/components/documents/DocumentTabs';
@@ -67,8 +68,12 @@ const DocumentsPage: React.FC = () => {
         open={createFolderOpen}
         onOpenChange={setCreateFolderOpen}
         onSuccess={(newFolder) => {
-          setFolders([...folders, newFolder]);
+          // Fix: We should not use setFolders directly as it's not available
+          // Instead, we'll need to refetch the data or update our document hook
+          // For now, just close the dialog and let the user refresh
           setCreateFolderOpen(false);
+          // Inform the user they need to refresh to see the new folder
+          toast.success('Folder created. Please refresh to see the new folder.');
         }}
       />
       

@@ -1,10 +1,9 @@
-
 import React from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Edit, GripVertical } from 'lucide-react';
 import { Droppable, Draggable } from '@hello-pangea/dnd';
-import { BudgetCategory } from '@/pages/BudgetPage';
+import { BudgetCategory } from '@/types/budget';
 
 interface BudgetTableProps {
   categories: BudgetCategory[];

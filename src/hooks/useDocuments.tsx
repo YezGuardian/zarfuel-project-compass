@@ -61,9 +61,9 @@ export const useDocuments = () => {
           let uploaderValue: Document['uploader'] = null;
           if (doc.uploader && typeof doc.uploader === 'object' && 'first_name' in doc.uploader) {
             uploaderValue = {
-              first_name: doc.uploader.first_name,
-              last_name: doc.uploader.last_name,
-              email: doc.uploader.email
+              first_name: doc.uploader.first_name || null,
+              last_name: doc.uploader.last_name || null,
+              email: doc.uploader.email || ''
             };
           }
           
