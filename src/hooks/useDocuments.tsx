@@ -1,4 +1,3 @@
-
 import { useState, useEffect } from 'react';
 import { supabase } from '@/integrations/supabase/client';
 import { toast } from 'sonner';
@@ -59,11 +58,12 @@ export const useDocuments = () => {
         const typedDocuments: Document[] = documentsData?.map(doc => {
           // Handle the case where uploader might be null or an error object
           let uploaderValue: Document['uploader'] = null;
-          if (doc.uploader && typeof doc.uploader === 'object' && 'first_name' in doc.uploader) {
+          if (doc.uploader && typeof doc.uploader === 'object') {
+            // Check if uploader has the required properties before accessing them
             uploaderValue = {
-              first_name: doc.uploader.first_name || null,
-              last_name: doc.uploader.last_name || null,
-              email: doc.uploader.email || ''
+              first_name: doc.uploader?.first_name || null,
+              last_name: doc.uploader?.last_name || null,
+              email: doc.uploader?.email || ''
             };
           }
           
@@ -210,6 +210,7 @@ export const useDocuments = () => {
     formatFileSize,
     handleDownload,
     handleDelete,
-    setDocuments
+    setDocuments,
+    setFolders
   };
 };
