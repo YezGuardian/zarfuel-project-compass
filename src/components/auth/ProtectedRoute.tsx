@@ -1,4 +1,3 @@
-
 import React, { ReactNode } from 'react';
 import { Navigate } from 'react-router-dom';
 import { useAuth } from '@/contexts/AuthContext';
@@ -8,12 +7,14 @@ type ProtectedRouteProps = {
   children: ReactNode;
   requiresAdmin?: boolean;
   requiresSpecial?: boolean;
+  skipProfileCheck?: boolean;
 };
 
 const ProtectedRoute: React.FC<ProtectedRouteProps> = ({ 
   children, 
   requiresAdmin = false,
-  requiresSpecial = false
+  requiresSpecial = false,
+  skipProfileCheck = false
 }) => {
   const { user, profile, isLoading, isAdmin, isSpecial } = useAuth();
 
@@ -32,6 +33,17 @@ const ProtectedRoute: React.FC<ProtectedRouteProps> = ({
   // If no user is logged in, redirect to login
   if (!user) {
     return <Navigate to="/login" replace />;
+  }
+
+  // Check if profile is incomplete (needs first and last name)
+  const isProfileIncomplete = 
+    !skipProfileCheck && 
+    profile && 
+    (!profile.first_name || !profile.last_name);
+
+  // Redirect to complete profile page if profile is incomplete
+  if (isProfileIncomplete) {
+    return <Navigate to="/complete-profile" replace />;
   }
 
   // If route requires admin but user is not admin

@@ -1,4 +1,3 @@
-
 import React, { useState } from 'react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -22,6 +21,7 @@ import {
 import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/contexts/AuthContext';
 import { toast } from 'sonner';
+import { uploadToDrive } from '@/integrations/google/drive-api';
 
 interface Folder {
   id: string;
@@ -60,33 +60,29 @@ const DocumentUploadDialog: React.FC<DocumentUploadDialogProps> = ({
 
     setIsSubmitting(true);
     try {
-      // Upload file to storage
-      const fileExt = file.name.split('.').pop();
-      const fileName = `${Date.now()}-${Math.random().toString(36).substring(2, 15)}.${fileExt}`;
-      const filePath = `documents/${fileName}`;
-
-      const { error: uploadError } = await supabase.storage
-        .from('project_documents')
-        .upload(filePath, file);
-
-      if (uploadError) throw uploadError;
-
-      // Get public URL
-      const { data: publicUrl } = supabase.storage
-        .from('project_documents')
-        .getPublicUrl(filePath);
-
-      // Create document record
+      // Get folder name if folder ID is selected
+      const selectedFolder = folders.find(f => f.id === folderId);
+      const folderName = selectedFolder ? selectedFolder.name : category;
+      
+      // Upload file to Google Drive
+      const driveResult = await uploadToDrive(file, folderName);
+      
+      if (!driveResult) {
+        throw new Error('Failed to upload file to Google Drive');
+      }
+      
+      // Create document record in database
       const { data: documentData, error: documentError } = await supabase
         .from('documents')
         .insert({
           file_name: file.name,
-          file_path: publicUrl.publicUrl,
+          file_path: driveResult.url,
           file_size: file.size,
           file_type: file.type,
           category,
           folder_id: folderId || null,
-          uploaded_by: user.id
+          uploaded_by: user.id,
+          drive_file_id: driveResult.fileId // Store Google Drive file ID
         })
         .select(`
           *,
@@ -102,6 +98,7 @@ const DocumentUploadDialog: React.FC<DocumentUploadDialogProps> = ({
 
       toast.success('Document uploaded successfully');
       onSuccess(documentData);
+      onOpenChange(false); // Close dialog on success
     } catch (error) {
       console.error('Error uploading document:', error);
       toast.error('Failed to upload document');

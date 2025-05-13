@@ -1,4 +1,3 @@
-
 import React from 'react';
 import { Card, CardContent } from '@/components/ui/card';
 import { LucideIcon } from 'lucide-react';
@@ -24,12 +23,12 @@ const StatCard: React.FC<StatCardProps> = ({
         <div className="flex items-center justify-between">
           <div>
             <p className="text-sm font-medium text-muted-foreground">{title}</p>
-            <h3 className="text-2xl font-bold mt-1">{value}</h3>
+            <h3 className="text-2xl font-bold mt-1 text-foreground">{value}</h3>
             {description && (
               <p className="text-sm text-muted-foreground mt-1">{description}</p>
             )}
           </div>
-          <div className={`${colorClass} p-3 rounded-full bg-muted/50`}>
+          <div className={`${colorClass} p-3 rounded-full bg-muted/50 icon-container`}>
             <Icon className="w-5 h-5" />
           </div>
         </div>

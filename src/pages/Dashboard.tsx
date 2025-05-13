@@ -1,4 +1,3 @@
-
 import React, { useEffect, useState } from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import StatCard from '@/components/dashboard/StatCard';
@@ -8,6 +7,7 @@ import { Calendar, CheckCircle, Clock, AlertCircle, RefreshCw } from 'lucide-rea
 import { supabase } from '@/integrations/supabase/client';
 import { Task } from '@/types';
 import { toast } from 'sonner';
+import { H1, Paragraph } from '@/components/ui/typography';
 
 const Dashboard: React.FC = () => {
   const [tasks, setTasks] = useState<Task[]>([]);
@@ -81,10 +81,10 @@ const Dashboard: React.FC = () => {
   return (
     <div className="space-y-6">
       <div>
-        <h1 className="text-2xl font-bold tracking-tight">Project Overview</h1>
-        <p className="text-muted-foreground">
+        <H1>Project Overview</H1>
+        <Paragraph className="text-muted-foreground">
           ZARFUEL Truck Stop project progress dashboard
-        </p>
+        </Paragraph>
       </div>
       
       {isLoading ? (

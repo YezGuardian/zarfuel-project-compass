@@ -1,4 +1,3 @@
-
 import React, { useState } from 'react';
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -12,6 +11,7 @@ import { Loader2 } from "lucide-react";
 import { toast } from 'sonner';
 import { supabase } from "@/integrations/supabase/client";
 import { ScrollArea } from '@/components/ui/scroll-area';
+import { useAuth } from '@/contexts/AuthContext';
 
 const formSchema = z.object({
   email: z.string().email({ message: "Please enter a valid email address." }),
@@ -26,6 +26,7 @@ interface InviteUserFormProps {
 
 const InviteUserForm: React.FC<InviteUserFormProps> = ({ onSuccess }) => {
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const { isSuperAdmin } = useAuth();
   
   const form = useForm<z.infer<typeof formSchema>>({
     resolver: zodResolver(formSchema),
@@ -108,12 +109,17 @@ const InviteUserForm: React.FC<InviteUserFormProps> = ({ onSuccess }) => {
                     </SelectTrigger>
                   </FormControl>
                   <SelectContent>
-                    <SelectItem value="admin">Admin</SelectItem>
                     <SelectItem value="viewer">Viewer</SelectItem>
+                    <SelectItem value="special">Special User</SelectItem>
+                    <SelectItem value="admin">Admin</SelectItem>
+                    {isSuperAdmin() && <SelectItem value="superadmin">Super Admin</SelectItem>}
                   </SelectContent>
                 </Select>
                 <FormDescription>
-                  Admins can manage the system and invite others. Viewers have read-only access.
+                  {field.value === "viewer" && "Viewers have read-only access to specific pages."}
+                  {field.value === "special" && "Special users can edit specific pages."}
+                  {field.value === "admin" && "Admins can manage most aspects of the system."}
+                  {field.value === "superadmin" && "Super Admins have complete control of the system."}
                 </FormDescription>
                 <FormMessage />
               </FormItem>

@@ -1,8 +1,15 @@
-
 import React, { createContext, useState, useContext, useEffect } from 'react';
 import { toast } from 'sonner';
 import { supabase } from '@/integrations/supabase/client';
 import { Session, User } from '@supabase/supabase-js';
+import { 
+  UserRole, 
+  isAdmin as checkIsAdmin, 
+  isSpecial as checkIsSpecial, 
+  isSuperAdmin as checkIsSuperAdmin,
+  canViewPage as checkCanViewPage,
+  canEditPage as checkCanEditPage 
+} from '@/utils/permissions';
 
 // Types for our authentication context
 type Profile = {
@@ -10,7 +17,7 @@ type Profile = {
   email: string;
   first_name: string;
   last_name: string;
-  role: 'admin' | 'viewer' | 'special' | 'superadmin';
+  role: UserRole;
   organization?: string;
   position?: string;
   phone?: string;
@@ -27,6 +34,8 @@ type AuthContextType = {
   isAdmin: () => boolean;
   isSpecial: () => boolean;
   isSuperAdmin: () => boolean;
+  canViewPage: (page: string) => boolean;
+  canEditPage: (page: string) => boolean;
   refreshProfile: () => Promise<void>;
 };
 
@@ -142,6 +151,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     toast.info('You have been logged out');
   };
 
+  // Use the permission utilities
   const isAdmin = (): boolean => {
     return profile?.role === 'admin' || isSuperAdmin();
   };
@@ -150,15 +160,25 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     return profile?.role === 'special' || isAdmin();
   };
 
-  // Super admin function specifically for Yezreel Shirinda
+  // Super admin function (includes Yezreel Shirinda)
   const isSuperAdmin = (): boolean => {
     if (!profile) return false;
     
     return (
+      profile.role === 'superadmin' ||
       profile.email?.toLowerCase() === 'yezreel@whitepaperconcepts.co.za' ||
-      (profile.first_name === 'Yezreel' && profile.last_name === 'Shirinda') ||
-      profile.role === 'superadmin'
+      (profile.first_name === 'Yezreel' && profile.last_name === 'Shirinda')
     );
+  };
+
+  // Check if user can view a page
+  const canViewPage = (page: string): boolean => {
+    return checkCanViewPage(profile?.role, page as any);
+  };
+
+  // Check if user can edit a page
+  const canEditPage = (page: string): boolean => {
+    return checkCanEditPage(profile?.role, page as any);
   };
 
   return (
@@ -172,6 +192,8 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
       isAdmin,
       isSpecial,
       isSuperAdmin,
+      canViewPage,
+      canEditPage,
       refreshProfile
     }}>
       {children}

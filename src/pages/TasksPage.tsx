@@ -17,6 +17,7 @@ import PhasesContainer from '@/components/tasks/PhasesContainer';
 import { supabase } from '@/integrations/supabase/client';
 import EditPhaseDialog from '@/components/tasks/EditPhaseDialog';
 import DeletePhaseDialog from '@/components/tasks/DeletePhaseDialog';
+import { H1, Paragraph } from '@/components/ui/typography';
 
 const TasksPage: React.FC = () => {
   // State for filters
@@ -195,10 +196,10 @@ const TasksPage: React.FC = () => {
     <div className="space-y-6">
       <div className="flex justify-between items-start">
         <div>
-          <h1 className="text-2xl font-bold tracking-tight">Phases & Tasks</h1>
-          <p className="text-muted-foreground">
+          <H1>Phases & Tasks</H1>
+          <Paragraph className="text-muted-foreground">
             Track and manage all project tasks across different phases
-          </p>
+          </Paragraph>
         </div>
         
         {isAdmin() && (

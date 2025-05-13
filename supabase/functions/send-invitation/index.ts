@@ -1,4 +1,3 @@
-
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
 
@@ -51,13 +50,27 @@ serve(async (req) => {
     // Verify if the inviter is an admin
     const { data: inviterProfile, error: profileError } = await supabase
       .from("profiles")
-      .select("role")
+      .select("role, email, first_name, last_name")
       .eq("id", inviterUserId)
       .single();
 
-    if (profileError || !inviterProfile || inviterProfile.role !== "admin") {
+    if (profileError || !inviterProfile) {
       return new Response(
-        JSON.stringify({ error: "Only admins can send invitations" }),
+        JSON.stringify({ error: "Failed to fetch inviter profile" }),
+        { status: 500, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+      );
+    }
+
+    // Check if inviter is a superadmin (by role or if it's Yezreel Shirinda)
+    const isSuperAdmin = 
+      inviterProfile.role === "superadmin" || 
+      inviterProfile.email?.toLowerCase() === "yezreel@whitepaperconcepts.co.za" || 
+      (inviterProfile.first_name === "Yezreel" && inviterProfile.last_name === "Shirinda");
+
+    // Regular users cannot invite others
+    if (inviterProfile.role !== "admin" && !isSuperAdmin) {
+      return new Response(
+        JSON.stringify({ error: "Only admins and super admins can send invitations" }),
         { status: 403, headers: { ...corsHeaders, "Content-Type": "application/json" } }
       );
     }
@@ -69,6 +82,14 @@ serve(async (req) => {
       return new Response(
         JSON.stringify({ error: "Email is required" }),
         { status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+      );
+    }
+
+    // Only superadmins can invite new superadmins or special users
+    if ((role === "superadmin" || role === "special") && !isSuperAdmin) {
+      return new Response(
+        JSON.stringify({ error: `Only super admins can invite ${role} users` }),
+        { status: 403, headers: { ...corsHeaders, "Content-Type": "application/json" } }
       );
     }
 
@@ -109,18 +130,107 @@ serve(async (req) => {
       );
     }
 
-    // Generate signup link with invitation ID
-    const signupLink = `${req.headers.get("origin") || SUPABASE_URL}/auth/register?invitation_id=${invitation.id}`;
+    // Generate invitation email with HTML template
+    const inviterName = `${inviterProfile.first_name} ${inviterProfile.last_name}`;
+    const baseUrl = req.headers.get("origin") || SUPABASE_URL;
+    const signupUrl = `${baseUrl}/auth/register?invitation_id=${invitation.id}`;
+    
+    // Generate email HTML
+    const roleDisplay = role.charAt(0).toUpperCase() + role.slice(1);
+    
+    const emailHtml = `
+      <!DOCTYPE html>
+      <html>
+      <head>
+        <meta charset="utf-8">
+        <title>ZARFUEL Invitation</title>
+        <style>
+          body {
+            font-family: Arial, sans-serif;
+            line-height: 1.6;
+            color: #333;
+            max-width: 600px;
+            margin: 0 auto;
+          }
+          .container {
+            padding: 20px;
+            border: 1px solid #ddd;
+            border-radius: 5px;
+          }
+          .header {
+            background-color: #2563eb;
+            color: white;
+            padding: 15px;
+            text-align: center;
+            border-radius: 4px 4px 0 0;
+          }
+          .content {
+            padding: 20px;
+            background-color: #f9f9f9;
+          }
+          .button {
+            display: inline-block;
+            background-color: #2563eb;
+            color: white;
+            text-decoration: none;
+            padding: 10px 20px;
+            border-radius: 4px;
+            margin: 20px 0;
+          }
+          .footer {
+            font-size: 12px;
+            color: #666;
+            text-align: center;
+            margin-top: 20px;
+          }
+        </style>
+      </head>
+      <body>
+        <div class="container">
+          <div class="header">
+            <h1>ZARFUEL Committee Dashboard</h1>
+          </div>
+          <div class="content">
+            <p>Hello,</p>
+            <p>You have been invited to join the ZARFUEL committee dashboard by ${inviterName}.</p>
+            
+            <p><strong>Details:</strong></p>
+            <ul>
+              <li><strong>Email:</strong> ${email}</li>
+              <li><strong>Role:</strong> ${roleDisplay}</li>
+              ${organization ? `<li><strong>Organization:</strong> ${organization}</li>` : ''}
+              ${position ? `<li><strong>Position:</strong> ${position}</li>` : ''}
+            </ul>
+            
+            <p>Please click the button below to complete your registration:</p>
+            
+            <a href="${signupUrl}" class="button">Complete Registration</a>
+            
+            <p>If you're unable to click the button, copy and paste this URL into your browser:</p>
+            <p>${signupUrl}</p>
+            
+            <p>This invitation link will expire in 7 days.</p>
+          </div>
+          <div class="footer">
+            <p>This is an automated message, please do not reply to this email.</p>
+            <p>&copy; ${new Date().getFullYear()} ZARFUEL. All rights reserved.</p>
+          </div>
+        </div>
+      </body>
+      </html>
+    `;
 
-    // Send invitation email through Supabase Auth API
-    const { error: emailError } = await supabase.auth.admin.inviteUserByEmail(email, {
-      redirectTo: signupLink,
-      data: {
-        invitation_id: invitation.id,
-        role,
+    // Send invitation email using resend-email function
+    const { error: emailError } = await supabase.functions.invoke('resend-email', {
+      body: {
+        to: email,
+        subject: `You've been invited to join the ZARFUEL Committee Dashboard`,
+        html: emailHtml,
+        from: "Zarfuel Committee <noreply@zarfuel.com>"
       }
     });
 
+    // If email sending fails, clean up the invitation
     if (emailError) {
       console.error("Error sending invitation email:", emailError);
       // Clean up the invitation if email fails

@@ -26,6 +26,7 @@ import { Plus, Edit, Trash2 } from 'lucide-react';
 import { useAuth } from '@/contexts/AuthContext';
 import { toast } from 'sonner';
 import { Risk, mapMockRiskToAppRisk } from '@/types/risk';
+import { H1, Paragraph } from '@/components/ui/typography';
 
 const RiskManagementPage: React.FC = () => {
   // Convert mock risks to the format expected by our component
@@ -139,10 +140,10 @@ const RiskManagementPage: React.FC = () => {
     <div className="space-y-6">
       <div className="flex justify-between items-start">
         <div>
-          <h1 className="text-2xl font-bold tracking-tight">Risk Management</h1>
-          <p className="text-muted-foreground">
+          <H1>Risk Management</H1>
+          <Paragraph className="text-muted-foreground">
             Identify, assess, and mitigate project risks
-          </p>
+          </Paragraph>
         </div>
         
         {isAdmin() && (

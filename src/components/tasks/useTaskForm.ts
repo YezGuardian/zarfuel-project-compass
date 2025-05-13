@@ -1,4 +1,3 @@
-
 import { useState, useEffect } from 'react';
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
@@ -7,6 +6,7 @@ import { Task, Phase } from '@/types';
 import { taskFormSchema, defaultValues, TaskFormValues, progressMap } from './TaskFormSchema';
 import { useAuth } from '@/contexts/AuthContext';
 import { toast } from 'sonner';
+import { createTaskNotification } from '@/utils/notificationService';
 
 interface UseTaskFormProps {
   initialData?: Task | null;
@@ -21,7 +21,7 @@ export const useTaskForm = ({ initialData, mode = 'create', onSuccess }: UseTask
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [teamSuggestions, setTeamSuggestions] = useState<string[]>([]);
   
-  const { user } = useAuth();
+  const { user, profile } = useAuth();
 
   const form = useForm<TaskFormValues>({
     resolver: zodResolver(taskFormSchema),
@@ -138,14 +138,17 @@ export const useTaskForm = ({ initialData, mode = 'create', onSuccess }: UseTask
       if (!submissionData.title) {
         throw new Error("Task title is required");
       }
+
+      // Get the user's full name for notifications
+      const performedBy = profile ? `${profile.first_name} ${profile.last_name}` : user?.email || 'A user';
       
       if (mode === 'create') {
         console.log("Creating new task");
         // Create new task
-        const { error } = await supabase.from('tasks').insert({
+        const { data, error } = await supabase.from('tasks').insert({
           ...submissionData,
           created_by: user?.id,
-        });
+        }).select('id').single();
         
         if (error) {
           console.error('Error creating task:', error);
@@ -155,14 +158,21 @@ export const useTaskForm = ({ initialData, mode = 'create', onSuccess }: UseTask
         console.log("Task created successfully");
         
         // Send notification about new task creation
-        await supabase.rpc('create_notification', {
-          p_user_id: user?.id,
-          p_type: 'task_created',
-          p_content: `New task "${values.title}" has been created`,
-          p_link: '/tasks'
-        });
+        if (data?.id) {
+          await createTaskNotification({
+            taskId: data.id,
+            taskTitle: values.title,
+            action: 'created',
+            performedBy,
+            excludeUserId: user?.id
+          });
+        }
       } else if (initialData?.id) {
         console.log("Updating existing task with ID:", initialData.id);
+        
+        // Check if the task is being marked as complete
+        const isCompletingTask = initialData.status !== 'complete' && values.status === 'complete';
+        
         // Update existing task
         const { error } = await supabase.from('tasks')
           .update(submissionData)
@@ -175,13 +185,24 @@ export const useTaskForm = ({ initialData, mode = 'create', onSuccess }: UseTask
         
         console.log("Task updated successfully");
         
-        // Send notification about task update
-        await supabase.rpc('create_notification', {
-          p_user_id: user?.id,
-          p_type: 'task_updated',
-          p_content: `Task "${values.title}" has been updated`,
-          p_link: '/tasks'
-        });
+        // Send appropriate notification based on whether task is being completed or just updated
+        if (isCompletingTask) {
+          await createTaskNotification({
+            taskId: initialData.id,
+            taskTitle: values.title,
+            action: 'completed',
+            performedBy,
+            excludeUserId: user?.id
+          });
+        } else {
+          await createTaskNotification({
+            taskId: initialData.id,
+            taskTitle: values.title,
+            action: 'updated',
+            performedBy,
+            excludeUserId: user?.id
+          });
+        }
       }
       
       // Reset form

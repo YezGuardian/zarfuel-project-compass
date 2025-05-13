@@ -1,4 +1,3 @@
-
 import React from 'react';
 import { NavLink } from 'react-router-dom';
 import { 
@@ -71,7 +70,7 @@ const Sidebar: React.FC<SidebarProps> = ({ isOpen }) => {
                 }
                 end
               >
-                <item.icon className="mr-3 h-5 w-5" />
+                <item.icon className="mr-3 h-5 w-5 dark:text-primary" />
                 {item.name}
               </NavLink>
             </li>

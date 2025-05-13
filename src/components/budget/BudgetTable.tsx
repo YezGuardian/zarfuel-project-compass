@@ -57,7 +57,7 @@ const BudgetTable: React.FC<BudgetTableProps> = ({
                         <tr
                           ref={provided.innerRef}
                           {...provided.draggableProps}
-                          className={`border-b last:border-0 ${snapshot.isDragging ? 'bg-muted opacity-80' : 'hover:bg-muted/30'}`}
+                          className={`border-b last:border-0 text-foreground ${snapshot.isDragging ? 'bg-muted opacity-80' : 'hover:bg-muted/30'}`}
                         >
                           {canEdit && (
                             <td className="px-2 w-8">
@@ -90,7 +90,7 @@ const BudgetTable: React.FC<BudgetTableProps> = ({
                     </Draggable>
                   ))}
                   {provided.placeholder}
-                  <tr className="font-medium bg-slate-50">
+                  <tr className="font-medium bg-slate-50 dark:bg-slate-800 text-foreground">
                     {canEdit && <td></td>}
                     <td className="px-4 py-3">Total</td>
                     <td className="px-4 py-3 text-right">{formatCurrency(categories.reduce((sum, cat) => sum + cat.estimated, 0))}</td>

@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect } from 'react';
 import { Calendar } from '@/components/ui/calendar';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
@@ -13,13 +12,15 @@ import { Separator } from '@/components/ui/separator';
 import { Button } from '@/components/ui/button';
 import { useAuth } from '@/contexts/AuthContext';
 import { format, isToday, isTomorrow, addDays, isSameMonth, parseISO, isAfter, isBefore, isSameDay } from 'date-fns';
-import { CalendarClock, Plus } from 'lucide-react';
+import { CalendarClock, Plus, Edit, Trash2, MoreHorizontal } from 'lucide-react';
 import { Task, Status } from '@/types';
 import { supabase } from '@/integrations/supabase/client';
 import { toast } from 'sonner';
 import EventForm from '@/components/calendar/EventForm';
 import StatusBadge from '@/components/dashboard/StatusBadge';
 import { useTasks } from '@/hooks/useTasks';
+import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from '@/components/ui/alert-dialog';
+import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from '@/components/ui/dropdown-menu';
 
 interface Event {
   id: string;
@@ -50,10 +51,13 @@ type CalendarItem = {
 const CalendarPage: React.FC = () => {
   const [selectedDate, setSelectedDate] = useState<Date>(new Date());
   const [dialogOpen, setDialogOpen] = useState(false);
+  const [editDialogOpen, setEditDialogOpen] = useState(false);
+  const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
   const [events, setEvents] = useState<Event[]>([]);
   const [dayEvents, setDayEvents] = useState<CalendarItem[]>([]);
   const [monthItems, setMonthItems] = useState<CalendarItem[]>([]);
   const [selectedItem, setSelectedItem] = useState<CalendarItem | null>(null);
+  const [currentEvent, setCurrentEvent] = useState<Event | null>(null);
   const [monthName, setMonthName] = useState<string>(format(new Date(), 'MMMM yyyy'));
   const [monthNameClicked, setMonthNameClicked] = useState(false);
   const { isAdmin, user } = useAuth();
@@ -143,6 +147,11 @@ const CalendarPage: React.FC = () => {
   
   const fetchEvents = async () => {
     try {
+      if (!user) {
+        console.warn('No authenticated user found for fetching events');
+        return;
+      }
+      
       const { data, error } = await supabase
         .from('events')
         .select('*')
@@ -168,36 +177,173 @@ const CalendarPage: React.FC = () => {
       // Make sure we set the current user as created_by
       if (user) {
         eventData.created_by = user.id;
+      } else {
+        throw new Error('User not authenticated. Please log in again.');
       }
       
-      const { data, error } = await supabase
-        .from('events')
-        .insert([eventData])
-        .select()
-        .single();
+      // Ensure created_by is set before inserting
+      if (!eventData.created_by) {
+        throw new Error('User ID is required to create an event');
+      }
+      
+      // Extract participants before sending to Supabase
+      // The participants should not be part of the events table insert
+      const participants = eventData.participants || [];
+      delete eventData.participants;
+      
+      console.log('Event data being sent to Supabase:', eventData);
+      
+      // Try standard supabase approach first
+      try {
+        const { data, error } = await supabase
+          .from('events')
+          .insert([eventData])
+          .select()
+          .single();
+          
+        if (error) throw error;
         
-      if (error) throw error;
-      
-      fetchEvents();
-      setDialogOpen(false);
-      toast.success('Event created successfully');
-      
-      // Handle notifications here
-      if (eventData.participants && eventData.participants.length > 0) {
-        for (const participantId of eventData.participants) {
-          await createNotification(
-            participantId,
-            'event',
-            `You have been invited to: ${eventData.title}`,
-            `/calendar`
-          );
+        console.log('Event created successfully:', data);
+        
+        // Add participants if it's a meeting and we have participants
+        if (data && eventData.is_meeting && participants.length > 0) {
+          await addEventParticipants(data.id, participants);
+          
+          // Send email notifications to participants (if this is a meeting)
+          try {
+            await sendMeetingInvitations(data.id);
+          } catch (emailError) {
+            console.error('Error sending email invitations:', emailError);
+            // Continue execution even if email sending fails
+          }
         }
+        
+        fetchEvents();
+        setDialogOpen(false);
+        toast.success(eventData.is_meeting ? 'Meeting scheduled successfully' : 'Event created successfully');
+        
+        // Handle in-app notifications
+        // For regular events, notify all users
+        // For meetings, notify only the participants
+        if (eventData.is_meeting) {
+          // Send notifications to participants if it's a meeting
+          if (participants.length > 0) {
+            for (const participantId of participants) {
+              await createNotification(
+                participantId,
+                'meeting',
+                `You have been invited to a meeting: ${eventData.title}`,
+                `/meetings`
+              );
+            }
+          }
+        } else {
+          // For regular events, get all users and notify them
+          try {
+            const { data: allUsers } = await supabase
+              .from('profiles')
+              .select('id');
+              
+            if (allUsers && allUsers.length > 0) {
+              for (const userProfile of allUsers) {
+                // Don't notify the creator about their own event
+                if (userProfile.id !== user.id) {
+                  await createNotification(
+                    userProfile.id,
+                    'event',
+                    `New event created: ${eventData.title}`,
+                    `/calendar`
+                  );
+                }
+              }
+            }
+          } catch (notifyError) {
+            console.error('Error notifying users about event:', notifyError);
+          }
+        }
+        
+        return true;
+      } catch (insertError: any) {
+        console.error('Initial insert error:', insertError);
+        // Handle specific error
+        throw insertError;
       }
-      
-      return true;
     } catch (error: any) {
       console.error('Error creating event:', error);
       toast.error(error.message || 'Failed to create event');
+      return false;
+    }
+  };
+  
+  // Send email invitations for a meeting
+  const sendMeetingInvitations = async (eventId: string) => {
+    try {
+      // You would typically call a Supabase edge function or other service here
+      // This is just a placeholder to show where you would integrate with an email service
+      const { error } = await supabase.functions.invoke('send-meeting-invitation', {
+        body: { eventId }
+      });
+      
+      if (error) throw error;
+      console.log('Meeting invitations sent successfully');
+      return true;
+    } catch (error) {
+      console.error('Error sending meeting invitations:', error);
+      return false;
+    }
+  };
+  
+  // Add participants to an event
+  const addEventParticipants = async (eventId: string, participantIds: string[]) => {
+    if (!participantIds || participantIds.length === 0) {
+      console.log('No participants to add');
+      return true;
+    }
+    
+    try {
+      console.log(`Adding ${participantIds.length} participants to event ${eventId}`);
+      
+      // First, check if any participants already exist to avoid duplicates
+      const { data: existingParticipants, error: checkError } = await supabase
+        .from('event_participants')
+        .select('user_id')
+        .eq('event_id', eventId);
+        
+      if (checkError) {
+        console.error('Error checking existing participants:', checkError);
+      }
+      
+      // Filter out existing participants
+      const existingUserIds = new Set((existingParticipants || []).map(p => p.user_id));
+      const newParticipantIds = participantIds.filter(id => !existingUserIds.has(id));
+      
+      if (newParticipantIds.length === 0) {
+        console.log('All participants already added');
+        return true;
+      }
+      
+      // Create participant records
+      const participants = newParticipantIds.map(userId => ({
+        event_id: eventId,
+        user_id: userId,
+        response: 'pending'
+      }));
+      
+      const { data, error } = await supabase
+        .from('event_participants')
+        .insert(participants);
+        
+      if (error) {
+        console.error('Error adding participants:', error);
+        toast.error('Event was created but failed to add some participants');
+        return false;
+      }
+      
+      console.log(`Successfully added ${newParticipantIds.length} participants`);
+      return true;
+    } catch (error) {
+      console.error('Error adding participants:', error);
+      toast.error('Event was created but failed to add participants');
       return false;
     }
   };
@@ -315,6 +461,34 @@ const CalendarPage: React.FC = () => {
     setMonthNameClicked(true);
   };
   
+  // Handle event deletion
+  const handleDeleteEvent = async () => {
+    if (!currentEvent) return;
+    
+    try {
+      const { error } = await supabase
+        .from('events')
+        .delete()
+        .eq('id', currentEvent.id);
+        
+      if (error) throw error;
+      
+      setEvents(events.filter(e => e.id !== currentEvent.id));
+      toast.success('Event deleted successfully');
+      setDeleteDialogOpen(false);
+      setSelectedItem(null);
+    } catch (error: any) {
+      console.error('Error deleting event:', error);
+      toast.error('Failed to delete event');
+    }
+  };
+
+  // Extract event ID from CalendarItem
+  const getEventIdFromItem = (item: CalendarItem): string | null => {
+    if (!item.id.startsWith('event-')) return null;
+    return item.id.replace('event-', '');
+  };
+  
   return (
     <div className="space-y-6">
       <div className="flex justify-between items-start">
@@ -381,7 +555,51 @@ const CalendarPage: React.FC = () => {
                   {selectedItem ? (
                     <div className="space-y-4">
                       <div className="space-y-2">
-                        <h4 className="font-medium text-lg">{selectedItem.title}</h4>
+                        <div className="flex justify-between items-start">
+                          <h4 className="font-medium text-lg">{selectedItem.title}</h4>
+                          {isAdmin() && !selectedItem.isTask && (
+                            <DropdownMenu>
+                              <DropdownMenuTrigger asChild>
+                                <Button variant="ghost" size="sm" className="h-8 w-8 p-0">
+                                  <MoreHorizontal className="h-4 w-4" />
+                                </Button>
+                              </DropdownMenuTrigger>
+                              <DropdownMenuContent align="end">
+                                <DropdownMenuItem 
+                                  onClick={() => {
+                                    const eventId = getEventIdFromItem(selectedItem);
+                                    if (eventId) {
+                                      const event = events.find(e => e.id === eventId);
+                                      if (event) {
+                                        setCurrentEvent(event);
+                                        setEditDialogOpen(true);
+                                      }
+                                    }
+                                  }}
+                                >
+                                  <Edit className="mr-2 h-4 w-4" />
+                                  Edit
+                                </DropdownMenuItem>
+                                <DropdownMenuItem
+                                  className="text-destructive"
+                                  onClick={() => {
+                                    const eventId = getEventIdFromItem(selectedItem);
+                                    if (eventId) {
+                                      const event = events.find(e => e.id === eventId);
+                                      if (event) {
+                                        setCurrentEvent(event);
+                                        setDeleteDialogOpen(true);
+                                      }
+                                    }
+                                  }}
+                                >
+                                  <Trash2 className="mr-2 h-4 w-4" />
+                                  Delete
+                                </DropdownMenuItem>
+                              </DropdownMenuContent>
+                            </DropdownMenu>
+                          )}
+                        </div>
                         {selectedItem.isTask && (
                           <StatusBadge status={selectedItem.status as Status || 'notstarted'} />
                         )}
@@ -562,6 +780,76 @@ const CalendarPage: React.FC = () => {
           </ScrollArea>
         </DialogContent>
       </Dialog>
+      
+      {/* Edit Event Dialog */}
+      {currentEvent && (
+        <Dialog open={editDialogOpen} onOpenChange={setEditDialogOpen}>
+          <DialogContent className="sm:max-w-[550px] max-h-[85vh] overflow-visible">
+            <DialogHeader>
+              <DialogTitle>Edit Event</DialogTitle>
+            </DialogHeader>
+            <ScrollArea className="max-h-[calc(85vh-120px)] overflow-y-auto">
+              <EventForm 
+                onSuccess={(eventData) => {
+                  // Update the event
+                  try {
+                    supabase
+                      .from('events')
+                      .update(eventData)
+                      .eq('id', currentEvent.id)
+                      .then(({ error }) => {
+                        if (error) {
+                          toast.error('Failed to update event');
+                          console.error(error);
+                          return;
+                        }
+                        
+                        fetchEvents();
+                        setEditDialogOpen(false);
+                        setSelectedItem(null);
+                        toast.success('Event updated successfully');
+                      });
+                    
+                    return true;
+                  } catch (error: any) {
+                    console.error('Error updating event:', error);
+                    toast.error(error.message || 'Failed to update event');
+                    return false;
+                  }
+                }}
+                initialData={{
+                  ...currentEvent,
+                  start_date: parseISO(currentEvent.start_time),
+                  start_time: format(parseISO(currentEvent.start_time), 'HH:mm'),
+                  end_date: parseISO(currentEvent.end_time),
+                  end_time: format(parseISO(currentEvent.end_time), 'HH:mm'),
+                }}
+              />
+            </ScrollArea>
+          </DialogContent>
+        </Dialog>
+      )}
+      
+      {/* Delete Event Confirmation */}
+      <AlertDialog open={deleteDialogOpen} onOpenChange={setDeleteDialogOpen}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Delete Event</AlertDialogTitle>
+            <AlertDialogDescription>
+              Are you sure you want to delete this event? This action cannot be undone.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel>Cancel</AlertDialogCancel>
+            <AlertDialogAction 
+              onClick={handleDeleteEvent}
+              className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
+            >
+              Delete
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
     </div>
   );
 };

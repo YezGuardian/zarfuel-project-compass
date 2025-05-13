@@ -1,4 +1,3 @@
-
 export type Status = 'complete' | 'inprogress' | 'notstarted' | 'ongoing';
 
 export type Task = {
@@ -73,19 +72,23 @@ export type EventParticipant = {
   };
 };
 
-export type MeetingMinute = {
+export interface MeetingMinute {
   id: string;
   event_id: string;
   file_path: string;
   file_name: string;
+  file_type?: string;
+  file_size?: number;
+  is_published?: boolean;
   created_at: string;
+  updated_at: string;
   uploaded_by: string;
   uploader?: {
     first_name: string;
     last_name: string;
     email: string;
   };
-};
+}
 
 export type Contact = {
   id: string;
@@ -120,7 +123,19 @@ export type Document = {
   } | null;
 };
 
-export type NotificationType = 'task_created' | 'task_updated' | 'comment_added' | 'meeting_scheduled' | 'document_uploaded' | string;
+export type NotificationType = 
+  // Task notifications
+  | 'task_created' | 'task_updated' | 'task_completed' | 'task_deleted'
+  // Meeting notifications
+  | 'meeting_created' | 'meeting_updated' | 'meeting_deleted'
+  // Budget notifications
+  | 'budget_created' | 'budget_updated' | 'budget_deleted'
+  // Risk notifications
+  | 'risk_created' | 'risk_updated' | 'risk_deleted'
+  // Legacy types
+  | 'comment_added' | 'meeting_scheduled' | 'document_uploaded'
+  // Fallback
+  | string;
 
 export type Notification = {
   id: string;
@@ -141,5 +156,20 @@ export type User = {
   company?: string;
   position?: string;
   phone?: string;
+  title?: string;
+};
+
+export type User = {
+  id: string;
+  email: string;
+  role: 'admin' | 'viewer';
+  first_name?: string;
+  last_name?: string;
+  company?: string;
+  position?: string;
+  phone?: string;
+  title?: string;
+};
+
   title?: string;
 };

@@ -1,4 +1,3 @@
-
 import React from 'react';
 import { Bell } from 'lucide-react';
 import { Badge } from '@/components/ui/badge';
@@ -13,6 +12,7 @@ import { useNotifications } from '@/contexts/NotificationsContext';
 import { formatDistanceToNow } from 'date-fns';
 import { Notification } from '@/types';
 import { useNavigate } from 'react-router-dom';
+import { NOTIFICATION_TYPES } from '@/utils/notificationService';
 
 const NotificationItem: React.FC<{ notification: Notification; onRead: (id: string) => Promise<void> }> = ({ 
   notification, 
@@ -27,12 +27,35 @@ const NotificationItem: React.FC<{ notification: Notification; onRead: (id: stri
     }
   };
   
-  const iconMap = {
-    task_created: "✏️",
-    task_updated: "🔄",
-    comment_added: "💬",
-    meeting_scheduled: "📅",
-    document_uploaded: "📁"
+  // Map notification types to icons
+  const iconMap: Record<string, string> = {
+    // Task notifications
+    [NOTIFICATION_TYPES.TASK_CREATED]: "✏️",
+    [NOTIFICATION_TYPES.TASK_UPDATED]: "🔄",
+    [NOTIFICATION_TYPES.TASK_COMPLETED]: "✅",
+    [NOTIFICATION_TYPES.TASK_DELETED]: "🗑️",
+    
+    // Meeting notifications
+    [NOTIFICATION_TYPES.MEETING_CREATED]: "📅",
+    [NOTIFICATION_TYPES.MEETING_UPDATED]: "🔄",
+    [NOTIFICATION_TYPES.MEETING_DELETED]: "❌",
+    
+    // Budget notifications
+    [NOTIFICATION_TYPES.BUDGET_CREATED]: "💰",
+    [NOTIFICATION_TYPES.BUDGET_UPDATED]: "💱",
+    [NOTIFICATION_TYPES.BUDGET_DELETED]: "🗑️",
+    
+    // Risk notifications
+    [NOTIFICATION_TYPES.RISK_CREATED]: "⚠️",
+    [NOTIFICATION_TYPES.RISK_UPDATED]: "🔄",
+    [NOTIFICATION_TYPES.RISK_DELETED]: "🗑️",
+    
+    // Legacy types
+    "task_created": "✏️",
+    "task_updated": "🔄",
+    "comment_added": "💬",
+    "meeting_scheduled": "📅",
+    "document_uploaded": "📁"
   };
   
   return (
@@ -86,7 +109,7 @@ const NotificationCenter: React.FC = () => {
           )}
         </div>
         
-        <ScrollArea className="h-[300px]">
+        <ScrollArea className="h-[400px]">
           {notifications.length > 0 ? (
             notifications.map((notification) => (
               <NotificationItem 

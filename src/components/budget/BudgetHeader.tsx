@@ -1,7 +1,7 @@
-
 import React from 'react';
 import { Button } from '@/components/ui/button';
 import { Plus } from 'lucide-react';
+import { H1, Paragraph } from '@/components/ui/typography';
 
 interface BudgetHeaderProps {
   canEdit: boolean;
@@ -12,10 +12,10 @@ const BudgetHeader: React.FC<BudgetHeaderProps> = ({ canEdit, onAddCategory }) =
   return (
     <div className="flex justify-between items-center">
       <div>
-        <h1 className="text-2xl font-bold tracking-tight">Budget & Financial Plan</h1>
-        <p className="text-muted-foreground">
+        <H1>Budget & Financial Plan</H1>
+        <Paragraph className="text-muted-foreground">
           Track financial allocation, spending, and projections
-        </p>
+        </Paragraph>
       </div>
       
       {canEdit && (

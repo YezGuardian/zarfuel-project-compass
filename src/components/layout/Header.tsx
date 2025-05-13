@@ -1,4 +1,3 @@
-
 import React from 'react';
 import { Link } from 'react-router-dom';
 import { 
@@ -18,6 +17,7 @@ import {
 } from '@/components/ui/dropdown-menu';
 import { useAuth } from '@/contexts/AuthContext';
 import NotificationCenter from '@/components/notifications/NotificationCenter';
+import ThemeToggle from './ThemeToggle';
 
 interface HeaderProps {
   sidebarOpen: boolean;
@@ -32,7 +32,7 @@ const Header: React.FC<HeaderProps> = ({ sidebarOpen, setSidebarOpen, user }) =>
   const { logout } = useAuth();
   
   return (
-    <header className="sticky top-0 z-10 bg-white border-b border-gray-200 shadow-sm">
+    <header className="sticky top-0 z-10 bg-background border-b border-gray-200 shadow-sm">
       <div className="px-4 sm:px-6 lg:px-8 h-16 flex justify-between items-center">
         <div className="flex items-center">
           <Button
@@ -57,6 +57,7 @@ const Header: React.FC<HeaderProps> = ({ sidebarOpen, setSidebarOpen, user }) =>
         </div>
         
         <div className="flex items-center gap-2">
+          <ThemeToggle />
           <NotificationCenter />
           
           <DropdownMenu>

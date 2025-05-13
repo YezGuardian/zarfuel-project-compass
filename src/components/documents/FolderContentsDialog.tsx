@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect } from 'react';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { Button } from '@/components/ui/button';
@@ -9,6 +8,7 @@ import { useAuth } from '@/contexts/AuthContext';
 import { Separator } from '@/components/ui/separator';
 import { DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import { downloadFile } from '@/utils/downloadHelper';
+import { uploadToDrive, getDriveDownloadUrl, deleteFromDrive } from '@/integrations/google/drive-api';
 
 interface FolderContentsDialogProps {
   folder: {
@@ -34,6 +34,7 @@ interface Document {
     last_name: string;
     email: string;
   } | null;
+  drive_file_id?: string;
 }
 
 const FolderContentsDialog: React.FC<FolderContentsDialogProps> = ({ folder, onClose }) => {
@@ -100,28 +101,25 @@ const FolderContentsDialog: React.FC<FolderContentsDialogProps> = ({ folder, onC
 
     setUploadingFile(true);
     try {
-      // 1. Upload file to storage
-      const fileExt = file.name.split('.').pop();
-      const fileName = `${Math.random().toString(36).substring(2, 15)}.${fileExt}`;
-      const filePath = `${folder.name}/${fileName}`;
+      // Upload file to Google Drive
+      const driveResult = await uploadToDrive(file, folder.name);
       
-      const { error: uploadError } = await supabase.storage
-        .from('documents')
-        .upload(filePath, file);
-
-      if (uploadError) throw uploadError;
+      if (!driveResult) {
+        throw new Error('Failed to upload file to Google Drive');
+      }
       
-      // 2. Create document record in database
+      // Create document record in database
       const { error: dbError } = await supabase
         .from('documents')
         .insert({
           file_name: file.name,
-          file_path: filePath,
-          file_type: fileExt || 'unknown',
+          file_path: driveResult.url,
+          file_type: file.type.split('/').pop() || 'unknown',
           file_size: file.size,
           category: folder.name,
           folder_id: folder.id,
-          uploaded_by: user.id
+          uploaded_by: user.id,
+          drive_file_id: driveResult.fileId // Store Google Drive file ID
         });
 
       if (dbError) throw dbError;
@@ -139,7 +137,41 @@ const FolderContentsDialog: React.FC<FolderContentsDialogProps> = ({ folder, onC
 
   const handleDownload = async (document: Document) => {
     try {
-      // Get download URL
+      // If we have a Google Drive file ID, use that to get download URL
+      if (document.drive_file_id) {
+        const downloadUrl = getDriveDownloadUrl(document.drive_file_id);
+        
+        // Update downloaded_by array
+        if (user) {
+          const downloaded_by = document.downloaded_by || [];
+          const downloadRecord = {
+            user_id: user.id,
+            downloaded_at: new Date().toISOString()
+          };
+          
+          const newDownloadedBy = [...downloaded_by, downloadRecord];
+          
+          await supabase
+            .from('documents')
+            .update({
+              downloaded_by: newDownloadedBy
+            })
+            .eq('id', document.id);
+        }
+        
+        // Open the download URL
+        window.open(downloadUrl, '_blank');
+        toast.success(`Downloading ${document.file_name}`);
+        return;
+      }
+      
+      // Legacy path for older files stored in Supabase
+      if (document.file_path.startsWith('http')) {
+        window.open(document.file_path, '_blank');
+        return;
+      }
+      
+      // Get download URL from Supabase Storage (legacy)
       const { data, error } = await supabase.storage
         .from('documents')
         .createSignedUrl(document.file_path, 60);
@@ -182,12 +214,19 @@ const FolderContentsDialog: React.FC<FolderContentsDialogProps> = ({ folder, onC
       const document = documents.find(d => d.id === documentId);
       if (!document) return;
       
-      // Delete the file from storage
-      const { error: storageError } = await supabase.storage
-        .from('documents')
-        .remove([document.file_path]);
-        
-      if (storageError) throw storageError;
+      // If it's a Google Drive file, delete it from Drive
+      if (document.drive_file_id) {
+        await deleteFromDrive(document.drive_file_id);
+      }
+      // If it's a legacy Supabase storage file
+      else if (!document.file_path.startsWith('http')) {
+        // Delete the file from Supabase storage
+        const { error: storageError } = await supabase.storage
+          .from('documents')
+          .remove([document.file_path]);
+          
+        if (storageError) throw storageError;
+      }
       
       // Delete the database record
       const { error: dbError } = await supabase

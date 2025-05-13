@@ -1,7 +1,7 @@
-
 import React from 'react';
 import { ResponsiveContainer, PieChart, Pie, Cell, Tooltip } from 'recharts';
 import { Card, CardHeader, CardTitle, CardContent } from '@/components/ui/card';
+import { useTheme } from 'next-themes';
 
 interface PieData {
   name: string;
@@ -19,6 +19,21 @@ const PieChartDisplay: React.FC<PieChartDisplayProps> = ({
   colors,
   formatCurrency
 }) => {
+  const { theme } = useTheme();
+  const isDark = theme === 'dark';
+  
+  // Enhanced colors for dark mode
+  const chartColors = isDark 
+    ? colors.map(color => {
+        // Brighten colors for dark mode
+        return color === '#0088FE' ? '#00AAFE' : 
+               color === '#FFBB28' ? '#FFD028' : 
+               color === '#FF8042' ? '#FFA042' : color;
+      }) 
+    : colors;
+    
+  const textColor = isDark ? '#fff' : '#000';
+  
   return (
     <Card>
       <CardHeader>
@@ -35,15 +50,24 @@ const PieChartDisplay: React.FC<PieChartDisplayProps> = ({
                 outerRadius={100}
                 fill="#8884d8"
                 dataKey="value"
+                labelLine={false}
               >
                 {data.map((entry, index) => (
                   <Cell 
                     key={`cell-${index}`} 
-                    fill={colors[index % colors.length]} 
+                    fill={chartColors[index % chartColors.length]} 
                   />
                 ))}
               </Pie>
-              <Tooltip formatter={(value) => formatCurrency(value as number)} />
+              <Tooltip 
+                formatter={(value) => formatCurrency(value as number)} 
+                contentStyle={{ 
+                  backgroundColor: isDark ? '#333' : '#fff',
+                  color: textColor,
+                  border: `1px solid ${isDark ? '#555' : '#ddd'}`
+                }}
+                labelStyle={{ color: textColor }}
+              />
             </PieChart>
           </ResponsiveContainer>
         </div>
@@ -52,10 +76,10 @@ const PieChartDisplay: React.FC<PieChartDisplayProps> = ({
         <div className="mt-6">
           <div className="grid grid-cols-2 sm:grid-cols-3 gap-4">
             {data.map((entry, index) => (
-              <div key={index} className="flex items-center text-sm">
+              <div key={index} className="flex items-center text-sm text-foreground">
                 <div 
                   className="w-4 h-4 mr-1" 
-                  style={{ backgroundColor: colors[index % colors.length] }}
+                  style={{ backgroundColor: chartColors[index % chartColors.length] }}
                 ></div>
                 <div className="flex flex-col">
                   <span className="whitespace-nowrap overflow-hidden text-ellipsis max-w-[120px]">{entry.name}</span>
