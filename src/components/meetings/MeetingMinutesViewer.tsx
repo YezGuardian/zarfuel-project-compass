@@ -20,7 +20,7 @@ const MeetingMinutesViewer: React.FC<MeetingMinutesViewerProps> = ({
   const { user, isAdmin } = useAuth();
 
   // Format the content for display (preserving line breaks)
-  const formattedContent = minute.content?.split('\n').map((line, i) => (
+  const formattedContent = minute.content && minute.content.split('\n').map((line, i) => (
     <React.Fragment key={i}>
       {line}
       <br />
@@ -34,16 +34,21 @@ const MeetingMinutesViewer: React.FC<MeetingMinutesViewerProps> = ({
     generateMeetingMinutesPDF(meeting, minute);
   };
 
+  // Get uploader name
+  const uploaderName = minute.uploader ? 
+    `${minute.uploader.first_name || ''} ${minute.uploader.last_name || ''}`.trim() : 
+    'Unknown User';
+
   return (
     <div className="space-y-4">
       <div className="flex justify-between items-start">
         <div className="space-y-1">
           <h3 className="text-lg font-medium">Meeting Minutes</h3>
           <p className="text-sm text-muted-foreground">
-            Recorded by {minute.uploader?.first_name} {minute.uploader?.last_name} 
-            {minute.created_at && ` on ${format(parseISO(minute.created_at), 'PPP')}`}
+            Recorded by {uploaderName}
+            {minute.created_at && ` on ${format(new Date(minute.created_at), 'PPP')}`}
             {minute.updated_at && minute.updated_at !== minute.created_at && 
-              ` (Updated ${format(parseISO(minute.updated_at), 'PPP')})`}
+              ` (Updated ${format(new Date(minute.updated_at), 'PPP')})`}
           </p>
         </div>
         

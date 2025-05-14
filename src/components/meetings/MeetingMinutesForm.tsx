@@ -45,12 +45,11 @@ const MeetingMinutesForm: React.FC<MeetingMinutesFormProps> = ({
     
     try {
       if (editMode && minuteId) {
-        // Update existing minutes - use a typecasting approach for the content field
+        // Update existing minutes - without updated_at field (will be handled by database trigger)
         const { error } = await supabase
           .from('meeting_minutes')
           .update({
-            content,
-            updated_at: new Date().toISOString(),
+            content: content,
             source_type: 'text'
           } as any)
           .eq('id', minuteId);
@@ -59,12 +58,12 @@ const MeetingMinutesForm: React.FC<MeetingMinutesFormProps> = ({
         
         toast.success('Meeting minutes updated successfully');
       } else {
-        // Create new minutes - use a typecasting approach for the content field
+        // Create new minutes - without updated_at field (will be handled by database)
         const { error } = await supabase
           .from('meeting_minutes')
           .insert({
             event_id: meeting.id,
-            content,
+            content: content,
             uploaded_by: user.id,
             source_type: 'text',
             file_path: null,

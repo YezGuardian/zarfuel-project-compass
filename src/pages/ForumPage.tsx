@@ -8,7 +8,7 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } f
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { toast } from 'sonner';
 import { Avatar, AvatarFallback } from '@/components/ui/avatar';
-import { Send, ThumbsUp, ThumbsDown, MessageSquare, Edit, Trash2 } from 'lucide-react';
+import { Send, ThumbsUp, ThumbsDown, MessageSquare, Edit, Trash2, Reply } from 'lucide-react';
 import { supabase } from '@/integrations/supabase/client';
 import { refreshSupabaseSchema } from '@/integrations/supabase/client';
 import { ForumPost, ForumComment } from '@/types/forum';
@@ -25,14 +25,32 @@ const ForumPage: React.FC = () => {
   const [users, setUsers] = useState<any[]>([]);
   const [editingPost, setEditingPost] = useState<ForumPost | null>(null);
   const [schemaRefreshed, setSchemaRefreshed] = useState(false);
+  const [replyingTo, setReplyingTo] = useState<{commentId: string, postId: string} | null>(null);
   
   // Refresh schema on load to ensure forum tables are recognized
   useEffect(() => {
     const initializeSchema = async () => {
       try {
+        console.log("Initializing forum tables schema...");
         // Try to refresh the schema to make sure forum tables are recognized
-        await refreshSupabaseSchema();
-        setSchemaRefreshed(true);
+        const success = await refreshSupabaseSchema();
+        setSchemaRefreshed(success);
+        if (success) {
+          console.log("Schema refresh successful");
+        } else {
+          console.warn("Schema refresh might not have been successful");
+          // Try again after a short delay
+          setTimeout(async () => {
+            console.log("Retrying schema refresh...");
+            const retrySuccess = await refreshSupabaseSchema();
+            setSchemaRefreshed(retrySuccess);
+            if (retrySuccess) {
+              console.log("Schema refresh retry successful");
+            } else {
+              console.error("Schema refresh retry failed");
+            }
+          }, 2000);
+        }
       } catch (error) {
         console.error("Failed to refresh schema:", error);
         // Continue anyway - we'll retry on any API calls
@@ -52,7 +70,7 @@ const ForumPage: React.FC = () => {
           await refreshSupabaseSchema();
         }
         
-        // Fetch users for @ mentions
+        // Fetch users for notifications
         const { data: usersData, error: usersError } = await supabase
           .from('profiles')
           .select('id, first_name, last_name')
@@ -61,49 +79,75 @@ const ForumPage: React.FC = () => {
         if (usersError) throw usersError;
         setUsers(usersData || []);
         
-        // Use any to bypass TypeScript errors while the schema is being updated
-        const postsQuery = supabase
+        // Fix: Use simpler query to avoid foreign key relationship issues
+        const { data: postsData, error: postsError } = await (supabase
           .from('forum_posts' as any)
-          .select(`
-            *,
-            author:author_id(
-              first_name,
-              last_name,
-              email
-            )
-          `)
-          .order('created_at', { ascending: false });
-        
-        const { data: postsData, error: postsError } = await postsQuery;
+          .select('*')
+          .order('created_at', { ascending: false }) as any);
         
         if (postsError) throw postsError;
-        setPosts(postsData || []);
         
-        // Fetch comments for all posts
+        // If posts are fetched, then fetch author details for each post
         if (postsData && postsData.length > 0) {
+          const postsWithAuthors = await Promise.all(
+            postsData.map(async (post) => {
+              // Fetch author details
+              const { data: authorData } = await supabase
+                .from('profiles')
+                .select('first_name, last_name, email')
+                .eq('id', post.author_id)
+                .single();
+                
+              return {
+                ...post,
+                author: authorData || null,
+                attachments: [] // Ensure this field exists
+              };
+            })
+          );
+          
+          setPosts(postsWithAuthors);
+          
+          // Fetch comments for all posts
           const allComments: Record<string, ForumComment[]> = {};
           
           for (const post of postsData) {
-            const commentsQuery = supabase
+            // Simple query to avoid foreign key relationship issues
+            const { data: commentsData, error: commentsError } = await (supabase
               .from('forum_comments' as any)
-              .select(`
-                *,
-                author:author_id(
-                  first_name,
-                  last_name,
-                  email
-                )
-              `)
+              .select('*')
               .eq('post_id', post.id)
-              .order('created_at', { ascending: true });
-              
-            const { data: commentsData, error: commentsError } = await commentsQuery;
+              .order('created_at', { ascending: true }) as any);
               
             if (commentsError) throw commentsError;
-            allComments[post.id] = commentsData || [];
+            
+            // If comments exist, fetch author details for each comment
+            if (commentsData && commentsData.length > 0) {
+              const commentsWithAuthors = await Promise.all(
+                commentsData.map(async (comment) => {
+                  // Fetch author details
+                  const { data: authorData } = await supabase
+                    .from('profiles')
+                    .select('first_name, last_name, email')
+                    .eq('id', comment.author_id)
+                    .single();
+                    
+                  return {
+                    ...comment,
+                    author: authorData || null
+                  };
+                })
+              );
+              
+              allComments[post.id] = commentsWithAuthors;
+            } else {
+              allComments[post.id] = [];
+            }
           }
           
           setComments(allComments);
+        } else {
+          setPosts([]);
         }
       } catch (error) {
         console.error('Error fetching forum data:', error);
@@ -122,33 +166,38 @@ const ForumPage: React.FC = () => {
     
     setIsLoading(true);
     try {
-      // Parse content for @mentions
-      const mentionedUserIds = extractMentions(newPostContent, users);
-      
       // Try to refresh schema if not already done
       if (!schemaRefreshed) {
         await refreshSupabaseSchema();
       }
       
+      console.log("Creating new post");
+      
       // Create the post
-      const postResult = await (supabase
+      const { data, error } = await supabase
         .from('forum_posts' as any)
         .insert({
           title: newPostTitle.trim(),
           content: newPostContent.trim(),
           author_id: user.id,
-          mentioned_users: JSON.stringify(mentionedUserIds)
+          likes: '[]',
+          created_at: new Date().toISOString(),
+          updated_at: new Date().toISOString(),
+          is_edited: false
         })
-        .select() as any);
+        .select();
       
-      const { data, error } = postResult;
+      if (error) {
+        console.error('Error creating post:', error);
+        throw error;
+      }
       
-      if (error) throw error;
+      console.log("Post created successfully:", data);
       
       if (data && data[0]) {
         // Add new post to state
         const newPost: ForumPost = {
-          ...data[0],
+          ...(data[0] as any),
           author: {
             first_name: profile?.first_name || '',
             last_name: profile?.last_name || '',
@@ -159,53 +208,60 @@ const ForumPage: React.FC = () => {
         };
         
         setPosts([newPost, ...posts]);
-        setComments({ ...comments, [newPost.id]: [] });
+        setComments({
+          ...comments,
+          [newPost.id]: []
+        });
+        
+        // Close the dialog
+        setNewPostDialogOpen(false);
+        
+        // Reset form
+        setNewPostTitle('');
+        setNewPostContent('');
         
         // Create notifications for all users about the new post
         if (users.length > 0) {
-          const notificationPromises = users.map(async (u) => {
-            if (u.id !== user.id) {
-              return (supabase
-                .from('forum_notifications' as any)
-                .insert({
-                  user_id: u.id,
-                  type: 'post_created',
-                  content: `${profile?.first_name} ${profile?.last_name} created a new post: ${newPostTitle}`,
-                  source_id: newPost.id
-                }) as any);
+          try {
+            // Batch notifications in groups to avoid hitting rate limits
+            const batchSize = 5;
+            const otherUsers = users.filter(u => u.id !== user.id);
+            
+            for (let i = 0; i < otherUsers.length; i += batchSize) {
+              const batch = otherUsers.slice(i, i + batchSize);
+              
+              const notificationsToInsert = batch.map(u => ({
+                user_id: u.id,
+                type: 'post_created',
+                content: `${profile?.first_name || ''} ${profile?.last_name || ''} created a new post: ${newPost.title}`,
+                source_id: newPost.id,
+                is_read: false,
+                created_at: new Date().toISOString()
+              }));
+              
+              if (notificationsToInsert.length > 0) {
+                await supabase
+                  .from('forum_notifications' as any)
+                  .insert(notificationsToInsert);
+              }
+              
+              // Small delay between batches to avoid rate limits
+              if (i + batchSize < otherUsers.length) {
+                await new Promise(resolve => setTimeout(resolve, 300));
+              }
             }
-            return Promise.resolve();
-          });
-          
-          await Promise.all(notificationPromises);
-        }
-        
-        // Create mention notifications
-        if (mentionedUserIds.length > 0) {
-          const mentionNotificationPromises = mentionedUserIds.map(async (mentionedId) => {
-            return (supabase
-              .from('forum_notifications' as any)
-              .insert({
-                user_id: mentionedId,
-                type: 'mention',
-                content: `${profile?.first_name} ${profile?.last_name} mentioned you in a post: ${newPostTitle}`,
-                source_id: newPost.id
-              }) as any);
-          });
-          
-          await Promise.all(mentionNotificationPromises);
+            
+            console.log(`Notifications created for ${otherUsers.length} users about new post`);
+          } catch (notifError) {
+            console.error('Error creating post notifications:', notifError);
+          }
         }
         
         toast.success('Post created successfully');
       }
-      
-      // Reset form
-      setNewPostDialogOpen(false);
-      setNewPostTitle('');
-      setNewPostContent('');
     } catch (error: any) {
       console.error('Error creating post:', error);
-      toast.error(`Failed to create post: ${error.message}`);
+      toast.error(`Failed to create post: ${error.message || 'Unknown error'}`);
     } finally {
       setIsLoading(false);
     }
@@ -217,8 +273,6 @@ const ForumPage: React.FC = () => {
     
     setIsLoading(true);
     try {
-      const mentionedUserIds = extractMentions(newPostContent, users);
-      
       // Try to refresh schema if not already done
       if (!schemaRefreshed) {
         await refreshSupabaseSchema();
@@ -229,7 +283,6 @@ const ForumPage: React.FC = () => {
         .update({
           title: newPostTitle.trim(),
           content: newPostContent.trim(),
-          mentioned_users: JSON.stringify(mentionedUserIds)
         })
         .eq('id', editingPost.id) as any);
         
@@ -266,25 +319,6 @@ const ForumPage: React.FC = () => {
         });
         
         await Promise.all(notificationPromises);
-      }
-      
-      // Create new mention notifications
-      if (mentionedUserIds.length > 0) {
-        const mentionNotificationPromises = mentionedUserIds.map(async (mentionedId) => {
-          if (!editingPost.mentioned_users.includes(mentionedId)) {
-            return (supabase
-              .from('forum_notifications' as any)
-              .insert({
-                user_id: mentionedId,
-                type: 'mention',
-                content: `${profile?.first_name} ${profile?.last_name} mentioned you in an edited post: ${newPostTitle}`,
-                source_id: editingPost.id
-              }) as any);
-          }
-          return Promise.resolve();
-        });
-        
-        await Promise.all(mentionNotificationPromises);
       }
       
       toast.success('Post updated successfully');
@@ -354,7 +388,7 @@ const ForumPage: React.FC = () => {
     }
   };
   
-  // Comment on a post
+  // Comment on a post or reply to a comment
   const handleAddComment = async (postId: string) => {
     if (!user || !newCommentContent[postId]?.trim()) return;
     
@@ -365,34 +399,63 @@ const ForumPage: React.FC = () => {
         await refreshSupabaseSchema();
       }
       
-      const commentContent = newCommentContent[postId].trim();
-      const mentionedUserIds = extractMentions(commentContent, users);
+      console.log("Adding comment or reply to post:", postId);
+      console.log("Replying to:", replyingTo);
       
-      const result = await (supabase
+      const commentContent = newCommentContent[postId].trim();
+      
+      // Prepare comment data
+      const commentData: any = {
+        post_id: postId,
+        content: commentContent,
+        author_id: user.id,
+        created_at: new Date().toISOString(),
+        updated_at: new Date().toISOString(),
+        is_edited: false,
+        likes: '[]'
+      };
+      
+      // If replying to a comment, include parent_comment_id
+      if (replyingTo && replyingTo.postId === postId) {
+        commentData.parent_comment_id = replyingTo.commentId;
+        console.log(`Adding reply to comment ${replyingTo.commentId}`);
+      } else {
+        console.log("Adding top-level comment");
+      }
+      
+      // Insert the comment
+      const { data, error } = await supabase
         .from('forum_comments' as any)
-        .insert({
-          post_id: postId,
-          content: commentContent,
-          author_id: user.id,
-          mentioned_users: JSON.stringify(mentionedUserIds)
-        })
-        .select() as any);
+        .insert(commentData)
+        .select('*');
         
-      const { data, error } = result;
-        
-      if (error) throw error;
+      if (error) {
+        console.error('Error inserting comment:', error);
+        throw error;
+      }
+      
+      console.log("Comment added successfully:", data);
       
       if (data && data[0]) {
-        // Add new comment to state
+        // Get profile data for the new comment
+        const { data: profileData } = await supabase
+          .from('profiles')
+          .select('first_name, last_name, email')
+          .eq('id', user.id)
+          .single();
+          
+        // Add new comment to state with author information
         const newComment: ForumComment = {
-          ...data[0],
+          ...(data[0] as any),
           author: {
-            first_name: profile?.first_name || '',
-            last_name: profile?.last_name || '',
-            email: user.email || ''
-          }
+            first_name: profileData?.first_name || profile?.first_name || '',
+            last_name: profileData?.last_name || profile?.last_name || '',
+            email: profileData?.email || user.email || ''
+          },
+          likes: []
         };
         
+        // Update the comments state
         const postComments = comments[postId] || [];
         setComments({
           ...comments,
@@ -405,45 +468,269 @@ const ForumPage: React.FC = () => {
           [postId]: ''
         });
         
-        // Create notification for post author about the new comment
+        // Get the post for notifications
         const post = posts.find(p => p.id === postId);
-        if (post && post.author_id !== user.id) {
-          await (supabase
-            .from('forum_notifications' as any)
-            .insert({
-              user_id: post.author_id,
-              type: 'comment_created',
-              content: `${profile?.first_name} ${profile?.last_name} commented on your post: ${post.title}`,
-              source_id: postId
-            }) as any);
+        
+        // If this is a reply to another comment, notify that comment's author
+        if (replyingTo && replyingTo.commentId) {
+          const parentComment = postComments.find(c => c.id === replyingTo.commentId);
+          
+          if (parentComment && parentComment.author_id !== user.id) {
+            try {
+              const notificationData = {
+                user_id: parentComment.author_id,
+                type: 'comment_reply',
+                content: `${profile?.first_name || ''} ${profile?.last_name || ''} replied to your comment`,
+                source_id: newComment.id,
+                is_read: false,
+                created_at: new Date().toISOString()
+              };
+              
+              await supabase
+                .from('forum_notifications' as any)
+                .insert(notificationData);
+                
+              console.log('Notification created for comment reply');
+            } catch (notifError) {
+              console.error('Error creating reply notification:', notifError);
+            }
+          }
+          
+          // Reset the replying state
+          setReplyingTo(null);
         }
         
-        // Create mention notifications
-        if (mentionedUserIds.length > 0) {
-          const mentionNotificationPromises = mentionedUserIds.map(async (mentionedId) => {
-            if (mentionedId !== user.id) {
-              return (supabase
-                .from('forum_notifications' as any)
-                .insert({
-                  user_id: mentionedId,
-                  type: 'mention',
-                  content: `${profile?.first_name} ${profile?.last_name} mentioned you in a comment`,
-                  source_id: newComment.id
-                }) as any);
+        // Create notification for post author about the new comment
+        if (post && post.author_id !== user.id) {
+          try {
+            const notificationData = {
+              user_id: post.author_id,
+              type: 'comment_created',
+              content: `${profile?.first_name || ''} ${profile?.last_name || ''} commented on your post: ${post.title}`,
+              source_id: postId,
+              is_read: false,
+              created_at: new Date().toISOString()
+            };
+            
+            await supabase
+              .from('forum_notifications' as any)
+              .insert(notificationData);
+              
+            console.log('Notification created for post author');
+          } catch (notifError) {
+            console.error('Error creating post comment notification:', notifError);
+          }
+        }
+        
+        // Create notifications for all other users (global forum activity)
+        if (users.length > 0) {
+          try {
+            // Batch notifications in groups to avoid hitting rate limits
+            const batchSize = 5;
+            const otherUsers = users.filter(u => 
+              u.id !== user.id && 
+              u.id !== post?.author_id && 
+              (!replyingTo || !postComments.find(c => c.id === replyingTo.commentId)?.author_id || 
+               u.id !== postComments.find(c => c.id === replyingTo.commentId)?.author_id)
+            );
+            
+            for (let i = 0; i < otherUsers.length; i += batchSize) {
+              const batch = otherUsers.slice(i, i + batchSize);
+              
+              const notificationsToInsert = batch.map(u => ({
+                user_id: u.id,
+                type: replyingTo ? 'comment_reply_created' : 'comment_created',
+                content: `${profile?.first_name || ''} ${profile?.last_name || ''} ${replyingTo ? 'replied to a comment' : 'commented'} on a post: ${post?.title || 'Forum post'}`,
+                source_id: postId,
+                is_read: false,
+                created_at: new Date().toISOString()
+              }));
+              
+              if (notificationsToInsert.length > 0) {
+                await supabase
+                  .from('forum_notifications' as any)
+                  .insert(notificationsToInsert);
+              }
+              
+              // Small delay between batches to avoid rate limits
+              if (i + batchSize < otherUsers.length) {
+                await new Promise(resolve => setTimeout(resolve, 300));
+              }
             }
-            return Promise.resolve();
-          });
-          
-          await Promise.all(mentionNotificationPromises);
+            
+            console.log(`Notifications created for ${otherUsers.length} other users`);
+          } catch (notifError) {
+            console.error('Error creating notifications for other users:', notifError);
+          }
         }
       
-        toast.success('Comment added');
+        toast.success(replyingTo ? 'Reply added' : 'Comment added');
       }
     } catch (error: any) {
       console.error('Error adding comment:', error);
-      toast.error(`Failed to add comment: ${error.message}`);
+      toast.error(`Failed to add comment: ${error.message || 'Unknown error'}`);
     } finally {
       setIsLoading(false);
+    }
+  };
+  
+  // Like or dislike a comment
+  const handleLikeComment = async (commentId: string, isLike: boolean) => {
+    if (!user) return;
+    
+    // Find the comment in any post's comments
+    let foundComment: ForumComment | undefined;
+    let foundPostId: string | undefined;
+    
+    // Search through all posts' comments to find the one with matching ID
+    for (const [postId, postComments] of Object.entries(comments)) {
+      const comment = postComments.find(c => c.id === commentId);
+      if (comment) {
+        foundComment = comment;
+        foundPostId = postId;
+        break;
+      }
+    }
+    
+    if (!foundComment || !foundPostId) {
+      console.error('Comment not found:', commentId);
+      toast.error('Comment not found');
+      return;
+    }
+    
+    try {
+      // Try to refresh schema if not already done
+      if (!schemaRefreshed) {
+        await refreshSupabaseSchema();
+      }
+      
+      console.log('Updating like for comment:', commentId, isLike ? 'like' : 'dislike');
+      
+      // Safely parse the likes - handle both string and array formats
+      let currentLikes = [];
+      try {
+        if (typeof foundComment.likes === 'string') {
+          // Handle string format
+          if (foundComment.likes.trim() === '') {
+            currentLikes = [];
+          } else {
+            currentLikes = JSON.parse(foundComment.likes);
+          }
+        } else if (Array.isArray(foundComment.likes)) {
+          // Already in array format
+          currentLikes = foundComment.likes;
+        } else if (foundComment.likes && typeof foundComment.likes === 'object') {
+          // Handle JSON object from database
+          currentLikes = Array.isArray(foundComment.likes) ? foundComment.likes : [];
+        }
+      } catch (e) {
+        console.warn('Error parsing likes, treating as empty array:', e);
+        console.log('Problematic likes value:', foundComment.likes);
+      }
+      
+      // Ensure currentLikes is always an array
+      if (!Array.isArray(currentLikes)) {
+        console.warn('Likes format not recognized, resetting to empty array');
+        currentLikes = [];
+      }
+      
+      // Check if user already liked/disliked
+      const userLikeIndex = currentLikes.findIndex(like => like && like.userId === user.id);
+      let newLikes;
+      
+      if (userLikeIndex >= 0) {
+        // User already has a like/dislike, update or remove it
+        const currentLike = currentLikes[userLikeIndex];
+        if (currentLike.isLike === isLike) {
+          // Remove like/dislike if clicking the same button
+          newLikes = [...currentLikes.slice(0, userLikeIndex), ...currentLikes.slice(userLikeIndex + 1)];
+        } else {
+          // Change like to dislike or vice versa
+          newLikes = [...currentLikes];
+          newLikes[userLikeIndex] = { 
+            userId: user.id, 
+            isLike, 
+            userName: `${profile?.first_name || ''} ${profile?.last_name || ''}`.trim() 
+          };
+        }
+      } else {
+        // Add new like/dislike
+        newLikes = [...currentLikes, { 
+          userId: user.id, 
+          isLike, 
+          userName: `${profile?.first_name || ''} ${profile?.last_name || ''}`.trim() 
+        }];
+      }
+      
+      // Convert to string for storage - ensure valid format
+      const likesString = JSON.stringify(newLikes);
+      console.log('Updated likes to save:', likesString);
+      
+      // Update in database - make sure we're sending valid JSONB
+      try {
+        const { error } = await supabase
+          .from('forum_comments' as any)
+          .update({ likes: likesString })
+          .eq('id', commentId);
+        
+        if (error) {
+          console.error('Database error when updating comment likes:', error);
+          
+          // Try an alternative approach
+          if (error.message.includes('likes')) {
+            console.log('Trying alternative approach with explicit JSONB cast');
+            // Try direct SQL approach
+            await supabase.rpc('update_comment_likes', { 
+              comment_id: commentId,
+              likes_json: likesString
+            });
+          } else {
+            throw error;
+          }
+        }
+      } catch (dbError) {
+        console.error('Failed to update likes in database:', dbError);
+        throw dbError;
+      }
+      
+      // Update in state to immediately show the change to the user
+      const updatedComments = { ...comments };
+      
+      for (const postId in updatedComments) {
+        updatedComments[postId] = updatedComments[postId].map(c => 
+          c.id === commentId ? { ...c, likes: newLikes } : c
+        );
+      }
+      
+      setComments(updatedComments);
+      
+      // Only send notification if it's not the user's own comment
+      if (foundComment.author_id !== user.id) {
+        // Create notification for the comment author
+        try {
+          const notificationData = {
+            user_id: foundComment.author_id,
+            type: 'comment_liked',
+            content: `${profile?.first_name || ''} ${profile?.last_name || ''} ${isLike ? 'liked' : 'disliked'} your comment`,
+            source_id: commentId,
+            is_read: false,
+            created_at: new Date().toISOString()
+          };
+          
+          await supabase
+            .from('forum_notifications' as any)
+            .insert(notificationData);
+            
+          console.log('Notification created for comment author');
+        } catch (notifError) {
+          console.error('Failed to create notification:', notifError);
+        }
+      }
+      
+      toast.success(isLike ? 'Comment liked' : 'Comment disliked');
+    } catch (error: any) {
+      console.error('Error updating comment likes:', error);
+      toast.error(`Failed to update comment like: ${error.message || 'Unknown error'}`);
     }
   };
   
@@ -452,7 +739,11 @@ const ForumPage: React.FC = () => {
     if (!user) return;
     
     const post = posts.find(p => p.id === postId);
-    if (!post) return;
+    if (!post) {
+      console.error('Post not found:', postId);
+      toast.error('Post not found');
+      return;
+    }
     
     try {
       // Try to refresh schema if not already done
@@ -460,10 +751,24 @@ const ForumPage: React.FC = () => {
         await refreshSupabaseSchema();
       }
       
-      // Convert likes from string[] to actual like objects if needed
-      const currentLikes = Array.isArray(post.likes) 
-        ? post.likes 
-        : (typeof post.likes === 'string' ? JSON.parse(post.likes) : []);
+      console.log('Updating like for post:', postId, isLike ? 'like' : 'dislike');
+      
+      // Safely parse the likes
+      let currentLikes = [];
+      try {
+        if (typeof post.likes === 'string') {
+          currentLikes = JSON.parse(post.likes);
+        } else if (Array.isArray(post.likes)) {
+          currentLikes = post.likes;
+        }
+      } catch (e) {
+        console.warn('Error parsing likes, treating as empty array', e);
+      }
+      
+      // Ensure currentLikes is an array
+      if (!Array.isArray(currentLikes)) {
+        currentLikes = [];
+      }
       
       // Check if user already liked/disliked
       const userLikeIndex = currentLikes.findIndex(like => like.userId === user.id);
@@ -478,55 +783,125 @@ const ForumPage: React.FC = () => {
         } else {
           // Change like to dislike or vice versa
           newLikes = [...currentLikes];
-          newLikes[userLikeIndex] = { userId: user.id, isLike, userName: `${profile?.first_name} ${profile?.last_name}` };
+          newLikes[userLikeIndex] = { 
+            userId: user.id, 
+            isLike, 
+            userName: `${profile?.first_name || ''} ${profile?.last_name || ''}`.trim() 
+          };
         }
       } else {
         // Add new like/dislike
-        newLikes = [...currentLikes, { userId: user.id, isLike, userName: `${profile?.first_name} ${profile?.last_name}` }];
+        newLikes = [...currentLikes, { 
+          userId: user.id, 
+          isLike, 
+          userName: `${profile?.first_name || ''} ${profile?.last_name || ''}`.trim() 
+        }];
       }
       
+      // Convert to string for storage
+      const likesString = JSON.stringify(newLikes);
+      
       // Update in database
-      const { error } = await (supabase
+      const { data, error } = await supabase
         .from('forum_posts' as any)
-        .update({ likes: JSON.stringify(newLikes) })
-        .eq('id', postId) as any);
+        .update({ likes: likesString })
+        .eq('id', postId)
+        .select();
         
-      if (error) throw error;
+      if (error) {
+        console.error('Database error when updating post likes:', error);
+        throw error;
+      }
+      
+      console.log('Post likes updated successfully:', data);
       
       // Update in state
       setPosts(posts.map(p => p.id === postId ? { ...p, likes: newLikes } : p));
+      
+      // Only send notification if it's not the user's own post
+      if (post.author_id !== user.id) {
+        // Notification for post author
+        try {
+          const authorNotification = {
+            user_id: post.author_id,
+            type: 'post_liked',
+            content: `${profile?.first_name || ''} ${profile?.last_name || ''} ${isLike ? 'liked' : 'disliked'} your post: ${post.title}`,
+            source_id: postId,
+            is_read: false,
+            created_at: new Date().toISOString()
+          };
+          
+          await supabase
+            .from('forum_notifications' as any)
+            .insert(authorNotification);
+            
+          console.log('Notification created for post author');
+        } catch (notifError) {
+          console.error('Error creating post like notification for author:', notifError);
+        }
+      }
+      
+      // Create notifications for other users (global forum activity)
+      if (users.length > 0) {
+        try {
+          // Batch notifications in groups to avoid hitting rate limits
+          const batchSize = 5;
+          const otherUsers = users.filter(u => 
+            u.id !== user.id && u.id !== post.author_id
+          );
+          
+          for (let i = 0; i < otherUsers.length; i += batchSize) {
+            const batch = otherUsers.slice(i, i + batchSize);
+            
+            const notificationsToInsert = batch.map(u => ({
+              user_id: u.id,
+              type: 'post_activity',
+              content: `${profile?.first_name || ''} ${profile?.last_name || ''} ${isLike ? 'liked' : 'disliked'} a post: ${post.title}`,
+              source_id: postId,
+              is_read: false,
+              created_at: new Date().toISOString()
+            }));
+            
+            if (notificationsToInsert.length > 0) {
+              await supabase
+                .from('forum_notifications' as any)
+                .insert(notificationsToInsert);
+            }
+            
+            // Small delay between batches to avoid rate limits
+            if (i + batchSize < otherUsers.length) {
+              await new Promise(resolve => setTimeout(resolve, 300));
+            }
+          }
+          
+          console.log(`Notifications created for ${otherUsers.length} other users about post like/dislike`);
+        } catch (notifError) {
+          console.error('Error creating post like notifications for other users:', notifError);
+        }
+      }
+      
+      toast.success(isLike ? 'Post liked' : 'Post disliked');
     } catch (error: any) {
       console.error('Error updating likes:', error);
-      toast.error(`Failed to update like: ${error.message}`);
+      toast.error(`Failed to update like: ${error.message || 'Unknown error'}`);
     }
   };
   
-  // Parse content for @mentions
-  const extractMentions = (content: string, users: any[]): string[] => {
-    const mentionRegex = /@\[(.*?)\]/g;
-    const matches = [...content.matchAll(mentionRegex)];
+  // Helper function to start replying to a comment
+  const startReplyingToComment = (commentId: string, postId: string) => {
+    setReplyingTo({ commentId, postId });
     
-    const mentionedIds: string[] = [];
-    matches.forEach(match => {
-      const mentionedName = match[1];
-      const nameParts = mentionedName.split(' ');
-      
-      if (nameParts.length >= 2) {
-        const firstName = nameParts[0];
-        const lastName = nameParts.slice(1).join(' ');
-        
-        const user = users.find(u => 
-          u.first_name.toLowerCase() === firstName.toLowerCase() && 
-          u.last_name.toLowerCase() === lastName.toLowerCase()
-        );
-        
-        if (user && !mentionedIds.includes(user.id)) {
-          mentionedIds.push(user.id);
-        }
-      }
+    // Focus on the comment input field
+    setNewCommentContent({
+      ...newCommentContent,
+      [postId]: newCommentContent[postId] || ''
     });
     
-    return mentionedIds;
+    // Scroll to the comment form
+    setTimeout(() => {
+      const commentForm = document.getElementById(`comment-form-${postId}`);
+      commentForm?.scrollIntoView({ behavior: 'smooth' });
+    }, 100);
   };
   
   // Start editing a post
@@ -579,6 +954,24 @@ const ForumPage: React.FC = () => {
     
     const names = filteredLikes.map(like => like.userName || 'Anonymous').join('\n');
     return names;
+  };
+  
+  // Helper to get parent-child comment structure
+  const getCommentThreads = (postComments: ForumComment[]) => {
+    // Separate parent comments and replies
+    const parentComments = postComments.filter(c => !c.parent_comment_id);
+    const childComments = postComments.filter(c => c.parent_comment_id);
+    
+    // Create a map of parent comments with their replies
+    const commentThreads = parentComments.map(parentComment => {
+      const replies = childComments.filter(c => c.parent_comment_id === parentComment.id);
+      return {
+        parent: parentComment,
+        replies
+      };
+    });
+    
+    return commentThreads;
   };
   
   return (
@@ -703,31 +1096,130 @@ const ForumPage: React.FC = () => {
               
               {/* Comments section */}
               <div className="bg-muted/30 px-6 py-3 border-t">
-                {comments[post.id]?.map(comment => (
-                  <div key={comment.id} className="flex items-start gap-3 mb-4">
-                    <Avatar className="h-8 w-8 mt-0.5">
-                      <AvatarFallback className="text-xs">
-                        {getInitials(comment.author?.first_name || '', comment.author?.last_name || '')}
-                      </AvatarFallback>
-                    </Avatar>
-                    <div className="flex-1">
-                      <div className="bg-background rounded-lg p-3">
-                        <div className="font-semibold text-sm">
-                          {comment.author?.first_name} {comment.author?.last_name}
+                {comments[post.id] && getCommentThreads(comments[post.id]).map(thread => (
+                  <div key={thread.parent.id} className="mb-6">
+                    {/* Parent comment */}
+                    <div className="flex items-start gap-3 mb-2">
+                      <Avatar className="h-8 w-8 mt-0.5">
+                        <AvatarFallback className="text-xs">
+                          {getInitials(thread.parent.author?.first_name || '', thread.parent.author?.last_name || '')}
+                        </AvatarFallback>
+                      </Avatar>
+                      <div className="flex-1">
+                        <div className="bg-background rounded-lg p-3">
+                          <div className="font-semibold text-sm">
+                            {thread.parent.author?.first_name} {thread.parent.author?.last_name}
+                          </div>
+                          <div className="text-sm mt-1">{thread.parent.content}</div>
                         </div>
-                        <div className="text-sm mt-1">{comment.content}</div>
-                      </div>
-                      <div className="text-xs text-muted-foreground mt-1">
-                        {formatDate(comment.created_at)}
-                        {comment.is_edited && <span className="ml-2 italic">(edited)</span>}
+                        <div className="flex items-center gap-4 mt-1">
+                          <div className="text-xs text-muted-foreground">
+                            {formatDate(thread.parent.created_at)}
+                            {thread.parent.is_edited && <span className="ml-2 italic">(edited)</span>}
+                          </div>
+                          <div className="flex items-center gap-2">
+                            <Button 
+                              variant="ghost" 
+                              size="sm" 
+                              className="h-6 px-2 text-xs flex items-center gap-1"
+                              onClick={() => handleLikeComment(thread.parent.id, true)}
+                            >
+                              <ThumbsUp className="h-3 w-3" 
+                                fill={
+                                  getLikeStatus(thread.parent.likes, user?.id) === 'like' ? 'currentColor' : 'none'
+                                }
+                              />
+                              <span>{getLikesCount(thread.parent.likes, true)}</span>
+                            </Button>
+                            <Button 
+                              variant="ghost" 
+                              size="sm" 
+                              className="h-6 px-2 text-xs flex items-center gap-1"
+                              onClick={() => handleLikeComment(thread.parent.id, false)}
+                            >
+                              <ThumbsDown className="h-3 w-3"
+                                fill={
+                                  getLikeStatus(thread.parent.likes, user?.id) === 'dislike' ? 'currentColor' : 'none'
+                                }
+                              />
+                              <span>{getLikesCount(thread.parent.likes, false)}</span>
+                            </Button>
+                            <Button 
+                              variant="ghost" 
+                              size="sm" 
+                              className="h-6 px-2 text-xs flex items-center gap-1"
+                              onClick={() => startReplyingToComment(thread.parent.id, post.id)}
+                            >
+                              <Reply className="h-3 w-3" />
+                              <span>Reply</span>
+                            </Button>
+                          </div>
+                        </div>
                       </div>
                     </div>
+
+                    {/* Replies */}
+                    {thread.replies.length > 0 && (
+                      <div className="ml-11 pl-6 border-l-2 border-muted">
+                        {thread.replies.map(reply => (
+                          <div key={reply.id} className="flex items-start gap-3 mb-3">
+                            <Avatar className="h-7 w-7 mt-0.5">
+                              <AvatarFallback className="text-xs">
+                                {getInitials(reply.author?.first_name || '', reply.author?.last_name || '')}
+                              </AvatarFallback>
+                            </Avatar>
+                            <div className="flex-1">
+                              <div className="bg-background rounded-lg p-2">
+                                <div className="font-semibold text-xs">
+                                  {reply.author?.first_name} {reply.author?.last_name}
+                                </div>
+                                <div className="text-sm mt-1">{reply.content}</div>
+                              </div>
+                              <div className="flex items-center gap-4 mt-1">
+                                <div className="text-xs text-muted-foreground">
+                                  {formatDate(reply.created_at)}
+                                  {reply.is_edited && <span className="ml-2 italic">(edited)</span>}
+                                </div>
+                                <div className="flex items-center gap-2">
+                                  <Button 
+                                    variant="ghost" 
+                                    size="sm" 
+                                    className="h-5 px-1.5 text-xs flex items-center gap-1"
+                                    onClick={() => handleLikeComment(reply.id, true)}
+                                  >
+                                    <ThumbsUp className="h-3 w-3" 
+                                      fill={
+                                        getLikeStatus(reply.likes, user?.id) === 'like' ? 'currentColor' : 'none'
+                                      }
+                                    />
+                                    <span>{getLikesCount(reply.likes, true)}</span>
+                                  </Button>
+                                  <Button 
+                                    variant="ghost" 
+                                    size="sm" 
+                                    className="h-5 px-1.5 text-xs flex items-center gap-1"
+                                    onClick={() => handleLikeComment(reply.id, false)}
+                                  >
+                                    <ThumbsDown className="h-3 w-3"
+                                      fill={
+                                        getLikeStatus(reply.likes, user?.id) === 'dislike' ? 'currentColor' : 'none'
+                                      }
+                                    />
+                                    <span>{getLikesCount(reply.likes, false)}</span>
+                                  </Button>
+                                </div>
+                              </div>
+                            </div>
+                          </div>
+                        ))}
+                      </div>
+                    )}
                   </div>
                 ))}
                 
                 {/* New comment form */}
                 {user && (
-                  <div className="flex items-start gap-3 mt-4">
+                  <div className="flex items-start gap-3 mt-4" id={`comment-form-${post.id}`}>
                     <Avatar className="h-8 w-8 mt-0.5">
                       <AvatarFallback className="text-xs">
                         {getInitials(profile?.first_name || '', profile?.last_name || '')}
@@ -735,7 +1227,9 @@ const ForumPage: React.FC = () => {
                     </Avatar>
                     <div className="flex-1 flex items-end gap-2">
                       <Textarea
-                        placeholder="Write a comment..."
+                        placeholder={replyingTo && replyingTo.postId === post.id 
+                          ? "Write a reply..." 
+                          : "Write a comment..."}
                         className="min-h-10 flex-1"
                         value={newCommentContent[post.id] || ''}
                         onChange={(e) => setNewCommentContent({
@@ -752,6 +1246,22 @@ const ForumPage: React.FC = () => {
                         <Send className="h-4 w-4" />
                       </Button>
                     </div>
+                  </div>
+                )}
+                
+                {/* Show who you're replying to */}
+                {replyingTo && replyingTo.postId === post.id && (
+                  <div className="ml-11 mt-2 text-xs text-muted-foreground flex items-center">
+                    <span>
+                      Replying to comment - 
+                      <Button 
+                        variant="link" 
+                        className="h-auto p-0 text-xs" 
+                        onClick={() => setReplyingTo(null)}
+                      >
+                        Cancel
+                      </Button>
+                    </span>
                   </div>
                 )}
               </div>
@@ -797,12 +1307,9 @@ const ForumPage: React.FC = () => {
                 <label htmlFor="post-content" className="text-sm font-medium">
                   Content
                 </label>
-                <p className="text-xs text-muted-foreground">
-                  Use @[First Last] to tag users (e.g., @[John Doe])
-                </p>
                 <Textarea
                   id="post-content"
-                  placeholder="Write your post content here... Use @[First Last] to mention users"
+                  placeholder="Write your post content here..."
                   value={newPostContent}
                   onChange={(e) => setNewPostContent(e.target.value)}
                   rows={8}
@@ -838,3 +1345,4 @@ const ForumPage: React.FC = () => {
 };
 
 export default ForumPage;
+

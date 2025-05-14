@@ -155,22 +155,62 @@ const MeetingsPage: React.FC = () => {
       
       for (const meeting of meetings) {
         try {
-        const { data: minutesData, error: minutesError } = await supabase
-          .from('meeting_minutes')
-          .select(`
-            *,
-              uploader:profiles!uploaded_by(
-              first_name,
-              last_name,
-              email
-            )
-          `)
-          .eq('event_id', meeting.id);
+          // Simplified query to avoid foreign key issues
+          const { data: minutesData, error: minutesError } = await supabase
+            .from('meeting_minutes')
+            .select('*')
+            .eq('event_id', meeting.id);
+            
+          if (minutesError) {
+            console.error(`Error fetching minutes for meeting ${meeting.id}:`, minutesError);
+            minutesMap[meeting.id] = [];
+            continue;
+          }
           
-        if (minutesError) throw minutesError;
-        
-        // Use a type assertion to handle the mismatch between API response and our MeetingMinute type
-        minutesMap[meeting.id] = (minutesData as unknown as MeetingMinute[]);
+          // Fetch uploader profile separately - more reliable than using foreign key relationships
+          const formattedMinutes = await Promise.all(
+            minutesData.map(async (minute: any) => {
+              try {
+                // Get uploader profile information if available
+                if (minute.uploaded_by) {
+                  const { data: uploaderData, error: uploaderError } = await supabase
+                    .from('profiles')
+                    .select('first_name, last_name, email')
+                    .eq('id', minute.uploaded_by)
+                    .single();
+                  
+                  if (!uploaderError && uploaderData) {
+                    return {
+                      ...minute,
+                      uploader: uploaderData
+                    };
+                  }
+                }
+                
+                // Return with default uploader if not found
+                return {
+                  ...minute,
+                  uploader: {
+                    first_name: 'Unknown',
+                    last_name: 'User',
+                    email: ''
+                  }
+                };
+              } catch (error) {
+                console.error(`Error fetching uploader for minute ${minute.id}:`, error);
+                return {
+                  ...minute,
+                  uploader: {
+                    first_name: 'Unknown',
+                    last_name: 'User',
+                    email: ''
+                  }
+                };
+              }
+            })
+          );
+          
+          minutesMap[meeting.id] = (formattedMinutes as unknown as MeetingMinute[]);
         } catch (error) {
           console.error(`Error fetching minutes for meeting ${meeting.id}:`, error);
           minutesMap[meeting.id] = [];
@@ -522,9 +562,20 @@ const MeetingsPage: React.FC = () => {
   };
   
   const getMinutesButton = (meeting: Event) => {
-    const meetingHasMinutes = meetingMinutes[meeting.id]?.length > 0;
-    const textMinutes = meetingMinutes[meeting.id]?.find(m => m.source_type === 'text' || m.content);
-    const fileMinutes = meetingMinutes[meeting.id]?.find(m => m.source_type === 'file' || (!m.content && m.file_path));
+    console.log(`Meeting ${meeting.id} minutes:`, meetingMinutes[meeting.id]);
+    
+    // Check if minutes exist for this meeting
+    const minutesForMeeting = meetingMinutes[meeting.id] || [];
+    const meetingHasMinutes = minutesForMeeting.length > 0;
+    
+    // Find text and file minutes if they exist
+    const textMinutes = minutesForMeeting.find(m => 
+      m.source_type === 'text' || (m.content && m.content.trim().length > 0)
+    );
+    
+    const fileMinutes = minutesForMeeting.find(m => 
+      m.source_type === 'file' || (m.file_path && !m.content)
+    );
     
     const isCompletedMeeting = parseISO(meeting.end_time) < new Date();
     
@@ -576,7 +627,7 @@ const MeetingsPage: React.FC = () => {
             View Minutes
           </Button>
         );
-      } else {
+      } else if (fileMinutes) {
         // Only file minutes exist
         return (
           <Button 
@@ -594,8 +645,10 @@ const MeetingsPage: React.FC = () => {
           </Button>
         );
       }
-    } else if (isCompletedMeeting) {
-      // No minutes exist, show "Record Minutes" for completed meetings
+    }
+    
+    // Only show "Record Minutes" button for completed meetings without minutes
+    if (isCompletedMeeting) {
       return (
         <Button 
           size="sm" 
@@ -1145,7 +1198,7 @@ const MeetingsPage: React.FC = () => {
                           ) : (
                             <Badge 
                               variant={
-                                participant.response === 'accepted' ? 'success' :
+                                participant.response === 'accepted' ? 'secondary' :
                                 participant.response === 'declined' ? 'destructive' :
                                 'outline'
                               }

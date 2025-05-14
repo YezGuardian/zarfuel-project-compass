@@ -9,107 +9,154 @@ export const PAGE_PERMISSIONS = {
   // All users can view the dashboard
   dashboard: {
     view: ['viewer', 'special', 'admin', 'superadmin'],
-    edit: ['admin', 'superadmin']
+    edit: ['special', 'admin', 'superadmin']
   },
-  // Overview is view-only
+  // Overview is view-only for all users
   overview: {
-    view: ['viewer', 'special', 'admin', 'superadmin'],
-    edit: []
-  },
-  // Phases & Tasks
-  tasks: {
     view: ['viewer', 'special', 'admin', 'superadmin'],
     edit: ['special', 'admin', 'superadmin']
   },
-  // Calendar
+  // Phases & Tasks - not accessible to viewers
+  tasks: {
+    view: ['special', 'admin', 'superadmin'],
+    edit: ['special', 'admin', 'superadmin']
+  },
+  // Calendar - all can view, special+ can edit
   calendar: {
     view: ['viewer', 'special', 'admin', 'superadmin'],
     edit: ['special', 'admin', 'superadmin']
   },
-  // Meetings
+  // Meetings - not accessible to viewers
   meetings: {
-    view: ['viewer', 'special', 'admin', 'superadmin'],
+    view: ['special', 'admin', 'superadmin'],
     edit: ['special', 'admin', 'superadmin']
   },
-  // Budget
+  // Budget - not accessible to viewers
   budget: {
-    view: ['viewer', 'special', 'admin', 'superadmin'],
+    view: ['special', 'admin', 'superadmin'],
     edit: ['special', 'admin', 'superadmin']
   },
-  // Risk Management
+  // Risk Management - not accessible to viewers
   risks: {
-    view: ['viewer', 'special', 'admin', 'superadmin'],
+    view: ['special', 'admin', 'superadmin'],
     edit: ['special', 'admin', 'superadmin']
   },
-  // Document Repository
+  // Document Repository - not accessible to viewers
   documents: {
     view: ['special', 'admin', 'superadmin'],
     edit: ['special', 'admin', 'superadmin']
   },
-  // Contact Directory
+  // Contact Directory - not accessible to viewers
   contacts: {
     view: ['special', 'admin', 'superadmin'],
     edit: ['special', 'admin', 'superadmin']
   },
-  // Forum
+  // Forum - all can view
   forum: {
-    view: ['special', 'admin', 'superadmin'],
+    view: ['viewer', 'special', 'admin', 'superadmin'],
     edit: ['special', 'admin', 'superadmin']
   },
-  // User Profile
+  // User Profile - own profile only
   profile: {
     view: ['viewer', 'special', 'admin', 'superadmin'],
     edit: ['viewer', 'special', 'admin', 'superadmin']
   },
-  // User Management (Admin Only)
+  // User Management - admins only
   users: {
     view: ['admin', 'superadmin'],
     edit: ['admin', 'superadmin']
+  },
+  // Other users' profiles - superadmin only
+  otherProfiles: {
+    view: ['superadmin'],
+    edit: ['superadmin']
   }
+};
+
+/**
+ * Safe includes check that handles null/undefined arrays
+ */
+const safeIncludes = (array: any[] | null | undefined, item: any): boolean => {
+  if (!array || !Array.isArray(array)) return false;
+  return array.includes(item);
 };
 
 /**
  * Check if a user with a given role can view a specific page
  */
 export const canViewPage = (role: UserRole | null | undefined, page: keyof typeof PAGE_PERMISSIONS): boolean => {
-  if (!role) return false;
-  // SuperAdmin can view all pages
-  if (role === 'superadmin') return true;
-  return PAGE_PERMISSIONS[page]?.view?.includes(role) || false;
+  try {
+    if (!role) return false;
+    // SuperAdmin can view all pages
+    if (role === 'superadmin') return true;
+    
+    const permissions = PAGE_PERMISSIONS[page];
+    if (!permissions) return false;
+    
+    return safeIncludes(permissions.view, role);
+  } catch (error) {
+    console.error('Error in canViewPage:', error);
+    return false;
+  }
 };
 
 /**
  * Check if a user with a given role can edit a specific page
  */
 export const canEditPage = (role: UserRole | null | undefined, page: keyof typeof PAGE_PERMISSIONS): boolean => {
-  if (!role) return false;
-  // SuperAdmin can edit all pages
-  if (role === 'superadmin') return true;
-  return PAGE_PERMISSIONS[page]?.edit?.includes(role) || false;
+  try {
+    if (!role) return false;
+    // SuperAdmin can edit all pages
+    if (role === 'superadmin') return true;
+    
+    const permissions = PAGE_PERMISSIONS[page];
+    if (!permissions) return false;
+    
+    return safeIncludes(permissions.edit, role);
+  } catch (error) {
+    console.error('Error in canEditPage:', error);
+    return false;
+  }
 };
 
 /**
  * Get all pages a user with a given role can view
  */
 export const getViewablePages = (role: UserRole | null | undefined): (keyof typeof PAGE_PERMISSIONS)[] => {
-  if (!role) return [];
-  // SuperAdmin can view all pages
-  if (role === 'superadmin') return Object.keys(PAGE_PERMISSIONS) as (keyof typeof PAGE_PERMISSIONS)[];
-  return Object.entries(PAGE_PERMISSIONS)
-    .filter(([_, permissions]) => permissions.view.includes(role))
-    .map(([page]) => page as keyof typeof PAGE_PERMISSIONS);
+  try {
+    if (!role) return [];
+    // SuperAdmin can view all pages
+    if (role === 'superadmin') return Object.keys(PAGE_PERMISSIONS) as (keyof typeof PAGE_PERMISSIONS)[];
+    
+    return Object.entries(PAGE_PERMISSIONS)
+      .filter(([_, permissions]) => {
+        return safeIncludes(permissions.view, role);
+      })
+      .map(([page]) => page as keyof typeof PAGE_PERMISSIONS);
+  } catch (error) {
+    console.error('Error in getViewablePages:', error);
+    return [];
+  }
 };
 
 /**
  * Get all pages a user with a given role can edit
  */
 export const getEditablePages = (role: UserRole | null | undefined): (keyof typeof PAGE_PERMISSIONS)[] => {
-  if (!role) return [];
-  // SuperAdmin can edit all pages
-  if (role === 'superadmin') return Object.keys(PAGE_PERMISSIONS) as (keyof typeof PAGE_PERMISSIONS)[];
-  return Object.entries(PAGE_PERMISSIONS)
-    .filter(([_, permissions]) => permissions.edit.includes(role))
-    .map(([page]) => page as keyof typeof PAGE_PERMISSIONS);
+  try {
+    if (!role) return [];
+    // SuperAdmin can edit all pages
+    if (role === 'superadmin') return Object.keys(PAGE_PERMISSIONS) as (keyof typeof PAGE_PERMISSIONS)[];
+    
+    return Object.entries(PAGE_PERMISSIONS)
+      .filter(([_, permissions]) => {
+        return safeIncludes(permissions.edit, role);
+      })
+      .map(([page]) => page as keyof typeof PAGE_PERMISSIONS);
+  } catch (error) {
+    console.error('Error in getEditablePages:', error);
+    return [];
+  }
 };
 
 /**
@@ -131,4 +178,23 @@ export const isAdmin = (role: UserRole | null | undefined): boolean => {
  */
 export const isSpecial = (role: UserRole | null | undefined): boolean => {
   return role === 'special' || role === 'admin' || role === 'superadmin';
+};
+
+/**
+ * Check if a user can edit other users' profiles
+ */
+export const canEditOtherProfiles = (role: UserRole | null | undefined): boolean => {
+  return role === 'superadmin';
+};
+
+/**
+ * Check if admin can only invite certain roles
+ */
+export const getAllowedRolesToInvite = (role: UserRole | null | undefined): UserRole[] => {
+  if (role === 'superadmin') {
+    return ['viewer', 'special', 'admin', 'superadmin'];
+  } else if (role === 'admin') {
+    return ['viewer', 'special'];
+  }
+  return [];
 }; 

@@ -15,7 +15,6 @@ import { AlertCircle, Loader2 } from 'lucide-react';
 import { useAuth } from '@/contexts/AuthContext';
 import { toast } from 'sonner';
 import { supabase } from '@/integrations/supabase/client';
-import TestNotifications from '@/components/notifications/TestNotifications';
 
 const ProfilePage: React.FC = () => {
   const { user, profile, refreshProfile } = useAuth();
@@ -118,9 +117,6 @@ const ProfilePage: React.FC = () => {
           View and update your account information
         </p>
       </div>
-      
-      {/* Test Notifications Component */}
-      <TestNotifications />
       
       <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
         <Card className="md:col-span-2">

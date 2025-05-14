@@ -18,41 +18,61 @@ const PDFViewer: React.FC<PDFViewerProps> = ({ fileUrl, fileName, open, onOpenCh
   const [scale, setScale] = useState(1);
   const [rotation, setRotation] = useState(0);
   const [embeddedUrl, setEmbeddedUrl] = useState("");
+  const [error, setError] = useState<string | null>(null);
 
   useEffect(() => {
     // Process the URL based on its type
-    if (fileUrl) {
-      if (fileUrl.includes('drive.google.com')) {
-        // Extract Google Drive file ID
-        const fileId = extractDriveFileId(fileUrl);
-        if (fileId) {
-          // Use Google Drive viewer embed URL
-          setEmbeddedUrl(`https://drive.google.com/file/d/${fileId}/preview`);
+    try {
+      if (fileUrl) {
+        const url = String(fileUrl); // Ensure fileUrl is a string
+        if (url.indexOf('drive.google.com') !== -1) {
+          // Extract Google Drive file ID
+          const fileId = extractDriveFileId(url);
+          if (fileId) {
+            // Use Google Drive viewer embed URL
+            setEmbeddedUrl(`https://drive.google.com/file/d/${fileId}/preview`);
+          } else {
+            // Fallback if we can't extract the ID
+            setEmbeddedUrl(url);
+          }
         } else {
-          // Fallback if we can't extract the ID
-          setEmbeddedUrl(fileUrl);
+          // Regular URL
+          setEmbeddedUrl(url);
         }
+        setError(null);
       } else {
-        // Regular URL
-        setEmbeddedUrl(fileUrl);
+        setError("No file URL provided");
+        setEmbeddedUrl("");
       }
+    } catch (err) {
+      console.error("Error processing file URL:", err);
+      setError("Error loading document. Please try again.");
+      setEmbeddedUrl("");
     }
   }, [fileUrl]);
 
   const handleDownload = () => {
     // Open file in new tab or download directly
-    window.open(fileUrl, '_blank');
+    if (fileUrl) {
+      window.open(fileUrl, '_blank');
+    }
   };
 
   const zoomIn = () => setScale(prev => Math.min(prev + 0.1, 2));
   const zoomOut = () => setScale(prev => Math.max(prev - 0.1, 0.5));
   const rotate = () => setRotation(prev => (prev + 90) % 360);
 
+  // Safely check if a string includes a substring
+  const safeIncludes = (str: string | null | undefined, substring: string): boolean => {
+    if (!str || typeof str !== 'string') return false;
+    return str.includes(substring);
+  };
+
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent className="max-w-4xl max-h-[90vh] flex flex-col">
         <DialogHeader>
-          <DialogTitle>{fileName}</DialogTitle>
+          <DialogTitle>{fileName || "Document"}</DialogTitle>
         </DialogHeader>
         <div className="flex justify-between items-center mb-2 gap-2">
           <div className="flex items-center gap-2">
@@ -66,17 +86,19 @@ const PDFViewer: React.FC<PDFViewerProps> = ({ fileUrl, fileName, open, onOpenCh
               <RotateCw className="h-4 w-4" />
             </Button>
           </div>
-          <a 
-            href={fileUrl} 
-            target="_blank" 
-            rel="noopener noreferrer" 
-            download={fileName}
-          >
-            <Button variant="outline" size="sm">
-              <Download className="h-4 w-4 mr-2" />
-              Download
-            </Button>
-          </a>
+          {fileUrl && (
+            <a 
+              href={fileUrl} 
+              target="_blank" 
+              rel="noopener noreferrer" 
+              download={fileName || "document"}
+            >
+              <Button variant="outline" size="sm">
+                <Download className="h-4 w-4 mr-2" />
+                Download
+              </Button>
+            </a>
+          )}
         </div>
         <div className="flex-1 overflow-auto">
           {loading && (
@@ -85,18 +107,35 @@ const PDFViewer: React.FC<PDFViewerProps> = ({ fileUrl, fileName, open, onOpenCh
             </div>
           )}
           
-          {/* Use iframe for viewing documents */}
-          <iframe
-            src={embeddedUrl}
-            title={fileName}
-            className="w-full h-full border-0"
-            style={fileUrl.includes('drive.google.com') ? {} : { 
-              transform: `scale(${scale}) rotate(${rotation}deg)`,
-              transformOrigin: 'center center'
-            }}
-            onLoad={() => setLoading(false)}
-            allow="autoplay"
-          />
+          {error && (
+            <div className="w-full h-full flex items-center justify-center">
+              <div className="text-center p-4 bg-red-50 rounded-md text-red-600">
+                <p>{error}</p>
+                <Button 
+                  variant="outline" 
+                  size="sm" 
+                  className="mt-2" 
+                  onClick={() => onOpenChange(false)}
+                >
+                  Close
+                </Button>
+              </div>
+            </div>
+          )}
+          
+          {!error && embeddedUrl && (
+            <iframe
+              src={embeddedUrl}
+              title={fileName || "Document"}
+              className="w-full h-full border-0"
+              style={safeIncludes(fileUrl, 'drive.google.com') ? {} : { 
+                transform: `scale(${scale}) rotate(${rotation}deg)`,
+                transformOrigin: 'center center'
+              }}
+              onLoad={() => setLoading(false)}
+              allow="autoplay"
+            />
+          )}
         </div>
       </DialogContent>
     </Dialog>

@@ -18,6 +18,8 @@ import {
 import { useAuth } from '@/contexts/AuthContext';
 import NotificationCenter from '@/components/notifications/NotificationCenter';
 import ThemeToggle from './ThemeToggle';
+import UserAvatar from '@/components/ui/user-avatar';
+import { UserRole } from '@/utils/permissions';
 
 interface HeaderProps {
   sidebarOpen: boolean;
@@ -49,10 +51,10 @@ const Header: React.FC<HeaderProps> = ({ sidebarOpen, setSidebarOpen, user }) =>
             )}
           </Button>
           <h1 className="hidden md:block text-xl font-bold text-zarfuel-blue">
-            ZARFUEL Committee Dashboard
+            ZARFUEL TRUCKSTOP
           </h1>
           <h1 className="md:hidden text-xl font-bold text-zarfuel-blue">
-            ZARFUEL
+            ZARFUEL TRUCKSTOP
           </h1>
         </div>
         
@@ -66,9 +68,11 @@ const Header: React.FC<HeaderProps> = ({ sidebarOpen, setSidebarOpen, user }) =>
                 <span className="hidden sm:inline-block font-medium">
                   {user.name}
                 </span>
-                <span className="inline-flex items-center justify-center h-8 w-8 rounded-full bg-zarfuel-charcoal text-white">
-                  {user.name.charAt(0)}
-                </span>
+                <UserAvatar 
+                  name={user.name} 
+                  role={user.role as UserRole} 
+                  className="h-8 w-8"
+                />
                 <ChevronDown size={16} />
               </Button>
             </DropdownMenuTrigger>

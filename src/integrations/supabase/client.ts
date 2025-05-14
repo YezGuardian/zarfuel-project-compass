@@ -91,23 +91,60 @@ export const supabase = createClient<Database>(SUPABASE_URL, SUPABASE_ANON_KEY, 
 // Add a function to refresh the schema cache
 export async function refreshSupabaseSchema() {
   try {
-    // Force refresh by getting a single row with cache busting
-    const timestamp = new Date().getTime();
-    await supabase.rpc('get_system_info', { cache_bust: timestamp });
+    console.log('Refreshing schema cache...');
     
-    // Try to create a simple query to force schema refresh
-    const tables = ['forum_posts', 'forum_comments', 'forum_notifications', 'meeting_minutes'];
+    // Initialize success variable
+    let success = false;
     
-    for (const table of tables) {
+    // Simple approach - directly access tables to force schema refresh
+    try {
+      // Force schema refresh by accessing each table directly
+      await Promise.all([
+        supabase.from('forum_posts' as any).select('id').limit(1),
+        supabase.from('forum_comments' as any).select('id').limit(1),
+        supabase.from('forum_notifications' as any).select('id').limit(1)
+      ]);
+      
+      console.log('Successfully refreshed basic schema');
+      success = true;
+    } catch (e) {
+      console.warn('Basic schema refresh failed, trying alternative approach');
+    }
+    
+    // Secondary approach - explicitly test problematic columns
+    if (!success) {
       try {
-        await supabase.from(table).select('id').limit(1);
+        // Try individual fields for forum_comments
+        await supabase
+          .from('forum_comments' as any)
+          .select('likes, is_edited, parent_comment_id')
+          .limit(1);
+        console.log('Successfully refreshed forum_comments columns');
+        success = true;
       } catch (e) {
-        console.log(`Table ${table} might not exist yet, skipping`);
+        console.error('Failed to refresh forum_comments columns:', e);
+      }
+      
+      try {
+        // Try individual fields for forum_posts
+        await supabase
+          .from('forum_posts' as any)
+          .select('likes, is_edited')
+          .limit(1);
+        console.log('Successfully refreshed forum_posts columns');
+        success = true;
+      } catch (e) {
+        console.error('Failed to refresh forum_posts columns:', e);
       }
     }
     
-    console.log('Schema refreshed');
-    return true;
+    // Add this function to window for debugging
+    if (typeof window !== 'undefined') {
+      (window as any).refreshSchema = refreshSupabaseSchema;
+      console.log('Added refreshSchema function to window for debugging');
+    }
+    
+    return success;
   } catch (error) {
     console.error('Failed to refresh schema:', error);
     return false;

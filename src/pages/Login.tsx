@@ -161,12 +161,7 @@ const Login: React.FC = () => {
       <div className="w-full lg:w-1/2 flex items-center justify-center bg-white p-8">
         <div className="w-full max-w-md">
           <div className="flex justify-center mb-8">
-            <img 
-              src="/zarfuel-logo.png" 
-              alt="Zarfuel Logo" 
-              className="h-20 w-auto" 
-              style={{ maxWidth: 180 }}
-            />
+            <h1 className="text-3xl font-bold text-zarfuel-blue">ZARFUEL TRUCKSTOP</h1>
           </div>
           {isNewUser ? (
             <Card>
@@ -270,7 +265,7 @@ const Login: React.FC = () => {
               <CardHeader className="p-0 pb-4">
                 <CardTitle className="text-2xl font-bold">Log in</CardTitle>
                 <CardDescription>
-                  Access the ZARFUEL committee dashboard
+                  Access the ZARFUEL TRUCKSTOP
                 </CardDescription>
               </CardHeader>
               <form onSubmit={handleSubmit}>

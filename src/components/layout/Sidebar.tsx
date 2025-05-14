@@ -20,25 +20,29 @@ interface SidebarProps {
 }
 
 const Sidebar: React.FC<SidebarProps> = ({ isOpen }) => {
-  const { isAdmin } = useAuth();
+  const { canViewPage, isAdmin } = useAuth();
   
   const navigation = [
-    { name: 'Overview', path: '/dashboard', icon: LayoutDashboard },
-    { name: 'Phases & Tasks', path: '/tasks', icon: FileText },
-    { name: 'Calendar', path: '/calendar', icon: CalendarDays },
-    { name: 'Meetings', path: '/meetings', icon: CalendarClock },
-    { name: 'Budget', path: '/budget', icon: DollarSign },
-    { name: 'Risk Management', path: '/risks', icon: Shield },
-    { name: 'Document Repository', path: '/documents', icon: FileArchive },
-    { name: 'Contact Directory', path: '/contacts', icon: Contact },
-    { name: 'Committee Forum', path: '/forum', icon: MessageSquare },
+    { name: 'Overview', path: '/dashboard', icon: LayoutDashboard, page: 'dashboard' },
+    { name: 'Phases & Tasks', path: '/tasks', icon: FileText, page: 'tasks' },
+    { name: 'Calendar', path: '/calendar', icon: CalendarDays, page: 'calendar' },
+    { name: 'Meetings', path: '/meetings', icon: CalendarClock, page: 'meetings' },
+    { name: 'Budget', path: '/budget', icon: DollarSign, page: 'budget' },
+    { name: 'Risk Management', path: '/risks', icon: Shield, page: 'risks' },
+    { name: 'Document Repository', path: '/documents', icon: FileArchive, page: 'documents' },
+    { name: 'Contact Directory', path: '/contacts', icon: Contact, page: 'contacts' },
+    { name: 'Committee Forum', path: '/forum', icon: MessageSquare, page: 'forum' },
   ];
 
   const adminNavigation = [
-    { name: 'User Management', path: '/users', icon: Users, requiresAdmin: true },
+    { name: 'User Management', path: '/users', icon: Users, page: 'users', requiresAdmin: true },
   ];
   
-  const allNavItems = [...navigation, ...(isAdmin() ? adminNavigation : [])];
+  // Filter navigation based on user permissions
+  const filteredNavigation = navigation.filter(item => canViewPage(item.page));
+  const filteredAdminNavigation = adminNavigation.filter(item => canViewPage(item.page));
+  
+  const allNavItems = [...filteredNavigation, ...filteredAdminNavigation];
 
   return (
     <div
@@ -50,7 +54,7 @@ const Sidebar: React.FC<SidebarProps> = ({ isOpen }) => {
     >
       {/* Sidebar Header */}
       <div className="h-16 flex items-center justify-center border-b border-sidebar-border">
-        <h1 className="text-xl font-bold text-sidebar-accent">ZARFUEL</h1>
+        <h1 className="text-xl font-bold text-sidebar-accent">ZARFUEL TRUCKSTOP</h1>
       </div>
       
       {/* Navigation Links */}
@@ -82,7 +86,7 @@ const Sidebar: React.FC<SidebarProps> = ({ isOpen }) => {
       <div className="absolute bottom-0 left-0 right-0 p-4">
         <div className="border-t border-sidebar-border pt-4 text-center">
           <div className="text-xs text-sidebar-foreground/70">
-            &copy; 2025 ZARFUEL Project
+            &copy; 2025 ZARFUEL TRUCKSTOP
           </div>
         </div>
       </div>

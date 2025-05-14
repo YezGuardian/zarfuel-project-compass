@@ -215,12 +215,24 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
 
   // Check if user can view a page
   const canViewPage = (page: string): boolean => {
-    return checkCanViewPage(profile?.role, page as any);
+    try {
+      return checkCanViewPage(profile?.role, page as any);
+    } catch (error) {
+      console.error(`Error checking if user can view page ${page}:`, error);
+      // Default to false for security
+      return false;
+    }
   };
 
   // Check if user can edit a page
   const canEditPage = (page: string): boolean => {
-    return checkCanEditPage(profile?.role, page as any);
+    try {
+      return checkCanEditPage(profile?.role, page as any);
+    } catch (error) {
+      console.error(`Error checking if user can edit page ${page}:`, error);
+      // Default to false for security
+      return false;
+    }
   };
 
   return (

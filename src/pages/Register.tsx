@@ -190,8 +190,7 @@ const Register: React.FC = () => {
     <div className="flex items-center justify-center min-h-screen bg-slate-100">
       <div className="w-full max-w-md p-4">
         <div className="text-center mb-8">
-          <h1 className="text-2xl font-bold text-zarfuel-blue mb-1">ZARFUEL</h1>
-          <p className="text-zarfuel-charcoal">Committee Dashboard</p>
+          <h1 className="text-2xl font-bold text-zarfuel-blue mb-1">ZARFUEL TRUCKSTOP</h1>
         </div>
         
         {invitationDetails?.default_password ? (
@@ -224,7 +223,7 @@ const Register: React.FC = () => {
             <CardHeader>
               <CardTitle>Complete Registration</CardTitle>
               <CardDescription>
-                You've been invited to join the ZARFUEL committee dashboard
+                You've been invited to join the ZARFUEL TRUCKSTOP
                 {invitationDetails?.organization ? ` for ${invitationDetails.organization}` : ''}
                 {invitationDetails?.role ? ` as a ${invitationDetails.role}` : ''}.
               </CardDescription>

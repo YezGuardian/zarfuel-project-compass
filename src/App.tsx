@@ -9,6 +9,8 @@ import { ThemeProvider } from "@/components/providers/theme-provider";
 import ProtectedRoute from "@/components/auth/ProtectedRoute";
 import DashboardLayout from "@/components/layout/DashboardLayout";
 import AuthErrorBoundary from "@/components/auth/AuthErrorBoundary";
+import { Suspense } from "react";
+import LoadingScreen from "@/components/LoadingScreen";
 
 // Pages
 import Login from "@/pages/Login";
@@ -20,7 +22,7 @@ import Dashboard from "@/pages/Dashboard";
 import TasksPage from "@/pages/TasksPage";
 import BudgetPage from "@/pages/BudgetPage";
 import RiskManagementPage from "@/pages/RiskManagementPage";
-import DocumentsPage from "@/pages/DocumentsPage";
+import DocumentRepository from "@/pages/DocumentRepository";
 import ContactsPage from "@/pages/ContactsPage";
 import ProfilePage from "@/pages/ProfilePage";
 import UsersPage from "@/pages/UsersPage";
@@ -29,6 +31,7 @@ import MeetingsPage from "@/pages/MeetingsPage";
 import ForumPage from "@/pages/ForumPage";
 import Unauthorized from "@/pages/Unauthorized";
 import NotFound from "@/pages/NotFound";
+import FixAuth from "@/pages/FixAuth";
 
 // Create a utility function to clear auth data
 const clearAuthData = () => {
@@ -66,69 +69,93 @@ clearAuthData();
 const queryClient = new QueryClient();
 
 const App = () => (
-  <ThemeProvider attribute="class" defaultTheme="light" enableSystem>
-    <QueryClientProvider client={queryClient}>
-      <AuthErrorBoundary>
-        <AuthProvider>
-          <NotificationsProvider>
-            <TooltipProvider>
-              <Toaster />
-              <Sonner />
-              <BrowserRouter>
-                <Routes>
-                  {/* Public routes */}
-                  <Route path="/login" element={<Login />} />
-                  <Route path="/auth/register" element={<Register />} />
-                  <Route path="/forgot-password" element={<ForgotPassword />} />
-                  <Route path="/reset-password" element={<ResetPassword />} />
-                  <Route path="/unauthorized" element={<Unauthorized />} />
-                  <Route path="/fix-auth" element={
-                    <Navigate to="/public/fix-auth.html" replace />
-                  } />
-                  
-                  {/* Complete profile route (authenticated but not fully onboarded) */}
-                  <Route path="/complete-profile" element={
-                    <ProtectedRoute skipProfileCheck>
-                      <CompleteProfile />
-                    </ProtectedRoute>
-                  } />
-                  
-                  {/* Root redirect to dashboard */}
-                  <Route path="/" element={<Navigate to="/dashboard" replace />} />
-                  
-                  {/* Protected routes */}
-                  <Route path="/" element={
-                    <ProtectedRoute>
-                      <DashboardLayout />
-                    </ProtectedRoute>
-                  }>
-                    <Route path="dashboard" element={<Dashboard />} />
-                    <Route path="tasks" element={<TasksPage />} />
-                    <Route path="calendar" element={<CalendarPage />} />
-                    <Route path="meetings" element={<MeetingsPage />} />
-                    <Route path="budget" element={<BudgetPage />} />
-                    <Route path="risks" element={<RiskManagementPage />} />
-                    <Route path="documents" element={<DocumentsPage />} />
-                    <Route path="contacts" element={<ContactsPage />} />
-                    <Route path="forum" element={<ForumPage />} />
-                    <Route path="profile" element={<ProfilePage />} />
-                    <Route path="users" element={
-                      <ProtectedRoute requiresAdmin>
-                        <UsersPage />
+  <AuthErrorBoundary>
+    <Suspense fallback={<LoadingScreen />}>
+      <ThemeProvider attribute="class" defaultTheme="light" enableSystem>
+        <QueryClientProvider client={queryClient}>
+          <AuthProvider>
+            <NotificationsProvider>
+              <TooltipProvider>
+                <Toaster />
+                <Sonner />
+                <BrowserRouter>
+                  <Routes>
+                    {/* Public routes */}
+                    <Route path="/login" element={<Login />} />
+                    <Route path="/auth/register" element={<Register />} />
+                    <Route path="/forgot-password" element={<ForgotPassword />} />
+                    <Route path="/reset-password" element={<ResetPassword />} />
+                    <Route path="/unauthorized" element={<Unauthorized />} />
+                    <Route path="/fix-auth" element={<FixAuth />} />
+                    
+                    {/* Complete profile route (authenticated but not fully onboarded) */}
+                    <Route path="/complete-profile" element={
+                      <ProtectedRoute skipProfileCheck>
+                        <CompleteProfile />
                       </ProtectedRoute>
                     } />
-                  </Route>
-                  
-                  {/* 404 route */}
-                  <Route path="*" element={<NotFound />} />
-                </Routes>
-              </BrowserRouter>
-            </TooltipProvider>
-          </NotificationsProvider>
-        </AuthProvider>
-      </AuthErrorBoundary>
-    </QueryClientProvider>
-  </ThemeProvider>
+                    
+                    {/* Root redirect to dashboard */}
+                    <Route path="/" element={<Navigate to="/dashboard" replace />} />
+                    
+                    {/* Protected routes */}
+                    <Route path="/" element={
+                      <ProtectedRoute>
+                        <DashboardLayout />
+                      </ProtectedRoute>
+                    }>
+                      <Route path="dashboard" element={<Dashboard />} />
+                      <Route path="tasks" element={
+                        <ProtectedRoute requiresSpecial>
+                          <TasksPage />
+                        </ProtectedRoute>
+                      } />
+                      <Route path="calendar" element={<CalendarPage />} />
+                      <Route path="meetings" element={
+                        <ProtectedRoute requiresSpecial>
+                          <MeetingsPage />
+                        </ProtectedRoute>
+                      } />
+                      <Route path="budget" element={
+                        <ProtectedRoute requiresSpecial>
+                          <BudgetPage />
+                        </ProtectedRoute>
+                      } />
+                      <Route path="risks" element={
+                        <ProtectedRoute requiresSpecial>
+                          <RiskManagementPage />
+                        </ProtectedRoute>
+                      } />
+                      <Route path="documents" element={
+                        <ProtectedRoute requiresSpecial>
+                          <DocumentRepository />
+                        </ProtectedRoute>
+                      } />
+                      <Route path="contacts" element={
+                        <ProtectedRoute requiresSpecial>
+                          <ContactsPage />
+                        </ProtectedRoute>
+                      } />
+                      <Route path="forum" element={<ForumPage />} />
+                      <Route path="profile" element={<ProfilePage />} />
+                      <Route path="users" element={
+                        <ProtectedRoute requiresAdmin>
+                          <UsersPage />
+                        </ProtectedRoute>
+                      } />
+                    </Route>
+                    
+                    {/* 404 route */}
+                    <Route path="*" element={<NotFound />} />
+                  </Routes>
+                </BrowserRouter>
+              </TooltipProvider>
+            </NotificationsProvider>
+          </AuthProvider>
+        </QueryClientProvider>
+      </ThemeProvider>
+    </Suspense>
+  </AuthErrorBoundary>
 );
 
 export default App;

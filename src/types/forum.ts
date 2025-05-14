@@ -12,7 +12,6 @@ export interface ForumPost {
     isLike: boolean;
     userName: string;
   }> | string | any[];
-  mentioned_users: string[] | string;
   author?: {
     first_name: string;
     last_name: string;
@@ -28,12 +27,12 @@ export interface ForumComment {
   author_id: string;
   updated_at?: string;
   is_edited?: boolean;
+  parent_comment_id?: string | null;
   likes: Array<{
     userId: string;
     isLike: boolean;
     userName: string;
   }> | string | any[];
-  mentioned_users: string[] | string;
   author?: {
     first_name: string;
     last_name: string;
@@ -44,7 +43,7 @@ export interface ForumComment {
 export interface ForumNotification {
   id: string;
   user_id: string;
-  type: 'post_created' | 'comment_created' | 'mention' | 'post_edited' | 'post_deleted';
+  type: 'post_created' | 'comment_created' | 'comment_reply' | 'post_edited' | 'post_deleted' | 'post_liked' | 'comment_liked';
   content: string;
   source_id: string;
   is_read: boolean;
