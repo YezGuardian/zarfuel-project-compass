@@ -189,7 +189,9 @@ const CalendarPage: React.FC = () => {
       // Extract participants before sending to Supabase
       // The participants should not be part of the events table insert
       const participants = eventData.participants || [];
+      const nonUserParticipants = eventData.non_user_participants || [];
       delete eventData.participants;
+      delete eventData.non_user_participants;
       
       console.log('Event data being sent to Supabase:', eventData);
       
@@ -259,13 +261,13 @@ const CalendarPage: React.FC = () => {
             }
           } catch (notifyError) {
             console.error('Error notifying users about event:', notifyError);
+            // Don't show error to user, just log it
           }
         }
         
         return true;
       } catch (insertError: any) {
         console.error('Initial insert error:', insertError);
-        // Handle specific error
         throw insertError;
       }
     } catch (error: any) {
@@ -790,32 +792,12 @@ const CalendarPage: React.FC = () => {
             </DialogHeader>
             <ScrollArea className="max-h-[calc(85vh-120px)] overflow-y-auto">
               <EventForm 
-                onSuccess={(eventData) => {
-                  // Update the event
-                  try {
-                    supabase
-                      .from('events')
-                      .update(eventData)
-                      .eq('id', currentEvent.id)
-                      .then(({ error }) => {
-                        if (error) {
-                          toast.error('Failed to update event');
-                          console.error(error);
-                          return;
-                        }
-                        
-                        fetchEvents();
-                        setEditDialogOpen(false);
-                        setSelectedItem(null);
-                        toast.success('Event updated successfully');
-                      });
-                    
-                    return true;
-                  } catch (error: any) {
-                    console.error('Error updating event:', error);
-                    toast.error(error.message || 'Failed to update event');
-                    return false;
-                  }
+                onSuccess={() => {
+                  // The event is already updated in the EventForm component
+                  fetchEvents();
+                  setEditDialogOpen(false);
+                  setSelectedItem(null);
+                  toast.success('Event updated successfully');
                 }}
                 initialData={{
                   ...currentEvent,

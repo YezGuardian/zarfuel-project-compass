@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect } from 'react';
 import { useNavigate, useLocation } from 'react-router-dom';
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from '@/components/ui/card';
@@ -16,6 +15,7 @@ interface InvitationDetails {
   role: string;
   organization?: string;
   position?: string;
+  default_password?: string;
 }
 
 const Register: React.FC = () => {
@@ -76,7 +76,8 @@ const Register: React.FC = () => {
           email: invitation.email,
           role: invitation.role,
           organization: invitation.organization,
-          position: invitation.position
+          position: invitation.position,
+          default_password: invitation.default_password
         });
         
       } catch (err) {
@@ -193,93 +194,120 @@ const Register: React.FC = () => {
           <p className="text-zarfuel-charcoal">Committee Dashboard</p>
         </div>
         
-        <Card>
-          <CardHeader>
-            <CardTitle>Complete Registration</CardTitle>
-            <CardDescription>
-              You've been invited to join the ZARFUEL committee dashboard
-              {invitationDetails?.organization ? ` for ${invitationDetails.organization}` : ''}
-              {invitationDetails?.role ? ` as a ${invitationDetails.role}` : ''}.
-            </CardDescription>
-          </CardHeader>
-          <form onSubmit={handleRegister}>
+        {invitationDetails?.default_password ? (
+          <Card>
+            <CardHeader>
+              <CardTitle>Default Password Provided</CardTitle>
+              <CardDescription>
+                A default password has been set for your account. You can log in directly.
+              </CardDescription>
+            </CardHeader>
             <CardContent className="space-y-4">
-              <div className="grid grid-cols-2 gap-4">
-                <div className="space-y-2">
-                  <Label htmlFor="firstName">First Name</Label>
-                  <Input
-                    id="firstName"
-                    value={firstName}
-                    onChange={(e) => setFirstName(e.target.value)}
-                    required
-                  />
+              <Alert className="bg-blue-50 border-blue-200">
+                <div className="flex flex-col space-y-2">
+                  <p>Your administrator has already created an account for you with a default password.</p>
+                  <p>Please check your email for login instructions or contact your administrator.</p>
                 </div>
-                <div className="space-y-2">
-                  <Label htmlFor="lastName">Last Name</Label>
-                  <Input
-                    id="lastName"
-                    value={lastName}
-                    onChange={(e) => setLastName(e.target.value)}
-                    required
-                  />
-                </div>
-              </div>
-              
-              <div className="space-y-2">
-                <Label htmlFor="email">Email</Label>
-                <Input
-                  id="email"
-                  type="email"
-                  value={invitationDetails?.email || ''}
-                  disabled
-                />
-              </div>
-              
-              <div className="space-y-2">
-                <Label htmlFor="password">Password</Label>
-                <Input
-                  id="password"
-                  type="password"
-                  value={password}
-                  onChange={(e) => setPassword(e.target.value)}
-                  required
-                />
-              </div>
-              
-              <div className="space-y-2">
-                <Label htmlFor="confirmPassword">Confirm Password</Label>
-                <Input
-                  id="confirmPassword"
-                  type="password"
-                  value={confirmPassword}
-                  onChange={(e) => setConfirmPassword(e.target.value)}
-                  required
-                />
-              </div>
-
-              {error && (
-                <Alert variant="destructive">
-                  <AlertCircle className="h-4 w-4" />
-                  <AlertDescription>{error}</AlertDescription>
-                </Alert>
-              )}
+              </Alert>
             </CardContent>
             <CardFooter>
               <Button 
-                type="submit" 
-                className="w-full" 
-                disabled={isLoading}
+                onClick={() => navigate('/login')} 
+                className="w-full"
               >
-                {isLoading ? (
-                  <span className="flex items-center">
-                    <Loader2 className="animate-spin h-4 w-4 mr-2" />
-                    Registering...
-                  </span>
-                ) : 'Complete Registration'}
+                Go to Login
               </Button>
             </CardFooter>
-          </form>
-        </Card>
+          </Card>
+        ) : (
+          <Card>
+            <CardHeader>
+              <CardTitle>Complete Registration</CardTitle>
+              <CardDescription>
+                You've been invited to join the ZARFUEL committee dashboard
+                {invitationDetails?.organization ? ` for ${invitationDetails.organization}` : ''}
+                {invitationDetails?.role ? ` as a ${invitationDetails.role}` : ''}.
+              </CardDescription>
+            </CardHeader>
+            <form onSubmit={handleRegister}>
+              <CardContent className="space-y-4">
+                <div className="grid grid-cols-2 gap-4">
+                  <div className="space-y-2">
+                    <Label htmlFor="firstName">First Name</Label>
+                    <Input
+                      id="firstName"
+                      value={firstName}
+                      onChange={(e) => setFirstName(e.target.value)}
+                      required
+                    />
+                  </div>
+                  <div className="space-y-2">
+                    <Label htmlFor="lastName">Last Name</Label>
+                    <Input
+                      id="lastName"
+                      value={lastName}
+                      onChange={(e) => setLastName(e.target.value)}
+                      required
+                    />
+                  </div>
+                </div>
+                
+                <div className="space-y-2">
+                  <Label htmlFor="email">Email</Label>
+                  <Input
+                    id="email"
+                    type="email"
+                    value={invitationDetails?.email || ''}
+                    disabled
+                  />
+                </div>
+                
+                <div className="space-y-2">
+                  <Label htmlFor="password">Password</Label>
+                  <Input
+                    id="password"
+                    type="password"
+                    value={password}
+                    onChange={(e) => setPassword(e.target.value)}
+                    required
+                  />
+                </div>
+                
+                <div className="space-y-2">
+                  <Label htmlFor="confirmPassword">Confirm Password</Label>
+                  <Input
+                    id="confirmPassword"
+                    type="password"
+                    value={confirmPassword}
+                    onChange={(e) => setConfirmPassword(e.target.value)}
+                    required
+                  />
+                </div>
+
+                {error && (
+                  <Alert variant="destructive">
+                    <AlertCircle className="h-4 w-4" />
+                    <AlertDescription>{error}</AlertDescription>
+                  </Alert>
+                )}
+              </CardContent>
+              <CardFooter>
+                <Button 
+                  type="submit" 
+                  className="w-full"
+                  disabled={isLoading}
+                >
+                  {isLoading ? (
+                    <span className="flex items-center">
+                      <Loader2 className="animate-spin -ml-1 mr-2 h-4 w-4" />
+                      Registering...
+                    </span>
+                  ) : 'Complete Registration'}
+                </Button>
+              </CardFooter>
+            </form>
+          </Card>
+        )}
       </div>
     </div>
   );

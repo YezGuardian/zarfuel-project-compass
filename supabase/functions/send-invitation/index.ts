@@ -14,6 +14,7 @@ interface InvitationRequest {
   role?: string;
   organization?: string;
   position?: string;
+  defaultPassword?: string;
 }
 
 serve(async (req) => {
@@ -76,7 +77,7 @@ serve(async (req) => {
     }
 
     // Get invitation details from request
-    const { email, role = "viewer", organization = "", position = "" } = await req.json() as InvitationRequest;
+    const { email, role = "viewer", organization = "", position = "", defaultPassword = "" } = await req.json() as InvitationRequest;
 
     if (!email) {
       return new Response(
@@ -116,7 +117,8 @@ serve(async (req) => {
           invited_by: inviterUserId,
           role,
           organization,
-          position
+          position,
+          default_password: defaultPassword
         }
       ])
       .select()
@@ -183,6 +185,13 @@ serve(async (req) => {
             text-align: center;
             margin-top: 20px;
           }
+          .password-box {
+            background-color: #f0f0f0;
+            border: 1px solid #ddd;
+            padding: 10px;
+            border-radius: 4px;
+            margin: 15px 0;
+          }
         </style>
       </head>
       <body>
@@ -201,6 +210,13 @@ serve(async (req) => {
               ${organization ? `<li><strong>Organization:</strong> ${organization}</li>` : ''}
               ${position ? `<li><strong>Position:</strong> ${position}</li>` : ''}
             </ul>
+            
+            ${defaultPassword ? `
+            <div class="password-box">
+              <p><strong>Your default password is:</strong> ${defaultPassword}</p>
+              <p>You will be asked to change this password when you first log in.</p>
+            </div>
+            ` : ''}
             
             <p>Please click the button below to complete your registration:</p>
             

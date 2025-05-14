@@ -1,14 +1,14 @@
-import React, { ReactNode } from 'react';
+import React from 'react';
 import { Navigate } from 'react-router-dom';
 import { useAuth } from '@/contexts/AuthContext';
 import { Loader2 } from 'lucide-react';
 
-type ProtectedRouteProps = {
-  children: ReactNode;
+interface ProtectedRouteProps {
+  children: React.ReactNode;
   requiresAdmin?: boolean;
   requiresSpecial?: boolean;
   skipProfileCheck?: boolean;
-};
+}
 
 const ProtectedRoute: React.FC<ProtectedRouteProps> = ({ 
   children, 
@@ -16,7 +16,7 @@ const ProtectedRoute: React.FC<ProtectedRouteProps> = ({
   requiresSpecial = false,
   skipProfileCheck = false
 }) => {
-  const { user, profile, isLoading, isAdmin, isSpecial } = useAuth();
+  const { user, profile, isLoading, isAdmin, isSpecial, isSuperAdmin } = useAuth();
 
   if (isLoading) {
     // Show loading indicator while checking authentication
@@ -33,6 +33,11 @@ const ProtectedRoute: React.FC<ProtectedRouteProps> = ({
   // If no user is logged in, redirect to login
   if (!user) {
     return <Navigate to="/login" replace />;
+  }
+
+  // SuperAdmin has access to everything, bypass all other checks
+  if (isSuperAdmin()) {
+    return <>{children}</>;
   }
 
   // Check if profile is incomplete (needs first and last name)

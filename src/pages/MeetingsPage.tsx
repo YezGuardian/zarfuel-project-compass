@@ -10,7 +10,7 @@ import {
 } from '@/components/ui/dropdown-menu';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
-import { Plus, Users, Clock, MapPin, FileText, Download, MoreHorizontal, Edit, Trash2, Upload, Eye } from 'lucide-react';
+import { Plus, Users, Clock, MapPin, FileText, Download, MoreHorizontal, Edit, Trash2, Upload, Eye, FileEdit } from 'lucide-react';
 import { format, parseISO, isToday, isTomorrow, addDays } from 'date-fns';
 import { supabase } from '@/integrations/supabase/client';
 import { toast } from 'sonner';
@@ -24,6 +24,8 @@ import MeetingResponseButtons from '@/components/calendar/MeetingResponseButtons
 import { UploadButton } from '@/components/ui/upload-button';
 import PDFViewer from '@/components/ui/pdf-viewer';
 import { uploadToDrive } from '@/integrations/google/drive-api';
+import MeetingMinutesForm from '@/components/meetings/MeetingMinutesForm';
+import MeetingMinutesViewer from '@/components/meetings/MeetingMinutesViewer';
 
 const MeetingsPage: React.FC = () => {
   const [meetings, setMeetings] = useState<Event[]>([]);
@@ -33,8 +35,11 @@ const MeetingsPage: React.FC = () => {
   const [editDialogOpen, setEditDialogOpen] = useState(false);
   const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
   const [uploadDialogOpen, setUploadDialogOpen] = useState(false);
+  const [recordMinutesDialogOpen, setRecordMinutesDialogOpen] = useState(false);
   const [minutesDialogOpen, setMinutesDialogOpen] = useState(false);
   const [pdfViewerOpen, setPdfViewerOpen] = useState(false);
+  const [viewTextMinutesOpen, setViewTextMinutesOpen] = useState(false);
+  const [editTextMinutesOpen, setEditTextMinutesOpen] = useState(false);
   const [currentMinute, setCurrentMinute] = useState<MeetingMinute | null>(null);
   const [currentMeeting, setCurrentMeeting] = useState<Event | null>(null);
   const [uploadingFile, setUploadingFile] = useState(false);
@@ -516,6 +521,303 @@ const MeetingsPage: React.FC = () => {
     }
   };
   
+  const getMinutesButton = (meeting: Event) => {
+    const meetingHasMinutes = meetingMinutes[meeting.id]?.length > 0;
+    const textMinutes = meetingMinutes[meeting.id]?.find(m => m.source_type === 'text' || m.content);
+    const fileMinutes = meetingMinutes[meeting.id]?.find(m => m.source_type === 'file' || (!m.content && m.file_path));
+    
+    const isCompletedMeeting = parseISO(meeting.end_time) < new Date();
+    
+    if (meetingHasMinutes) {
+      // Show "View Minutes" if minutes exist, with a dropdown if there are multiple types
+      if (textMinutes && fileMinutes) {
+        return (
+          <DropdownMenu>
+            <DropdownMenuTrigger asChild>
+              <Button size="sm" variant="secondary" className="flex-1">
+                <Eye className="h-4 w-4 mr-2" />
+                View Minutes
+              </Button>
+            </DropdownMenuTrigger>
+            <DropdownMenuContent>
+              <DropdownMenuItem onClick={() => {
+                setCurrentMeeting(meeting);
+                setCurrentMinute(textMinutes);
+                setViewTextMinutesOpen(true);
+              }}>
+                <FileEdit className="h-4 w-4 mr-2" />
+                View Text Minutes
+              </DropdownMenuItem>
+              <DropdownMenuItem onClick={() => {
+                setCurrentMeeting(meeting);
+                setCurrentMinute(fileMinutes);
+                setPdfViewerOpen(true);
+              }}>
+                <FileText className="h-4 w-4 mr-2" />
+                View File Minutes
+              </DropdownMenuItem>
+            </DropdownMenuContent>
+          </DropdownMenu>
+        );
+      } else if (textMinutes) {
+        // Only text minutes exist
+        return (
+          <Button 
+            size="sm" 
+            variant="secondary"
+            className="flex-1"
+            onClick={() => {
+              setCurrentMeeting(meeting);
+              setCurrentMinute(textMinutes);
+              setViewTextMinutesOpen(true);
+            }}
+          >
+            <Eye className="h-4 w-4 mr-2" />
+            View Minutes
+          </Button>
+        );
+      } else {
+        // Only file minutes exist
+        return (
+          <Button 
+            size="sm" 
+            variant="secondary"
+            className="flex-1"
+            onClick={() => {
+              setCurrentMeeting(meeting);
+              setCurrentMinute(fileMinutes);
+              setPdfViewerOpen(true);
+            }}
+          >
+            <Eye className="h-4 w-4 mr-2" />
+            View Minutes
+          </Button>
+        );
+      }
+    } else if (isCompletedMeeting) {
+      // No minutes exist, show "Record Minutes" for completed meetings
+      return (
+        <Button 
+          size="sm" 
+          className="flex-1"
+          onClick={() => {
+            setCurrentMeeting(meeting);
+            setRecordMinutesDialogOpen(true);
+          }}
+        >
+          <FileEdit className="h-4 w-4 mr-2" />
+          Record Minutes
+        </Button>
+      );
+    }
+    
+    // For upcoming meetings with no minutes, don't show a minutes button
+    return null;
+  };
+  
+  const renderUpcomingMeetingCard = (meeting: Event) => (
+    <Card key={meeting.id}>
+      <CardHeader className="pb-2">
+        <div className="flex justify-between items-start">
+          <div>
+            <CardTitle className="text-lg">{meeting.title}</CardTitle>
+            {meeting.created_by === user?.id ? (
+              <Badge variant="secondary" className="mt-1">
+                You are the organizer
+              </Badge>
+            ) : (
+              <Badge variant="outline" className="mt-1">
+                You are invited
+              </Badge>
+            )}
+          </div>
+          {(isAdmin() || meeting.created_by === user?.id) && (
+            <DropdownMenu>
+              <DropdownMenuTrigger asChild>
+                <Button variant="ghost" size="sm" className="h-8 w-8 p-0">
+                  <MoreHorizontal className="h-4 w-4" />
+                </Button>
+              </DropdownMenuTrigger>
+              <DropdownMenuContent align="end">
+                <DropdownMenuItem 
+                  onClick={() => {
+                    setCurrentMeeting(meeting);
+                    setEditDialogOpen(true);
+                  }}
+                >
+                  <Edit className="mr-2 h-4 w-4" />
+                  Edit
+                </DropdownMenuItem>
+                <DropdownMenuItem
+                  className="text-destructive"
+                  onClick={() => {
+                    setCurrentMeeting(meeting);
+                    setDeleteDialogOpen(true);
+                  }}
+                >
+                  <Trash2 className="mr-2 h-4 w-4" />
+                  Delete
+                </DropdownMenuItem>
+              </DropdownMenuContent>
+            </DropdownMenu>
+          )}
+        </div>
+        {meeting.description && (
+          <CardDescription>{meeting.description}</CardDescription>
+        )}
+      </CardHeader>
+      <CardContent>
+        <div className="space-y-3">
+          <div className="flex items-center gap-2 text-sm">
+            <Clock className="h-4 w-4 text-muted-foreground" />
+            <span>
+              {getRelativeDateString(meeting.start_time)} • {format(parseISO(meeting.start_time), 'h:mm a')} - {format(parseISO(meeting.end_time), 'h:mm a')}
+            </span>
+          </div>
+          {meeting.location && (
+            <div className="flex items-center gap-2 text-sm">
+              <MapPin className="h-4 w-4 text-muted-foreground" />
+              <span>{meeting.location}</span>
+            </div>
+          )}
+          <div className="flex items-center gap-2 text-sm">
+            <Users className="h-4 w-4 text-muted-foreground" />
+            <span>
+              {meeting.participants && meeting.participants.length > 0
+                ? `${meeting.participants.length} participant${meeting.participants.length !== 1 ? 's' : ''}`
+                : 'No participants'}
+            </span>
+          </div>
+          <div className="pt-2 flex space-x-2">
+            <Button 
+              variant="outline" 
+              size="sm" 
+              className="flex-1"
+              onClick={() => {
+                setCurrentMeeting(meeting);
+                setMinutesDialogOpen(true);
+              }}
+            >
+              View Details
+            </Button>
+          </div>
+        </div>
+      </CardContent>
+    </Card>
+  );
+  
+  const renderPreviousMeetingCard = (meeting: Event) => (
+    <Card key={meeting.id}>
+      <CardHeader className="pb-2">
+        <div className="flex justify-between items-start">
+          <div>
+            <CardTitle className="text-lg">{meeting.title}</CardTitle>
+            {meeting.created_by === user?.id ? (
+              <Badge variant="secondary" className="mt-1">
+                You are the organizer
+              </Badge>
+            ) : (
+              <Badge variant="outline" className="mt-1">
+                You are invited
+              </Badge>
+            )}
+          </div>
+          {(isAdmin() || meeting.created_by === user?.id) && (
+            <DropdownMenu>
+              <DropdownMenuTrigger asChild>
+                <Button variant="ghost" size="sm" className="h-8 w-8 p-0">
+                  <MoreHorizontal className="h-4 w-4" />
+                </Button>
+              </DropdownMenuTrigger>
+              <DropdownMenuContent align="end">
+                <DropdownMenuItem 
+                  onClick={() => {
+                    setCurrentMeeting(meeting);
+                    setEditDialogOpen(true);
+                  }}
+                >
+                  <Edit className="mr-2 h-4 w-4" />
+                  Edit
+                </DropdownMenuItem>
+                <DropdownMenuItem
+                  onClick={() => {
+                    setCurrentMeeting(meeting);
+                    setRecordMinutesDialogOpen(true);
+                  }}
+                >
+                  <FileEdit className="mr-2 h-4 w-4" />
+                  Record Minutes
+                </DropdownMenuItem>
+                <DropdownMenuItem
+                  className="text-destructive"
+                  onClick={() => {
+                    setCurrentMeeting(meeting);
+                    setDeleteDialogOpen(true);
+                  }}
+                >
+                  <Trash2 className="mr-2 h-4 w-4" />
+                  Delete
+                </DropdownMenuItem>
+              </DropdownMenuContent>
+            </DropdownMenu>
+          )}
+        </div>
+        {meeting.description && (
+          <CardDescription>{meeting.description}</CardDescription>
+        )}
+      </CardHeader>
+      <CardContent>
+        <div className="space-y-3">
+          <div className="flex items-center gap-2 text-sm">
+            <Clock className="h-4 w-4 text-muted-foreground" />
+            <span>
+              {format(parseISO(meeting.start_time), 'MMM d, yyyy')} • {format(parseISO(meeting.start_time), 'h:mm a')} - {format(parseISO(meeting.end_time), 'h:mm a')}
+            </span>
+          </div>
+          {meeting.location && (
+            <div className="flex items-center gap-2 text-sm">
+              <MapPin className="h-4 w-4 text-muted-foreground" />
+              <span>{meeting.location}</span>
+            </div>
+          )}
+          <div className="flex items-center gap-2 text-sm">
+            <Users className="h-4 w-4 text-muted-foreground" />
+            <span>
+              {meeting.participants && meeting.participants.length > 0
+                ? `${meeting.participants.length} participant${meeting.participants.length !== 1 ? 's' : ''}`
+                : 'No participants'}
+            </span>
+          </div>
+          
+          {/* Meeting Minutes Status */}
+          <div className="flex items-center gap-2 text-sm">
+            <FileText className="h-4 w-4 text-muted-foreground" />
+            <span>
+              {meetingMinutes[meeting.id]?.length 
+                ? `${meetingMinutes[meeting.id].length} minute${meetingMinutes[meeting.id].length !== 1 ? 's' : ''} available`
+                : 'No minutes recorded'}
+            </span>
+          </div>
+          
+          <div className="pt-2 flex space-x-2">
+            <Button 
+              variant="outline" 
+              size="sm" 
+              className="flex-1"
+              onClick={() => {
+                setCurrentMeeting(meeting);
+                setMinutesDialogOpen(true);
+              }}
+            >
+              View Details
+            </Button>
+            {getMinutesButton(meeting)}
+          </div>
+        </div>
+      </CardContent>
+    </Card>
+  );
+  
   return (
     <div className="space-y-6">
       <div className="flex justify-between items-start">
@@ -549,96 +851,7 @@ const MeetingsPage: React.FC = () => {
             <h2 className="text-xl font-medium">Upcoming Meetings</h2>
             {upcomingMeetings.length > 0 ? (
               <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-5 mt-4">
-                {upcomingMeetings.map(meeting => (
-                  <Card key={meeting.id}>
-                    <CardHeader className="pb-2">
-                      <div className="flex justify-between items-start">
-                        <div>
-                          <CardTitle className="text-lg">{meeting.title}</CardTitle>
-                          {meeting.created_by === user?.id ? (
-                            <Badge variant="secondary" className="mt-1">
-                              You are the organizer
-                            </Badge>
-                          ) : (
-                            <Badge variant="outline" className="mt-1">
-                              You are invited
-                            </Badge>
-                          )}
-                        </div>
-                        {(isAdmin() || meeting.created_by === user?.id) && (
-                          <DropdownMenu>
-                            <DropdownMenuTrigger asChild>
-                              <Button variant="ghost" size="sm" className="h-8 w-8 p-0">
-                                <MoreHorizontal className="h-4 w-4" />
-                              </Button>
-                            </DropdownMenuTrigger>
-                            <DropdownMenuContent align="end">
-                              <DropdownMenuItem 
-                                onClick={() => {
-                                  setCurrentMeeting(meeting);
-                                  setEditDialogOpen(true);
-                                }}
-                              >
-                                <Edit className="mr-2 h-4 w-4" />
-                                Edit
-                              </DropdownMenuItem>
-                              <DropdownMenuItem
-                                className="text-destructive"
-                                onClick={() => {
-                                  setCurrentMeeting(meeting);
-                                  setDeleteDialogOpen(true);
-                                }}
-                              >
-                                <Trash2 className="mr-2 h-4 w-4" />
-                                Delete
-                              </DropdownMenuItem>
-                            </DropdownMenuContent>
-                          </DropdownMenu>
-                        )}
-                      </div>
-                      {meeting.description && (
-                        <CardDescription>{meeting.description}</CardDescription>
-                      )}
-                    </CardHeader>
-                    <CardContent>
-                      <div className="space-y-3">
-                        <div className="flex items-center gap-2 text-sm">
-                          <Clock className="h-4 w-4 text-muted-foreground" />
-                          <span>
-                            {getRelativeDateString(meeting.start_time)} • {format(parseISO(meeting.start_time), 'h:mm a')} - {format(parseISO(meeting.end_time), 'h:mm a')}
-                          </span>
-                        </div>
-                        {meeting.location && (
-                          <div className="flex items-center gap-2 text-sm">
-                            <MapPin className="h-4 w-4 text-muted-foreground" />
-                            <span>{meeting.location}</span>
-                          </div>
-                        )}
-                        <div className="flex items-center gap-2 text-sm">
-                          <Users className="h-4 w-4 text-muted-foreground" />
-                          <span>
-                            {meeting.participants && meeting.participants.length > 0
-                              ? `${meeting.participants.length} participant${meeting.participants.length !== 1 ? 's' : ''}`
-                              : 'No participants'}
-                          </span>
-                        </div>
-                        <div className="pt-2 flex space-x-2">
-                          <Button 
-                            variant="outline" 
-                            size="sm" 
-                            className="flex-1"
-                            onClick={() => {
-                              setCurrentMeeting(meeting);
-                              setMinutesDialogOpen(true);
-                            }}
-                          >
-                            View Details
-                          </Button>
-                        </div>
-                      </div>
-                    </CardContent>
-                  </Card>
-                ))}
+                {upcomingMeetings.map(meeting => renderUpcomingMeetingCard(meeting))}
               </div>
             ) : (
               <div className="text-center py-8 text-muted-foreground">
@@ -652,143 +865,7 @@ const MeetingsPage: React.FC = () => {
             <h2 className="text-xl font-medium">Previous Meetings & Minutes</h2>
             {previousMeetings.length > 0 ? (
               <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-5 mt-4">
-                {previousMeetings.map(meeting => (
-                  <Card key={meeting.id}>
-                    <CardHeader className="pb-2">
-                      <div className="flex justify-between items-start">
-                        <div>
-                          <CardTitle className="text-lg">{meeting.title}</CardTitle>
-                          {meeting.created_by === user?.id ? (
-                            <Badge variant="secondary" className="mt-1">
-                              You are the organizer
-                            </Badge>
-                          ) : (
-                            <Badge variant="outline" className="mt-1">
-                              You are invited
-                            </Badge>
-                          )}
-                        </div>
-                        {(isAdmin() || meeting.created_by === user?.id) && (
-                          <DropdownMenu>
-                            <DropdownMenuTrigger asChild>
-                              <Button variant="ghost" size="sm" className="h-8 w-8 p-0">
-                                <MoreHorizontal className="h-4 w-4" />
-                              </Button>
-                            </DropdownMenuTrigger>
-                            <DropdownMenuContent align="end">
-                              <DropdownMenuItem 
-                                onClick={() => {
-                                  setCurrentMeeting(meeting);
-                                  setEditDialogOpen(true);
-                                }}
-                              >
-                                <Edit className="mr-2 h-4 w-4" />
-                                Edit
-                              </DropdownMenuItem>
-                              <DropdownMenuItem
-                                onClick={() => {
-                                  setCurrentMeeting(meeting);
-                                  setUploadDialogOpen(true);
-                                }}
-                              >
-                                <Upload className="mr-2 h-4 w-4" />
-                                Upload Minutes
-                              </DropdownMenuItem>
-                              <DropdownMenuItem
-                                className="text-destructive"
-                                onClick={() => {
-                                  setCurrentMeeting(meeting);
-                                  setDeleteDialogOpen(true);
-                                }}
-                              >
-                                <Trash2 className="mr-2 h-4 w-4" />
-                                Delete
-                              </DropdownMenuItem>
-                            </DropdownMenuContent>
-                          </DropdownMenu>
-                        )}
-                      </div>
-                      {meeting.description && (
-                        <CardDescription>{meeting.description}</CardDescription>
-                      )}
-                    </CardHeader>
-                    <CardContent>
-                      <div className="space-y-3">
-                        <div className="flex items-center gap-2 text-sm">
-                          <Clock className="h-4 w-4 text-muted-foreground" />
-                          <span>
-                            {format(parseISO(meeting.start_time), 'MMM d, yyyy')} • {format(parseISO(meeting.start_time), 'h:mm a')} - {format(parseISO(meeting.end_time), 'h:mm a')}
-                          </span>
-                        </div>
-                        {meeting.location && (
-                          <div className="flex items-center gap-2 text-sm">
-                            <MapPin className="h-4 w-4 text-muted-foreground" />
-                            <span>{meeting.location}</span>
-                          </div>
-                        )}
-                        <div className="flex items-center gap-2 text-sm">
-                          <Users className="h-4 w-4 text-muted-foreground" />
-                          <span>
-                            {meeting.participants && meeting.participants.length > 0
-                              ? `${meeting.participants.length} participant${meeting.participants.length !== 1 ? 's' : ''}`
-                              : 'No participants'}
-                          </span>
-                        </div>
-                        
-                        {/* Previous Meetings Card */}
-                        <div className="flex items-center gap-2 text-sm">
-                          <FileText className="h-4 w-4 text-muted-foreground" />
-                          <span>
-                            {meetingMinutes[meeting.id]?.length 
-                              ? `${meetingMinutes[meeting.id].length} minute${meetingMinutes[meeting.id].length !== 1 ? 's' : ''} available`
-                              : 'No minutes uploaded'}
-                          </span>
-                        </div>
-                        
-                        <div className="pt-2 flex space-x-2">
-                          <Button 
-                            variant="outline" 
-                            size="sm" 
-                            className="flex-1"
-                            onClick={() => {
-                              setCurrentMeeting(meeting);
-                              setMinutesDialogOpen(true);
-                            }}
-                          >
-                            View Details
-                          </Button>
-                          {meetingMinutes[meeting.id]?.length > 0 ? (
-                            <Button 
-                              size="sm" 
-                              variant="secondary"
-                              className="flex-1"
-                              onClick={() => {
-                                setCurrentMeeting(meeting);
-                                setCurrentMinute(meetingMinutes[meeting.id][0]);
-                                setPdfViewerOpen(true);
-                              }}
-                            >
-                              <Eye className="h-4 w-4 mr-2" />
-                              View Minutes
-                            </Button>
-                          ) : isAdmin() && (
-                            <Button 
-                              size="sm" 
-                              className="flex-1"
-                              onClick={() => {
-                                setCurrentMeeting(meeting);
-                                setUploadDialogOpen(true);
-                              }}
-                            >
-                              <Upload className="h-4 w-4 mr-2" />
-                              Upload Minutes
-                            </Button>
-                          )}
-                        </div>
-                      </div>
-                    </CardContent>
-                  </Card>
-                ))}
+                {previousMeetings.map(meeting => renderPreviousMeetingCard(meeting))}
               </div>
             ) : (
               <div className="text-center py-8 text-muted-foreground">
@@ -798,6 +875,79 @@ const MeetingsPage: React.FC = () => {
           </div>
         </div>
       )}
+      
+      {/* Add new dialog for recording minutes */}
+      <Dialog open={recordMinutesDialogOpen} onOpenChange={setRecordMinutesDialogOpen}>
+        <DialogContent className="sm:max-w-[600px] max-h-[85vh] overflow-visible">
+          <DialogHeader>
+            <DialogTitle>Record Meeting Minutes</DialogTitle>
+            <DialogDescription>
+              {currentMeeting?.title} - {currentMeeting && format(parseISO(currentMeeting.start_time), 'PPP')}
+            </DialogDescription>
+          </DialogHeader>
+          <ScrollArea className="max-h-[calc(85vh-120px)]">
+            {currentMeeting && (
+              <MeetingMinutesForm 
+                meeting={currentMeeting}
+                onSuccess={() => {
+                  fetchData();
+                  setRecordMinutesDialogOpen(false);
+                }}
+              />
+            )}
+          </ScrollArea>
+        </DialogContent>
+      </Dialog>
+      
+      {/* Add dialog for viewing text minutes */}
+      <Dialog open={viewTextMinutesOpen} onOpenChange={setViewTextMinutesOpen}>
+        <DialogContent className="sm:max-w-[600px] max-h-[85vh] overflow-visible">
+          <DialogHeader>
+            <DialogTitle>Meeting Minutes</DialogTitle>
+            <DialogDescription>
+              {currentMeeting?.title} - {currentMeeting && format(parseISO(currentMeeting.start_time), 'PPP')}
+            </DialogDescription>
+          </DialogHeader>
+          <ScrollArea className="max-h-[calc(85vh-120px)]">
+            {currentMinute && currentMeeting && (
+              <MeetingMinutesViewer 
+                minute={currentMinute}
+                meeting={currentMeeting}
+                onEdit={() => {
+                  setViewTextMinutesOpen(false);
+                  setEditTextMinutesOpen(true);
+                }}
+              />
+            )}
+          </ScrollArea>
+        </DialogContent>
+      </Dialog>
+      
+      {/* Add dialog for editing text minutes */}
+      <Dialog open={editTextMinutesOpen} onOpenChange={setEditTextMinutesOpen}>
+        <DialogContent className="sm:max-w-[600px] max-h-[85vh] overflow-visible">
+          <DialogHeader>
+            <DialogTitle>Edit Meeting Minutes</DialogTitle>
+            <DialogDescription>
+              {currentMeeting?.title} - {currentMeeting && format(parseISO(currentMeeting.start_time), 'PPP')}
+            </DialogDescription>
+          </DialogHeader>
+          <ScrollArea className="max-h-[calc(85vh-120px)]">
+            {currentMeeting && currentMinute && (
+              <MeetingMinutesForm 
+                meeting={currentMeeting}
+                onSuccess={() => {
+                  fetchData();
+                  setEditTextMinutesOpen(false);
+                }}
+                existingContent={currentMinute.content || ''}
+                editMode={true}
+                minuteId={currentMinute.id}
+              />
+            )}
+          </ScrollArea>
+        </DialogContent>
+      </Dialog>
       
       {/* Schedule New Meeting Dialog */}
       <Dialog open={addDialogOpen} onOpenChange={setAddDialogOpen}>
@@ -994,11 +1144,15 @@ const MeetingsPage: React.FC = () => {
                             />
                           ) : (
                             <Badge 
-                              variant={participant.response === 'accepted' ? 'default' : 
-                                    participant.response === 'declined' ? 'destructive' : 'outline'}
+                              variant={
+                                participant.response === 'accepted' ? 'success' :
+                                participant.response === 'declined' ? 'destructive' :
+                                'outline'
+                              }
                             >
-                              {participant.response === 'accepted' ? 'Accepted' : 
-                               participant.response === 'declined' ? 'Declined' : 'Pending'}
+                              {participant.response === 'accepted' ? 'Attending' :
+                               participant.response === 'declined' ? 'Declined' :
+                               'Pending'}
                             </Badge>
                           )}
                         </div>
@@ -1011,60 +1165,90 @@ const MeetingsPage: React.FC = () => {
                 
                 {/* Meeting Minutes */}
                 <div>
-                  <div className="flex justify-between items-center mb-2">
+                  <div className="flex items-center justify-between mb-2">
                     <h4 className="text-sm font-medium text-muted-foreground">Meeting Minutes</h4>
-                    {isAdmin() && (
-                      <Button 
-                        size="sm"
-                        variant="outline"
-                        onClick={() => {
-                          setMinutesDialogOpen(false);
-                          setUploadDialogOpen(true);
-                        }}
-                      >
-                        <Upload className="h-4 w-4 mr-2" />
-                        Upload Minutes
-                      </Button>
+                    
+                    {/* Only show the action buttons for admins or meeting creators */}
+                    {(isAdmin() || currentMeeting.created_by === user?.id) && 
+                      parseISO(currentMeeting.end_time) < new Date() && (
+                      <div className="flex gap-2">
+                        {/* Remove Upload button, only show Record Minutes when no minutes exist */}
+                        {!meetingMinutes[currentMeeting.id]?.length && (
+                          <Button 
+                            size="sm" 
+                            variant="outline"
+                            onClick={() => {
+                              setRecordMinutesDialogOpen(true);
+                              setMinutesDialogOpen(false);
+                            }}
+                          >
+                            <FileEdit className="h-4 w-4 mr-1" />
+                            Record Minutes
+                          </Button>
+                        )}
+                      </div>
                     )}
                   </div>
+                  
+                  {/* Display meeting minutes */}
                   {meetingMinutes[currentMeeting.id]?.length > 0 ? (
                     <div className="space-y-2">
-                      {meetingMinutes[currentMeeting.id].map(minute => (
-                        <div key={minute.id} className="flex items-center justify-between border p-3 rounded-md">
-                          <div className="flex items-center">
-                            <FileText className="h-4 w-4 mr-2 text-blue-500" />
-                            <div>
-                              <p className="font-medium">{minute.file_name}</p>
-                              <p className="text-xs text-muted-foreground">
-                                Uploaded by: {minute.uploader?.first_name} {minute.uploader?.last_name} on {format(new Date(minute.created_at), 'PP')}
-                              </p>
+                      {meetingMinutes[currentMeeting.id]
+                        .sort((a, b) => {
+                          // Sort by type (text first) then by date (newest first)
+                          if ((a.source_type === 'text' || a.content) && !(b.source_type === 'text' || b.content)) return -1;
+                          if (!(a.source_type === 'text' || a.content) && (b.source_type === 'text' || b.content)) return 1;
+                          return new Date(b.created_at).getTime() - new Date(a.created_at).getTime();
+                        })
+                        .map(minute => {
+                          const isTextMinute = minute.source_type === 'text' || minute.content;
+                          
+                          return (
+                            <div key={minute.id} className="flex items-center justify-between border p-3 rounded-md">
+                              <div className="flex items-center">
+                                <FileText className="h-4 w-4 mr-2 text-blue-500" />
+                                <div>
+                                  <p className="font-medium">
+                                    {isTextMinute ? 'Text Minutes' : minute.file_name}
+                                  </p>
+                                  <p className="text-xs text-muted-foreground">
+                                    {isTextMinute ? 'Recorded' : 'Uploaded'} by: {minute.uploader?.first_name} {minute.uploader?.last_name} on {format(new Date(minute.created_at), 'PP')}
+                                  </p>
+                                </div>
+                              </div>
+                              <div className="flex gap-2">
+                                <Button 
+                                  variant="outline" 
+                                  size="sm"
+                                  onClick={() => {
+                                    setCurrentMinute(minute);
+                                    if (isTextMinute) {
+                                      setViewTextMinutesOpen(true);
+                                    } else {
+                                      setPdfViewerOpen(true);
+                                    }
+                                    setMinutesDialogOpen(false);
+                                  }}
+                                >
+                                  <Eye className="h-4 w-4 mr-1" />
+                                  View
+                                </Button>
+                                {!isTextMinute && (
+                                  <Button 
+                                    variant="outline" 
+                                    size="sm"
+                                    onClick={() => window.open(minute.file_path, '_blank')}
+                                  >
+                                    <Download className="h-4 w-4" />
+                                  </Button>
+                                )}
+                              </div>
                             </div>
-                          </div>
-                          <div className="flex gap-2">
-                            <Button 
-                              variant="outline" 
-                              size="sm"
-                              onClick={() => {
-                                setCurrentMinute(minute);
-                                setPdfViewerOpen(true);
-                              }}
-                            >
-                              <Eye className="h-4 w-4 mr-1" />
-                              View
-                            </Button>
-                            <Button 
-                              variant="outline" 
-                              size="sm"
-                              onClick={() => window.open(minute.file_path, '_blank')}
-                            >
-                              <Download className="h-4 w-4" />
-                            </Button>
-                          </div>
-                        </div>
-                      ))}
+                          );
+                        })}
                     </div>
                   ) : (
-                    <p className="text-muted-foreground">No minutes have been uploaded for this meeting</p>
+                    <p className="text-muted-foreground">No minutes have been recorded for this meeting</p>
                   )}
                 </div>
               </div>

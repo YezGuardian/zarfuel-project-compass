@@ -75,10 +75,12 @@ export type EventParticipant = {
 export interface MeetingMinute {
   id: string;
   event_id: string;
-  file_path: string;
-  file_name: string;
+  file_path: string | null;
+  file_name: string | null;
   file_type?: string;
   file_size?: number;
+  content?: string;
+  source_type?: 'file' | 'text' | 'both';
   is_published?: boolean;
   created_at: string;
   updated_at: string;
@@ -156,20 +158,5 @@ export type User = {
   company?: string;
   position?: string;
   phone?: string;
-  title?: string;
-};
-
-export type User = {
-  id: string;
-  email: string;
-  role: 'admin' | 'viewer';
-  first_name?: string;
-  last_name?: string;
-  company?: string;
-  position?: string;
-  phone?: string;
-  title?: string;
-};
-
   title?: string;
 };

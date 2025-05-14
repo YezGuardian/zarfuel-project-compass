@@ -39,7 +39,7 @@ const eventSchema = z.object({
   end_time: z.string(),
   is_meeting: z.boolean().default(false),
   participants: z.array(z.string()).optional(),
-  external_emails: z.array(z.string().email("Invalid email address")).optional(),
+  non_user_participants: z.array(z.string()).optional(),
 }).refine(data => {
   // Create date objects with times for comparison
   const startDateTime = new Date(data.start_date);
@@ -64,10 +64,22 @@ type EventFormValues = z.infer<typeof eventSchema>;
 
 interface EventFormProps {
   onSuccess?: (data: any) => void;
-  initialData?: Partial<EventFormValues> & { is_meeting?: boolean };
+  initialData?: {
+    id?: string;
+    title?: string;
+    description?: string;
+    location?: string;
+    start_date?: Date;
+    start_time?: string;
+    end_date?: Date;
+    end_time?: string;
+    is_meeting?: boolean;
+    participants?: string[];
+    non_user_participants?: string[];
+  };
 }
 
-// Participant type can be either a registered user or an external email
+// Participant type can be either a registered user or an external name
 type Participant = {
   id: string;
   email: string;
@@ -81,8 +93,8 @@ const EventForm: React.FC<EventFormProps> = ({ onSuccess, initialData }) => {
   const [users, setUsers] = useState<any[]>([]);
   const [selectedParticipants, setSelectedParticipants] = useState<string[]>(initialData?.participants || []);
   const [searchQuery, setSearchQuery] = useState('');
-  const [newEmail, setNewEmail] = useState('');
-  const [externalEmails, setExternalEmails] = useState<string[]>(initialData?.external_emails || []);
+  const [newParticipantName, setNewParticipantName] = useState('');
+  const [nonUserParticipants, setNonUserParticipants] = useState<string[]>(initialData?.non_user_participants || []);
   const [selectedTab, setSelectedTab] = useState<'internal' | 'external'>('internal');
 
   // Initialize form with default values
@@ -98,7 +110,7 @@ const EventForm: React.FC<EventFormProps> = ({ onSuccess, initialData }) => {
       end_time: initialData?.end_time || '10:00',
       is_meeting: initialData?.is_meeting || false,
       participants: initialData?.participants || [],
-      external_emails: initialData?.external_emails || [],
+      non_user_participants: initialData?.non_user_participants || [],
     },
   });
 
@@ -186,7 +198,7 @@ const EventForm: React.FC<EventFormProps> = ({ onSuccess, initialData }) => {
       endDate.setHours(endHour, endMinute, 0);
       
       // Create the event data
-      const eventData = {
+      const eventData: any = {
         title: values.title,
         description: values.description || '',
         location: values.location || '',
@@ -195,6 +207,11 @@ const EventForm: React.FC<EventFormProps> = ({ onSuccess, initialData }) => {
         is_meeting: values.is_meeting,
         created_by: user.id
       };
+      
+      // Add non-user participants to the description if there are any
+      if (nonUserParticipants.length > 0) {
+        eventData.description = `${eventData.description}\n\nNon-user participants: ${nonUserParticipants.join(', ')}`;
+      }
       
       // Insert or update the event
       let eventId;
@@ -244,21 +261,6 @@ const EventForm: React.FC<EventFormProps> = ({ onSuccess, initialData }) => {
             
           if (error) throw error;
         }
-        
-        // Add external participants
-        if (externalEmails.length > 0) {
-          const externalParticipants = externalEmails.map(email => ({
-            event_id: eventId,
-            email,
-            response: 'pending'
-          }));
-          
-          const { error } = await supabase
-            .from('external_participants')
-            .insert(externalParticipants);
-            
-          if (error) throw error;
-        }
       }
       
       toast.success(`Event ${initialData ? 'updated' : 'created'} successfully`);
@@ -268,7 +270,7 @@ const EventForm: React.FC<EventFormProps> = ({ onSuccess, initialData }) => {
           ...eventData,
           id: eventId,
           participants: selectedParticipants,
-          external_emails: externalEmails
+          non_user_participants: nonUserParticipants
         });
       }
     } catch (error) {
@@ -290,30 +292,23 @@ const EventForm: React.FC<EventFormProps> = ({ onSuccess, initialData }) => {
     });
   };
 
-  // Add external email
-  const addExternalEmail = () => {
-    if (!newEmail) return;
+  // Add non-user participant
+  const addNonUserParticipant = () => {
+    if (!newParticipantName.trim()) return;
     
-    // Basic email validation
-    const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
-    if (!emailRegex.test(newEmail)) {
-      toast.error('Please enter a valid email address');
+    // Check if name already exists
+    if (nonUserParticipants.includes(newParticipantName)) {
+      toast.error('This participant has already been added');
       return;
     }
     
-    // Check if email already exists
-    if (externalEmails.includes(newEmail)) {
-      toast.error('This email has already been added');
-      return;
-    }
-    
-    setExternalEmails(prev => [...prev, newEmail]);
-    setNewEmail('');
+    setNonUserParticipants(prev => [...prev, newParticipantName]);
+    setNewParticipantName('');
   };
 
-  // Remove external email
-  const removeExternalEmail = (email: string) => {
-    setExternalEmails(prev => prev.filter(e => e !== email));
+  // Remove non-user participant
+  const removeNonUserParticipant = (name: string) => {
+    setNonUserParticipants(prev => prev.filter(p => p !== name));
   };
 
   return (
@@ -530,7 +525,7 @@ const EventForm: React.FC<EventFormProps> = ({ onSuccess, initialData }) => {
                   size="sm"
                   onClick={() => setSelectedTab('external')}
                 >
-                  External Emails
+                  Non-Users
                 </Button>
               </div>
             </div>
@@ -623,22 +618,22 @@ const EventForm: React.FC<EventFormProps> = ({ onSuccess, initialData }) => {
               <div className="space-y-4">
                 <FormField
                   control={form.control}
-                  name="external_emails"
+                  name="non_user_participants"
                   render={() => (
                     <FormItem>
                       <FormDescription>
-                        Add external participants by email
+                        Add participants who are not registered users
                       </FormDescription>
                       
                       <div className="flex gap-2 my-2">
                         <Input
-                          placeholder="Enter email address..."
-                          value={newEmail}
-                          onChange={(e) => setNewEmail(e.target.value)}
+                          placeholder="Enter participant name..."
+                          value={newParticipantName}
+                          onChange={(e) => setNewParticipantName(e.target.value)}
                           onKeyDown={(e) => {
                             if (e.key === 'Enter') {
                               e.preventDefault();
-                              addExternalEmail();
+                              addNonUserParticipant();
                             }
                           }}
                         />
@@ -646,21 +641,21 @@ const EventForm: React.FC<EventFormProps> = ({ onSuccess, initialData }) => {
                           type="button" 
                           variant="outline" 
                           size="icon"
-                          onClick={addExternalEmail}
-                          disabled={!newEmail}
+                          onClick={addNonUserParticipant}
+                          disabled={!newParticipantName}
                         >
                           <Plus className="h-4 w-4" />
                         </Button>
                       </div>
                       
-                      {externalEmails.length > 0 ? (
+                      {nonUserParticipants.length > 0 ? (
                         <div className="flex flex-wrap gap-2 mt-4">
-                          {externalEmails.map(email => (
-                            <Badge key={email} variant="secondary" className="flex items-center gap-1">
-                              {email}
+                          {nonUserParticipants.map(name => (
+                            <Badge key={name} variant="secondary" className="flex items-center gap-1">
+                              {name}
                               <button 
                                 type="button" 
-                                onClick={() => removeExternalEmail(email)}
+                                onClick={() => removeNonUserParticipant(name)}
                                 className="text-muted-foreground hover:text-foreground"
                               >
                                 <X className="h-3 w-3" />
@@ -670,7 +665,7 @@ const EventForm: React.FC<EventFormProps> = ({ onSuccess, initialData }) => {
                         </div>
                       ) : (
                         <p className="text-sm text-muted-foreground text-center py-4">
-                          No external participants added
+                          No non-user participants added
                         </p>
                       )}
                       

@@ -118,7 +118,7 @@ export const useTaskForm = ({ initialData, mode = 'create', onSuccess }: UseTask
       setIsSubmitting(true);
       console.log("Submitting task form with values:", values);
       
-      // Use the selected teams from state rather than form values
+      // Prepare base submission data (without duration field which may cause issues)
       const submissionData = {
         title: values.title,
         description: values.description,
@@ -128,11 +128,8 @@ export const useTaskForm = ({ initialData, mode = 'create', onSuccess }: UseTask
         end_date: values.end_date,
         status: values.status,
         progress_summary: values.progress_summary || '',
-        duration: values.duration || '',
         updated_by: user?.id
       };
-      
-      console.log("Submission data prepared:", submissionData);
       
       // Ensure title is provided (required by the database)
       if (!submissionData.title) {
@@ -143,75 +140,103 @@ export const useTaskForm = ({ initialData, mode = 'create', onSuccess }: UseTask
       const performedBy = profile ? `${profile.first_name} ${profile.last_name}` : user?.email || 'A user';
       
       if (mode === 'create') {
-        console.log("Creating new task");
         // Create new task
-        const { data, error } = await supabase.from('tasks').insert({
-          ...submissionData,
-          created_by: user?.id,
-        }).select('id').single();
-        
-        if (error) {
+        try {
+          const { data, error } = await supabase.from('tasks').insert({
+            ...submissionData,
+            created_by: user?.id,
+            // Add duration if provided
+            ...(values.duration ? { duration: values.duration } : {})
+          }).select('id').single();
+          
+          if (error) {
+            // If the error contains "duration" in the message, try without it
+            if (error.message.includes('duration')) {
+              console.warn('Error with duration field, trying without it');
+              const { data: dataWithoutDuration, error: errorWithoutDuration } = await supabase.from('tasks').insert({
+                ...submissionData,
+                created_by: user?.id,
+              }).select('id').single();
+              
+              if (errorWithoutDuration) throw errorWithoutDuration;
+              
+              // Success without duration
+              if (dataWithoutDuration?.id) {
+                await createTaskNotification({
+                  taskId: dataWithoutDuration.id,
+                  taskTitle: values.title,
+                  action: 'created',
+                  performedBy,
+                  excludeUserId: user?.id
+                });
+              }
+            } else {
+              // Some other error
+              throw error;
+            }
+          } else {
+            // Success with duration
+            if (data?.id) {
+              await createTaskNotification({
+                taskId: data.id,
+                taskTitle: values.title,
+                action: 'created',
+                performedBy,
+                excludeUserId: user?.id
+              });
+            }
+          }
+        } catch (error: any) {
           console.error('Error creating task:', error);
-          throw error;
-        }
-        
-        console.log("Task created successfully");
-        
-        // Send notification about new task creation
-        if (data?.id) {
-          await createTaskNotification({
-            taskId: data.id,
-            taskTitle: values.title,
-            action: 'created',
-            performedBy,
-            excludeUserId: user?.id
-          });
+          throw new Error(`Failed to create task: ${error.message || 'Unknown error'}`);
         }
       } else if (initialData?.id) {
-        console.log("Updating existing task with ID:", initialData.id);
-        
         // Check if the task is being marked as complete
         const isCompletingTask = initialData.status !== 'complete' && values.status === 'complete';
         
         // Update existing task
-        const { error } = await supabase.from('tasks')
-          .update(submissionData)
-          .eq('id', initialData.id);
-        
-        if (error) {
+        try {
+          const { error } = await supabase.from('tasks').update({
+            ...submissionData,
+            // Add duration if provided
+            ...(values.duration ? { duration: values.duration } : {})
+          }).eq('id', initialData.id);
+          
+          if (error) {
+            // If the error contains "duration" in the message, try without it
+            if (error.message.includes('duration')) {
+              console.warn('Error with duration field, trying without it');
+              const { error: errorWithoutDuration } = await supabase.from('tasks').update(submissionData)
+                .eq('id', initialData.id);
+                
+              if (errorWithoutDuration) throw errorWithoutDuration;
+            } else {
+              // Some other error
+              throw error;
+            }
+          }
+          
+          // Send appropriate notification
+          await createTaskNotification({
+            taskId: initialData.id,
+            taskTitle: values.title,
+            action: isCompletingTask ? 'completed' : 'updated',
+            performedBy,
+            excludeUserId: user?.id
+          });
+        } catch (error: any) {
           console.error('Error updating task:', error);
-          throw error;
-        }
-        
-        console.log("Task updated successfully");
-        
-        // Send appropriate notification based on whether task is being completed or just updated
-        if (isCompletingTask) {
-          await createTaskNotification({
-            taskId: initialData.id,
-            taskTitle: values.title,
-            action: 'completed',
-            performedBy,
-            excludeUserId: user?.id
-          });
-        } else {
-          await createTaskNotification({
-            taskId: initialData.id,
-            taskTitle: values.title,
-            action: 'updated',
-            performedBy,
-            excludeUserId: user?.id
-          });
+          throw new Error(`Failed to update task: ${error.message || 'Unknown error'}`);
         }
       }
       
-      // Reset form
+      // Reset form for create mode
       if (mode === 'create') {
         form.reset(defaultValues);
         setSelectedTeams([]);
       }
       
-      // Call success callback
+      // Call success callback if provided
       if (onSuccess) onSuccess();
       
       toast.success(`Task ${mode === 'create' ? 'created' : 'updated'} successfully`);

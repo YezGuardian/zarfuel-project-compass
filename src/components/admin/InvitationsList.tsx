@@ -1,4 +1,3 @@
-
 import React, { useEffect, useState } from 'react';
 import { 
   Card, 
@@ -20,6 +19,7 @@ import { Badge } from '@/components/ui/badge';
 import { RefreshCcw, Trash2, Mail } from 'lucide-react';
 import { toast } from 'sonner';
 import { supabase } from '@/integrations/supabase/client';
+import { serviceClient } from '@/integrations/supabase/service-client';
 import { formatDistanceToNow } from 'date-fns';
 
 type Invitation = {
@@ -32,91 +32,155 @@ type Invitation = {
   expires_at: string;
 };
 
+type PendingUser = {
+  id: string;
+  email: string;
+  role: string;
+  organization: string | null;
+  position: string | null;
+  created_at: string;
+  isInvitation: boolean; // Whether this is from invitations table or profiles table
+};
+
 const InvitationsList: React.FC = () => {
-  const [invitations, setInvitations] = useState<Invitation[]>([]);
+  const [pendingUsers, setPendingUsers] = useState<PendingUser[]>([]);
   const [loading, setLoading] = useState<boolean>(true);
   const [refreshing, setRefreshing] = useState<boolean>(false);
   
-  const fetchInvitations = async () => {
+  const fetchPendingUsers = async () => {
     try {
       setLoading(true);
-      const { data, error } = await supabase
+      console.log('Fetching pending users...');
+      
+      // Get all invitations
+      const { data: invitations, error: invitationsError } = await serviceClient
         .from('invitations')
         .select('*')
         .order('created_at', { ascending: false });
-        
-      if (error) {
-        throw error;
+      
+      if (invitationsError) {
+        console.error('Error fetching invitations:', invitationsError);
+        toast.error(`Failed to load invitations: ${invitationsError.message}`);
+        setPendingUsers([]);
+        return;
       }
       
-      setInvitations(data || []);
+      console.log('Invitations fetched:', invitations?.length || 0);
+      
+      // Get all profiles to check which emails are already registered
+      const { data: allProfiles, error: profilesError } = await serviceClient
+        .from('profiles')
+        .select('email');
+      
+      if (profilesError) {
+        console.error('Error fetching profiles:', profilesError);
+        toast.error(`Failed to load profiles: ${profilesError.message}`);
+        setPendingUsers([]);
+        return;
+      }
+      
+      // Create a set of all registered emails
+      const registeredEmails = new Set<string>(
+        (allProfiles || []).map(profile => profile.email.toLowerCase())
+      );
+      
+      console.log('Registered emails count:', registeredEmails.size);
+      
+      // Filter invitations to only include those not already registered
+      const pendingInvitations = (invitations || []).filter(invitation => 
+        !registeredEmails.has(invitation.email.toLowerCase())
+      );
+      
+      console.log('Pending invitations count:', pendingInvitations.length);
+      
+      // Convert invitations to PendingUser format
+      const invitationUsers: PendingUser[] = pendingInvitations.map(invitation => ({
+        id: invitation.id,
+        email: invitation.email,
+        role: invitation.role,
+        organization: invitation.organization,
+        position: invitation.position,
+        created_at: invitation.created_at,
+        isInvitation: true
+      }));
+      
+      setPendingUsers(invitationUsers);
     } catch (error: any) {
-      console.error('Error fetching invitations:', error);
-      toast.error('Failed to load invitations');
+      console.error('Error fetching pending users:', error);
+      toast.error(`Failed to load pending users: ${error.message || 'Unknown error'}`);
+      setPendingUsers([]);
     } finally {
       setLoading(false);
     }
   };
   
   useEffect(() => {
-    fetchInvitations();
+    fetchPendingUsers();
   }, []);
   
   const handleRefresh = async () => {
     setRefreshing(true);
-    await fetchInvitations();
+    await fetchPendingUsers();
     setRefreshing(false);
   };
   
-  const handleDelete = async (id: string) => {
+  const handleDelete = async (user: PendingUser) => {
     try {
-      const { error } = await supabase
-        .from('invitations')
-        .delete()
-        .eq('id', id);
+      if (user.isInvitation) {
+        // Delete from invitations table
+        const { error } = await serviceClient
+          .from('invitations')
+          .delete()
+          .eq('id', user.id);
+          
+        if (error) {
+          throw error;
+        }
+      } else {
+        // Delete from profiles table
+        const { error } = await serviceClient
+          .from('profiles')
+          .delete()
+          .eq('id', user.id);
+          
+        if (error) {
+          throw error;
+        }
         
+        // Also delete from auth.users
+        const { error: authError } = await serviceClient.auth.admin.deleteUser(user.id);
+        
+        if (authError) {
+          console.error('Error deleting auth user:', authError);
+          // Continue anyway
+        }
+      }
+      
+      setPendingUsers(pendingUsers.filter(u => u.id !== user.id));
+      toast.success(`User ${user.email} removed`);
+    } catch (error: any) {
+      console.error('Error deleting user:', error);
+      toast.error(`Failed to delete user: ${error.message || 'Unknown error'}`);
+    }
+  };
+  
+  const handleResend = async (user: PendingUser) => {
+    try {
+      // Send a password reset email
+      const { error } = await serviceClient.auth.admin.generateLink({
+        type: 'recovery',
+        email: user.email,
+      });
+      
       if (error) {
         throw error;
       }
       
-      setInvitations(invitations.filter(inv => inv.id !== id));
-      toast.success('Invitation deleted');
+      toast.success(`Password reset email sent to ${user.email}`);
     } catch (error: any) {
-      console.error('Error deleting invitation:', error);
-      toast.error('Failed to delete invitation');
+      console.error('Error sending password reset:', error);
+      toast.error(`Failed to send password reset: ${error.message || 'Unknown error'}`);
     }
-  };
-  
-  const handleResend = async (invitation: Invitation) => {
-    try {
-      // Call the edge function to resend the invitation
-      const { data, error } = await supabase.functions.invoke('send-invitation', {
-        body: {
-          email: invitation.email,
-          role: invitation.role,
-          organization: invitation.organization,
-          position: invitation.position
-        }
-      });
-      
-      if (error) {
-        throw new Error(error.message);
-      }
-      
-      if (data.error) {
-        throw new Error(data.error);
-      }
-      
-      toast.success(`Invitation resent to ${invitation.email}`);
-      handleRefresh();
-    } catch (error: any) {
-      console.error('Error resending invitation:', error);
-      toast.error(error.message || 'Failed to resend invitation');
-    }
-  };
-  
-  const isExpired = (expiresAt: string) => {
-    return new Date(expiresAt) < new Date();
   };
   
   return (
@@ -125,7 +189,7 @@ const InvitationsList: React.FC = () => {
         <div>
           <CardTitle>Pending Invitations</CardTitle>
           <CardDescription>
-            View and manage invitations sent to potential users
+            Users who have been invited but haven't registered yet
           </CardDescription>
         </div>
         <Button
@@ -143,9 +207,9 @@ const InvitationsList: React.FC = () => {
           <div className="flex justify-center py-6">
             <RefreshCcw className="h-6 w-6 animate-spin text-muted-foreground" />
           </div>
-        ) : invitations.length === 0 ? (
+        ) : pendingUsers.length === 0 ? (
           <div className="text-center py-6 text-muted-foreground">
-            No pending invitations found
+            No pending users found
           </div>
         ) : (
           <div className="rounded-md border">
@@ -154,43 +218,39 @@ const InvitationsList: React.FC = () => {
                 <TableRow>
                   <TableHead>Email</TableHead>
                   <TableHead>Role</TableHead>
-                  <TableHead>Sent</TableHead>
-                  <TableHead>Expires</TableHead>
+                  <TableHead>Created</TableHead>
                   <TableHead>Status</TableHead>
                   <TableHead className="text-right">Actions</TableHead>
                 </TableRow>
               </TableHeader>
               <TableBody>
-                {invitations.map((invitation) => (
-                  <TableRow key={invitation.id}>
-                    <TableCell>{invitation.email}</TableCell>
-                    <TableCell className="capitalize">{invitation.role}</TableCell>
+                {pendingUsers.map((user) => (
+                  <TableRow key={user.id}>
+                    <TableCell>{user.email}</TableCell>
+                    <TableCell className="capitalize">{user.role}</TableCell>
                     <TableCell>
-                      {formatDistanceToNow(new Date(invitation.created_at), { addSuffix: true })}
+                      {formatDistanceToNow(new Date(user.created_at), { addSuffix: true })}
                     </TableCell>
                     <TableCell>
-                      {formatDistanceToNow(new Date(invitation.expires_at), { addSuffix: true })}
-                    </TableCell>
-                    <TableCell>
-                      {isExpired(invitation.expires_at) ? (
-                        <Badge variant="destructive">Expired</Badge>
-                      ) : (
-                        <Badge variant="outline">Pending</Badge>
-                      )}
+                      <Badge variant="outline">
+                        {user.isInvitation ? 'Invitation Sent' : 'Needs Setup'}
+                      </Badge>
                     </TableCell>
                     <TableCell className="text-right">
                       <div className="flex justify-end gap-2">
                         <Button
                           variant="outline"
                           size="icon"
-                          onClick={() => handleResend(invitation)}
+                          onClick={() => handleResend(user)}
+                          title="Send password reset email"
                         >
                           <Mail className="h-4 w-4" />
                         </Button>
                         <Button
                           variant="outline"
                           size="icon"
-                          onClick={() => handleDelete(invitation.id)}
+                          onClick={() => handleDelete(user)}
+                          title="Delete user"
                         >
                           <Trash2 className="h-4 w-4" />
                         </Button>

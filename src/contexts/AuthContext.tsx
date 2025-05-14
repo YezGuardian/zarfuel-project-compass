@@ -37,6 +37,8 @@ type AuthContextType = {
   canViewPage: (page: string) => boolean;
   canEditPage: (page: string) => boolean;
   refreshProfile: () => Promise<void>;
+  needsPasswordChange: boolean;
+  clearPasswordChangeRequirement: () => Promise<void>;
 };
 
 // Create the authentication context
@@ -47,6 +49,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
   const [profile, setProfile] = useState<Profile | null>(null);
   const [session, setSession] = useState<Session | null>(null);
   const [isLoading, setIsLoading] = useState<boolean>(true);
+  const [needsPasswordChange, setNeedsPasswordChange] = useState<boolean>(false);
 
   // Fetch user profile data
   const fetchProfile = async (userId: string) => {
@@ -90,9 +93,14 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
           setTimeout(async () => {
             const profileData = await fetchProfile(session.user.id);
             setProfile(profileData);
+            
+            // Check if user needs to change password
+            const needsChange = session.user.user_metadata?.needs_password_change === true;
+            setNeedsPasswordChange(needsChange);
           }, 0);
         } else {
           setProfile(null);
+          setNeedsPasswordChange(false);
         }
 
         setIsLoading(false);
@@ -108,6 +116,10 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
         fetchProfile(session.user.id).then(profileData => {
           setProfile(profileData);
         });
+        
+        // Check if user needs to change password
+        const needsChange = session.user.user_metadata?.needs_password_change === true;
+        setNeedsPasswordChange(needsChange);
       }
       
       setIsLoading(false);
@@ -133,7 +145,16 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
       if (data.user) {
         const profileData = await fetchProfile(data.user.id);
         setProfile(profileData);
-        toast.success(`Welcome back, ${profileData?.first_name || data.user.email}`);
+        
+        // Check if user needs to change password
+        const needsChange = data.user.user_metadata?.needs_password_change === true;
+        setNeedsPasswordChange(needsChange);
+        
+        if (needsChange) {
+          toast.info('Please change your password to continue');
+        } else {
+          toast.success(`Welcome back, ${profileData?.first_name || data.user.email}`);
+        }
       }
     } catch (error: any) {
       console.error('Login error:', error);
@@ -143,11 +164,32 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     }
   };
 
+  // Function to clear the password change requirement
+  const clearPasswordChangeRequirement = async (): Promise<void> => {
+    if (!user) return;
+    
+    try {
+      const { error } = await supabase.auth.updateUser({
+        data: { needs_password_change: false }
+      });
+      
+      if (error) {
+        console.error('Error updating user metadata:', error);
+        return;
+      }
+      
+      setNeedsPasswordChange(false);
+    } catch (error) {
+      console.error('Error clearing password change requirement:', error);
+    }
+  };
+
   const logout = async (): Promise<void> => {
     await supabase.auth.signOut();
     setUser(null);
     setProfile(null);
     setSession(null);
+    setNeedsPasswordChange(false);
     toast.info('You have been logged out');
   };
 
@@ -194,7 +236,9 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
       isSuperAdmin,
       canViewPage,
       canEditPage,
-      refreshProfile
+      refreshProfile,
+      needsPasswordChange,
+      clearPasswordChangeRequirement
     }}>
       {children}
     </AuthContext.Provider>

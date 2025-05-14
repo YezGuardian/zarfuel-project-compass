@@ -1,4 +1,3 @@
-
 import React, { useState } from 'react';
 import { 
   Tabs, 
@@ -26,8 +25,8 @@ const UsersPage: React.FC = () => {
   const { isAdmin, isSuperAdmin } = useAuth();
   const [dialogOpen, setDialogOpen] = useState(false);
   
-  // Redirect non-admin users
-  if (!isAdmin()) {
+  // Redirect non-admin users, but make sure superAdmin can always access
+  if (!isAdmin() && !isSuperAdmin()) {
     return <Navigate to="/unauthorized" replace />;
   }
   
@@ -47,7 +46,7 @@ const UsersPage: React.FC = () => {
             <TabsTrigger value="invitations">Invitations</TabsTrigger>
           </TabsList>
           <div className="mt-6 mb-4 flex justify-end">
-            <Dialog open={dialogOpen} onOpenChange={isSuperAdmin() ? setDialogOpen : undefined}>
+            <Dialog open={dialogOpen} onOpenChange={setDialogOpen}>
               <DialogTrigger asChild>
                 <Button>
                   <PlusCircle className="h-4 w-4 mr-2" />
@@ -58,7 +57,7 @@ const UsersPage: React.FC = () => {
                 <DialogHeader>
                   <DialogTitle>Invite New User</DialogTitle>
                   <DialogDescription>
-                    Send an invitation email to add a new user to the system
+                    Add a new user to the system
                   </DialogDescription>
                 </DialogHeader>
                 <InviteUserForm onSuccess={() => setDialogOpen(false)} />

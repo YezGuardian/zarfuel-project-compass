@@ -2,15 +2,114 @@
 import { createClient } from '@supabase/supabase-js';
 import type { Database } from './types';
 
+// Use hardcoded values since environment variables aren't working
 const SUPABASE_URL = "https://auswnhnpeetphmlqtecs.supabase.co";
-const SUPABASE_PUBLISHABLE_KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImF1c3duaG5wZWV0cGhtbHF0ZWNzIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NDYwMTY2MzgsImV4cCI6MjA2MTU5MjYzOH0.tJXZNrK9LaGtVzy-_UuNOgj1kW6zC-FXDxTiIwevFcc";
+const SUPABASE_ANON_KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImF1c3duaG5wZWV0cGhtbHF0ZWNzIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NDYwMTY2MzgsImV4cCI6MjA2MTU5MjYzOH0.tJXZNrK9LaGtVzy-_UuNOgj1kW6zC-FXDxTiIwevFcc";
+
+// Define the site URL for authentication redirects
+const getSiteUrl = (): string => {
+  if (typeof window !== 'undefined') {
+    // For local development, you might want to hardcode this
+    // return 'http://localhost:8086';
+    return window.location.origin;
+  }
+  return 'https://zarfuel-project-compass.vercel.app'; // Fallback production URL
+};
+
+// Clear any existing invalid tokens from localStorage
+try {
+  if (typeof window !== 'undefined') {
+    // Clear all Supabase related items from localStorage
+    const keysToRemove = [
+      'supabase.auth.token',
+      'supabase.auth.refreshToken',
+      'supabase.auth.expires_at',
+      'supabase.auth.provider_token',
+      'supabase.auth.provider_refresh_token'
+    ];
+    
+    keysToRemove.forEach(key => {
+      localStorage.removeItem(key);
+    });
+    
+    // Also try to clear any items that start with 'supabase.auth.'
+    for (let i = 0; i < localStorage.length; i++) {
+      const key = localStorage.key(i);
+      if (key && key.startsWith('supabase.auth.')) {
+        localStorage.removeItem(key);
+      }
+    }
+  }
+} catch (error) {
+  console.error('Error clearing localStorage:', error);
+}
 
 // Import the supabase client like this:
 // import { supabase } from "@/integrations/supabase/client";
 
-export const supabase = createClient<Database>(SUPABASE_URL, SUPABASE_PUBLISHABLE_KEY, {
+export const supabase = createClient<Database>(SUPABASE_URL, SUPABASE_ANON_KEY, {
   auth: {
     persistSession: true,
     autoRefreshToken: true,
+    detectSessionInUrl: true,
+    flowType: 'pkce', // More secure flow for authentication
+    storage: {
+      // Use a custom storage implementation to handle errors
+      getItem: (key) => {
+        try {
+          if (typeof window !== 'undefined') {
+            return window.localStorage.getItem(key);
+          }
+          return null;
+        } catch (error) {
+          console.error('Error getting item from localStorage:', error);
+          return null;
+        }
+      },
+      setItem: (key, value) => {
+        try {
+          if (typeof window !== 'undefined') {
+            window.localStorage.setItem(key, value);
+          }
+        } catch (error) {
+          console.error('Error setting item in localStorage:', error);
+        }
+      },
+      removeItem: (key) => {
+        try {
+          if (typeof window !== 'undefined') {
+            window.localStorage.removeItem(key);
+          }
+        } catch (error) {
+          console.error('Error removing item from localStorage:', error);
+        }
+      }
+    }
   }
 });
+
+// Add a function to refresh the schema cache
+export async function refreshSupabaseSchema() {
+  try {
+    // Force refresh by getting a single row with cache busting
+    const timestamp = new Date().getTime();
+    await supabase.rpc('get_system_info', { cache_bust: timestamp });
+    
+    // Try to create a simple query to force schema refresh
+    const tables = ['forum_posts', 'forum_comments', 'forum_notifications', 'meeting_minutes'];
+    
+    for (const table of tables) {
+      try {
+        await supabase.from(table).select('id').limit(1);
+      } catch (e) {
+        console.log(`Table ${table} might not exist yet, skipping`);
+      }
+    }
+    
+    console.log('Schema refreshed');
+    return true;
+  } catch (error) {
+    console.error('Failed to refresh schema:', error);
+    return false;
+  }
+}
