@@ -147,7 +147,7 @@ const ForumPage: React.FC = () => {
           
           setComments(allComments);
         } else {
-          setPosts([]);
+        setPosts([]);
         }
       } catch (error) {
         console.error('Error fetching forum data:', error);
@@ -257,7 +257,7 @@ const ForumPage: React.FC = () => {
           }
         }
         
-        toast.success('Post created successfully');
+      toast.success('Post created successfully');
       }
     } catch (error: any) {
       console.error('Error creating post:', error);
@@ -463,11 +463,11 @@ const ForumPage: React.FC = () => {
         });
         
         // Reset the comment form for this post
-        setNewCommentContent({
-          ...newCommentContent,
-          [postId]: ''
-        });
-        
+      setNewCommentContent({
+        ...newCommentContent,
+        [postId]: ''
+      });
+      
         // Get the post for notifications
         const post = posts.find(p => p.id === postId);
         
