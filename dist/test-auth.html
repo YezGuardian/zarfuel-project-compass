@@ -1,0 +1,232 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <title>Test Supabase Authentication</title>
+  <style>
+    body {
+      font-family: Arial, sans-serif;
+      max-width: 800px;
+      margin: 0 auto;
+      padding: 20px;
+    }
+    h1 {
+      color: #333;
+    }
+    button {
+      padding: 10px;
+      margin: 5px;
+      background-color: #4CAF50;
+      color: white;
+      border: none;
+      cursor: pointer;
+    }
+    button:hover {
+      background-color: #45a049;
+    }
+    .key-input {
+      width: 100%;
+      padding: 10px;
+      margin: 5px 0;
+      font-family: monospace;
+      font-size: 14px;
+    }
+    pre {
+      background-color: #f5f5f5;
+      padding: 10px;
+      border-radius: 5px;
+      overflow: auto;
+    }
+    .section {
+      border: 1px solid #ddd;
+      padding: 15px;
+      margin: 15px 0;
+      border-radius: 5px;
+    }
+    #results {
+      margin-top: 20px;
+      border: 1px solid #ddd;
+      padding: 10px;
+      border-radius: 5px;
+    }
+  </style>
+</head>
+<body>
+  <h1>Test Supabase Authentication</h1>
+  
+  <div class="section">
+    <h2>Supabase URL</h2>
+    <input id="supabaseUrl" type="text" class="key-input" value="https://auswnhnpeetphmlqtecs.supabase.co" placeholder="Supabase URL">
+  </div>
+  
+  <div class="section">
+    <h2>Anonymous Key</h2>
+    <input id="anonKey" type="text" class="key-input" value="eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImF1c3duaG5wZWV0cGhtbHF0ZWNzIiwicm9sZSI6ImFub24iLCJpYXQiOjE3Mzk1MzM0MTYsImV4cCI6MjA1NTEwOTQxNn0.s07yOdZYp9G1iDGmQZPL_TYxqbZV9n70_c_2SZw-Fsc" placeholder="Anonymous API Key">
+    <button id="testAnonKey">Test Anonymous Key</button>
+  </div>
+  
+  <div class="section">
+    <h2>Service Role Key</h2>
+    <input id="serviceKey" type="text" class="key-input" value="eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImF1c3duaG5wZWV0cGhtbHF0ZWNzIiwicm9sZSI6InNlcnZpY2Vfcm9sZSIsImlhdCI6MTczOTUzMzQxNiwiZXhwIjoyMDU1MTA5NDE2fQ.G-EvKmIlRSRQjKn66P-fJ_YDKhYu8XOK8T-VKj0vW9E" placeholder="Service Role API Key">
+    <button id="testServiceKey">Test Service Role Key</button>
+  </div>
+  
+  <div class="section">
+    <h2>Local Storage</h2>
+    <button id="clearStorage">Clear Auth Storage</button>
+    <button id="listStorage">List Local Storage</button>
+  </div>
+  
+  <div>
+    <button id="goToApp">Go to App</button>
+  </div>
+  
+  <div id="results">
+    <p>Results will appear here...</p>
+  </div>
+  
+  <script>
+    const resultsDiv = document.getElementById('results');
+    
+    // Test Anonymous Key
+    document.getElementById('testAnonKey').addEventListener('click', async function() {
+      const supabaseUrl = document.getElementById('supabaseUrl').value.trim();
+      const anonKey = document.getElementById('anonKey').value.trim();
+      
+      // Log key details for debugging
+      console.log('Anonymous key length:', anonKey.length);
+      console.log('Anonymous key:', anonKey);
+      
+      resultsDiv.innerHTML = '<p>Testing Anonymous Key connection...</p>';
+      
+      try {
+        const response = await fetch(`${supabaseUrl}/rest/v1/profiles?select=count`, {
+          method: 'GET',
+          headers: {
+            'apikey': anonKey,
+            'Authorization': `Bearer ${anonKey}`,
+            'Content-Type': 'application/json',
+            'Prefer': 'count=exact'
+          }
+        });
+        
+        if (response.ok) {
+          const data = await response.json();
+          resultsDiv.innerHTML = '<p>Anonymous Key test successful!</p><pre>' + JSON.stringify(data, null, 2) + '</pre>';
+        } else {
+          const error = await response.text();
+          resultsDiv.innerHTML = '<p>Anonymous Key test failed: ' + response.status + ' ' + response.statusText + '</p><pre>' + error + '</pre>';
+        }
+      } catch (error) {
+        resultsDiv.innerHTML = '<p>Error testing Anonymous Key: ' + error.message + '</p>';
+      }
+    });
+    
+    // Test Service Role Key
+    document.getElementById('testServiceKey').addEventListener('click', async function() {
+      const supabaseUrl = document.getElementById('supabaseUrl').value.trim();
+      const serviceKey = document.getElementById('serviceKey').value.trim();
+      
+      // Log key details for debugging
+      console.log('Service key length:', serviceKey.length);
+      console.log('Service key:', serviceKey);
+      
+      resultsDiv.innerHTML = '<p>Testing Service Role Key connection...</p>';
+      
+      try {
+        const response = await fetch(`${supabaseUrl}/rest/v1/profiles?select=count`, {
+          method: 'GET',
+          headers: {
+            'apikey': serviceKey,
+            'Authorization': `Bearer ${serviceKey}`,
+            'Content-Type': 'application/json',
+            'Prefer': 'count=exact'
+          }
+        });
+        
+        if (response.ok) {
+          const data = await response.json();
+          resultsDiv.innerHTML = '<p>Service Role Key test successful!</p><pre>' + JSON.stringify(data, null, 2) + '</pre>';
+        } else {
+          const error = await response.text();
+          resultsDiv.innerHTML = '<p>Service Role Key test failed: ' + response.status + ' ' + response.statusText + '</p><pre>' + error + '</pre>';
+        }
+      } catch (error) {
+        resultsDiv.innerHTML = '<p>Error testing Service Role Key: ' + error.message + '</p>';
+      }
+    });
+    
+    // Clear Supabase Auth Storage
+    document.getElementById('clearStorage').addEventListener('click', function() {
+      try {
+        // Clear all Supabase related items from localStorage
+        const keysToRemove = [
+          'sb-auswnhnpeetphmlqtecs-auth-token',
+          'supabase-auth-token',
+          'supabase.auth.token',
+          'supabase.auth.refreshToken',
+          'supabase.auth.expires_at',
+          'supabase.auth.provider_token',
+          'supabase.auth.provider_refresh_token'
+        ];
+        
+        keysToRemove.forEach(key => {
+          localStorage.removeItem(key);
+        });
+        
+        // Also try to clear any items that start with 'supabase.auth.' or 'sb-'
+        const keysToDelete = [];
+        for (let i = 0; i < localStorage.length; i++) {
+          const key = localStorage.key(i);
+          if (key && (key.startsWith('supabase.auth.') || key.startsWith('sb-'))) {
+            keysToDelete.push(key);
+          }
+        }
+        
+        keysToDelete.forEach(key => localStorage.removeItem(key));
+        
+        resultsDiv.innerHTML = '<p>Successfully cleared Supabase auth data from localStorage</p>';
+      } catch (error) {
+        resultsDiv.innerHTML = '<p>Error clearing localStorage: ' + error.message + '</p>';
+      }
+    });
+    
+    // List Local Storage
+    document.getElementById('listStorage').addEventListener('click', function() {
+      try {
+        let html = '<h3>LocalStorage Contents:</h3>';
+        html += '<pre>';
+        
+        for (let i = 0; i < localStorage.length; i++) {
+          const key = localStorage.key(i);
+          let value = localStorage.getItem(key);
+          
+          // Try to pretty-print JSON
+          try {
+            const jsonValue = JSON.parse(value);
+            value = JSON.stringify(jsonValue, null, 2);
+          } catch (e) {
+            // Not JSON, leave as is
+          }
+          
+          // Truncate very long values
+          if (value && value.length > 500) {
+            value = value.substring(0, 500) + '... (truncated)';
+          }
+          
+          html += `${i + 1}. <strong>${key}</strong>: ${value}\n\n`;
+        }
+        
+        html += '</pre>';
+        resultsDiv.innerHTML = html;
+      } catch (error) {
+        resultsDiv.innerHTML = '<p>Error listing localStorage: ' + error.message + '</p>';
+      }
+    });
+    
+    // Go to App
+    document.getElementById('goToApp').addEventListener('click', function() {
+      window.location.href = '/';
+    });
+  </script>
+</body>
+</html> 

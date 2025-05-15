@@ -1,0 +1,165 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <title>Zarfuel Auth Fix</title>
+  <style>
+    body {
+      font-family: Arial, sans-serif;
+      max-width: 800px;
+      margin: 0 auto;
+      padding: 20px;
+    }
+    h1 {
+      color: #333;
+    }
+    button {
+      padding: 10px;
+      margin: 5px;
+      background-color: #4CAF50;
+      color: white;
+      border: none;
+      cursor: pointer;
+    }
+    button:hover {
+      background-color: #45a049;
+    }
+    pre {
+      background-color: #f5f5f5;
+      padding: 10px;
+      border-radius: 5px;
+      overflow: auto;
+    }
+    #results {
+      margin-top: 20px;
+      border: 1px solid #ddd;
+      padding: 10px;
+      border-radius: 5px;
+    }
+  </style>
+</head>
+<body>
+  <h1>Zarfuel Authentication Fix</h1>
+  
+  <div>
+    <button id="clearStorage">Clear Supabase Auth Storage</button>
+    <button id="listStorage">List Local Storage</button>
+    <button id="testConnection">Test Supabase Connection</button>
+    <button id="goToApp">Go to App</button>
+  </div>
+  
+  <div id="results">
+    <p>Results will appear here...</p>
+  </div>
+  
+  <script>
+    const resultsDiv = document.getElementById('results');
+    
+    // Clear Supabase Auth Storage
+    document.getElementById('clearStorage').addEventListener('click', function() {
+      try {
+        // Clear all Supabase related items from localStorage
+        const keysToRemove = [
+          'sb-auswnhnpeetphmlqtecs-auth-token',
+          'supabase-auth-token',
+          'supabase.auth.token',
+          'supabase.auth.refreshToken',
+          'supabase.auth.expires_at',
+          'supabase.auth.provider_token',
+          'supabase.auth.provider_refresh_token'
+        ];
+        
+        keysToRemove.forEach(key => {
+          localStorage.removeItem(key);
+        });
+        
+        // Also try to clear any items that start with 'supabase.auth.' or 'sb-'
+        const keysToDelete = [];
+        for (let i = 0; i < localStorage.length; i++) {
+          const key = localStorage.key(i);
+          if (key && (key.startsWith('supabase.auth.') || key.startsWith('sb-'))) {
+            keysToDelete.push(key);
+          }
+        }
+        
+        keysToDelete.forEach(key => localStorage.removeItem(key));
+        
+        resultsDiv.innerHTML = '<p>Successfully cleared Supabase auth data from localStorage</p>';
+      } catch (error) {
+        resultsDiv.innerHTML = '<p>Error clearing localStorage: ' + error.message + '</p>';
+      }
+    });
+    
+    // List Local Storage
+    document.getElementById('listStorage').addEventListener('click', function() {
+      try {
+        let html = '<h3>LocalStorage Contents:</h3>';
+        html += '<pre>';
+        
+        for (let i = 0; i < localStorage.length; i++) {
+          const key = localStorage.key(i);
+          let value = localStorage.getItem(key);
+          
+          // Try to pretty-print JSON
+          try {
+            const jsonValue = JSON.parse(value);
+            value = JSON.stringify(jsonValue, null, 2);
+          } catch (e) {
+            // Not JSON, leave as is
+          }
+          
+          // Truncate very long values
+          if (value && value.length > 500) {
+            value = value.substring(0, 500) + '... (truncated)';
+          }
+          
+          html += `${i + 1}. <strong>${key}</strong>: ${value}\n\n`;
+        }
+        
+        html += '</pre>';
+        resultsDiv.innerHTML = html;
+      } catch (error) {
+        resultsDiv.innerHTML = '<p>Error listing localStorage: ' + error.message + '</p>';
+      }
+    });
+    
+    // Test Supabase Connection
+    document.getElementById('testConnection').addEventListener('click', async function() {
+      resultsDiv.innerHTML = '<p>Testing Supabase connection...</p>';
+      
+      try {
+        const SUPABASE_URL = 'https://auswnhnpeetphmlqtecs.supabase.co';
+        const SUPABASE_ANON_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImF1c3duaG5wZWV0cGhtbHF0ZWNzIiwicm9sZSI6ImFub24iLCJpYXQiOjE3Mzk1MzM0MTYsImV4cCI6MjA1NTEwOTQxNn0.s07yOdZYp9G1iDGmQZPL_TYxqbZV9n70_c_2SZw-Fsc';
+        
+        // Log key details to check for any issues
+        console.log('SUPABASE_ANON_KEY length:', SUPABASE_ANON_KEY.length);
+        console.log('SUPABASE_ANON_KEY:', SUPABASE_ANON_KEY);
+        
+        const response = await fetch(`${SUPABASE_URL}/rest/v1/profiles?select=count`, {
+          method: 'GET',
+          headers: {
+            'apikey': SUPABASE_ANON_KEY,
+            'Authorization': `Bearer ${SUPABASE_ANON_KEY}`,
+            'Content-Type': 'application/json',
+            'Prefer': 'count=exact'
+          }
+        });
+        
+        if (response.ok) {
+          const data = await response.json();
+          resultsDiv.innerHTML = '<p>Connection successful!</p><pre>' + JSON.stringify(data, null, 2) + '</pre>';
+        } else {
+          const error = await response.text();
+          resultsDiv.innerHTML = '<p>Connection failed: ' + response.status + ' ' + response.statusText + '</p><pre>' + error + '</pre>';
+        }
+      } catch (error) {
+        resultsDiv.innerHTML = '<p>Error testing connection: ' + error.message + '</p>';
+      }
+    });
+    
+    // Go to App
+    document.getElementById('goToApp').addEventListener('click', function() {
+      window.location.href = '/';
+    });
+  </script>
+</body>
+</html> 
