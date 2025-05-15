@@ -1,0 +1,214 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Test Supabase Connection - ZARFUEL</title>
+  <script src="https://unpkg.com/@supabase/supabase-js@2"></script>
+  <style>
+    body {
+      font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, Cantarell, 'Open Sans', 'Helvetica Neue', sans-serif;
+      line-height: 1.6;
+      color: #333;
+      max-width: 800px;
+      margin: 0 auto;
+      padding: 20px;
+    }
+    .container {
+      background-color: #f9f9f9;
+      border-radius: 8px;
+      padding: 20px;
+      box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+    }
+    h1 {
+      color: #2563eb;
+    }
+    button {
+      background-color: #2563eb;
+      color: white;
+      border: none;
+      padding: 10px 20px;
+      border-radius: 4px;
+      cursor: pointer;
+      font-size: 16px;
+      margin-top: 20px;
+    }
+    button:hover {
+      background-color: #1d4ed8;
+    }
+    .success {
+      background-color: #dcfce7;
+      color: #166534;
+      padding: 10px;
+      border-radius: 4px;
+      margin-top: 20px;
+    }
+    .error {
+      background-color: #fee2e2;
+      color: #b91c1c;
+      padding: 10px;
+      border-radius: 4px;
+      margin-top: 20px;
+    }
+    pre {
+      background-color: #f1f5f9;
+      padding: 10px;
+      border-radius: 4px;
+      overflow: auto;
+      max-height: 300px;
+    }
+  </style>
+</head>
+<body>
+  <div class="container">
+    <h1>Test Supabase Connection</h1>
+    <p>This page tests your Supabase connection with both anonymous and service role keys.</p>
+    
+    <div>
+      <h2>1. Test Anonymous Connection</h2>
+      <button id="testAnon">Test Anonymous Connection</button>
+      <div id="anonResult" style="margin-top: 10px;"></div>
+    </div>
+
+    <div style="margin-top: 30px;">
+      <h2>2. Test Service Role Connection</h2>
+      <button id="testService">Test Service Role Connection</button>
+      <div id="serviceResult" style="margin-top: 10px;"></div>
+    </div>
+
+    <div style="margin-top: 30px;">
+      <h2>3. Clear Authentication Data</h2>
+      <button id="clearAuth">Clear Authentication Data</button>
+      <div id="clearResult" style="margin-top: 10px;"></div>
+    </div>
+
+    <div style="margin-top: 30px;">
+      <p><a href="/">Return to Application</a></p>
+    </div>
+  </div>
+
+  <script>
+    // Supabase configuration
+    const SUPABASE_URL = "https://auswnhnpeetphmlqtecs.supabase.co";
+    const SUPABASE_ANON_KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImF1c3duaG5wZWV0cGhtbHF0ZWNzIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NDYwMTY2MzgsImV4cCI6MjA2MTU5MjYzOH0.tJXZNrK9LaGtVzy-_UuNOgj1kW6zC-FXDxTiIwevFcc";
+    const SUPABASE_SERVICE_KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImF1c3duaG5wZWV0cGhtbHF0ZWNzIiwicm9sZSI6InNlcnZpY2Vfcm9sZSIsImlhdCI6MTc0NjAxNjYzOCwiZXhwIjoyMDYxNTkyNjM4fQ.ptBT-_nrn4gUcWvgTq-ZjK93Rl-k-lRVv-0w1717kOc";
+    
+    // Create clients
+    const supabaseAnon = supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
+    const supabaseService = supabase.createClient(SUPABASE_URL, SUPABASE_SERVICE_KEY, {
+      auth: {
+        autoRefreshToken: false,
+        persistSession: false
+      }
+    });
+    
+    // Test anonymous connection
+    document.getElementById('testAnon').addEventListener('click', async function() {
+      const resultDiv = document.getElementById('anonResult');
+      resultDiv.innerHTML = '<p>Testing anonymous connection...</p>';
+      
+      try {
+        // Try to get some public data
+        const { data, error } = await supabaseAnon
+          .from('profiles')
+          .select('count()')
+          .limit(1);
+        
+        if (error) {
+          throw error;
+        }
+        
+        resultDiv.innerHTML = `
+          <div class="success">
+            <strong>Success!</strong> Anonymous connection is working.
+            <pre>${JSON.stringify(data, null, 2)}</pre>
+          </div>
+        `;
+      } catch (error) {
+        console.error('Error testing anonymous connection:', error);
+        resultDiv.innerHTML = `
+          <div class="error">
+            <strong>Error!</strong> Anonymous connection failed.
+            <pre>${JSON.stringify(error, null, 2)}</pre>
+          </div>
+        `;
+      }
+    });
+    
+    // Test service role connection
+    document.getElementById('testService').addEventListener('click', async function() {
+      const resultDiv = document.getElementById('serviceResult');
+      resultDiv.innerHTML = '<p>Testing service role connection...</p>';
+      
+      try {
+        // Try to get some data that requires service role
+        const { data, error } = await supabaseService
+          .from('profiles')
+          .select('count(*)')
+          .limit(1);
+        
+        if (error) {
+          throw error;
+        }
+        
+        resultDiv.innerHTML = `
+          <div class="success">
+            <strong>Success!</strong> Service role connection is working.
+            <pre>${JSON.stringify(data, null, 2)}</pre>
+          </div>
+        `;
+      } catch (error) {
+        console.error('Error testing service role connection:', error);
+        resultDiv.innerHTML = `
+          <div class="error">
+            <strong>Error!</strong> Service role connection failed.
+            <pre>${JSON.stringify(error, null, 2)}</pre>
+          </div>
+        `;
+      }
+    });
+    
+    // Clear authentication data
+    document.getElementById('clearAuth').addEventListener('click', function() {
+      const resultDiv = document.getElementById('clearResult');
+      
+      try {
+        // Clear all Supabase related items from localStorage
+        const keysToRemove = [
+          'supabase.auth.token',
+          'supabase.auth.refreshToken',
+          'supabase.auth.expires_at',
+          'supabase.auth.provider_token',
+          'supabase.auth.provider_refresh_token'
+        ];
+        
+        keysToRemove.forEach(key => {
+          localStorage.removeItem(key);
+        });
+        
+        // Also try to clear any items that start with 'supabase.auth.'
+        for (let i = 0; i < localStorage.length; i++) {
+          const key = localStorage.key(i);
+          if (key && key.startsWith('supabase.auth.')) {
+            localStorage.removeItem(key);
+          }
+        }
+        
+        resultDiv.innerHTML = `
+          <div class="success">
+            <strong>Success!</strong> Authentication data has been cleared.
+          </div>
+        `;
+      } catch (error) {
+        console.error('Error clearing auth data:', error);
+        resultDiv.innerHTML = `
+          <div class="error">
+            <strong>Error!</strong> Could not clear authentication data.
+            <pre>${JSON.stringify(error, null, 2)}</pre>
+          </div>
+        `;
+      }
+    });
+  </script>
+</body>
+</html> 
