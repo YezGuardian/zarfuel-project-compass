@@ -184,9 +184,9 @@ const Dashboard: React.FC = () => {
       
       <div className="space-y-6">
         <div>
-          <H1>Project Overview</H1>
+          <H1>Committee Dashboard</H1>
           <Paragraph className="text-muted-foreground">
-            ZARFUEL Truck Stop project progress dashboard
+            Project progress dashboard
           </Paragraph>
         </div>
         

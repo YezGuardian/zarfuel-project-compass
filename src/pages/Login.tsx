@@ -161,7 +161,7 @@ const Login: React.FC = () => {
       <div className="w-full lg:w-1/2 flex items-center justify-center bg-white p-8">
         <div className="w-full max-w-md">
           <div className="flex justify-center mb-8">
-            <h1 className="text-3xl font-bold text-zarfuel-blue">ZARFUEL TRUCKSTOP</h1>
+            <img src="/zarfuel-logo.svg" alt="ZARFUEL Logo" style={{ width: '50mm', height: '50mm' }} />
           </div>
           {isNewUser ? (
             <Card>
@@ -265,7 +265,7 @@ const Login: React.FC = () => {
               <CardHeader className="p-0 pb-4">
                 <CardTitle className="text-2xl font-bold">Log in</CardTitle>
                 <CardDescription>
-                  Access the ZARFUEL TRUCKSTOP
+                  to Access the ZARFUEL Live Committee Dashboard
                 </CardDescription>
               </CardHeader>
               <form onSubmit={handleSubmit}>
@@ -291,9 +291,6 @@ const Login: React.FC = () => {
                   <div className="space-y-2">
                     <div className="flex justify-between items-center">
                       <Label htmlFor="password">Password</Label>
-                      <Link to="/forgot-password" className="text-sm text-blue-600 hover:underline">
-                        Forgot password?
-                      </Link>
                     </div>
                     <Input
                       id="password"
@@ -321,14 +318,7 @@ const Login: React.FC = () => {
                   </Button>
                   <div className="flex items-center justify-center space-x-2 text-sm">
                     <span className="text-gray-500">Don't have an account?</span>
-                    <Button
-                      type="button"
-                      variant="link"
-                      className="p-0 h-auto text-blue-600"
-                      onClick={() => setIsNewUser(true)}
-                    >
-                      New Profile Setup
-                    </Button>
+                    <span className="p-0 h-auto text-blue-600 font-semibold">Contact Dashboard admin</span>
                   </div>
                 </CardFooter>
               </form>

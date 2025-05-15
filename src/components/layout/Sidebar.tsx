@@ -54,7 +54,7 @@ const Sidebar: React.FC<SidebarProps> = ({ isOpen }) => {
     >
       {/* Sidebar Header */}
       <div className="h-16 flex items-center justify-center border-b border-sidebar-border">
-        <h1 className="text-xl font-bold text-sidebar-accent">ZARFUEL TRUCKSTOP</h1>
+        <h1 className="text-xl font-bold text-sidebar-accent">Committee Dashboard</h1>
       </div>
       
       {/* Navigation Links */}
@@ -86,7 +86,7 @@ const Sidebar: React.FC<SidebarProps> = ({ isOpen }) => {
       <div className="absolute bottom-0 left-0 right-0 p-4">
         <div className="border-t border-sidebar-border pt-4 text-center">
           <div className="text-xs text-sidebar-foreground/70">
-            &copy; 2025 ZARFUEL TRUCKSTOP
+            &copy; 2025 Committee Dashboard
           </div>
         </div>
       </div>

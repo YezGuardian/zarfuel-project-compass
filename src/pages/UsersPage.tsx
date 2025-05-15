@@ -35,7 +35,7 @@ const UsersPage: React.FC = () => {
       <div>
         <h1 className="text-2xl font-bold tracking-tight">User Management</h1>
         <p className="text-muted-foreground">
-          Manage users and invitations for the ZARFUEL TRUCKSTOP
+          Manage users and invitations for the Committee Dashboard
         </p>
       </div>
       
