@@ -50,10 +50,7 @@ const Header: React.FC<HeaderProps> = ({ sidebarOpen, setSidebarOpen, user }) =>
               <Menu className="h-5 w-5" />
             )}
           </Button>
-          <h1 className="hidden md:block text-xl font-bold text-zarfuel-blue">
-            Committee Report Dashboard
-          </h1>
-          <h1 className="md:hidden text-xl font-bold text-zarfuel-blue">
+          <h1 className="text-xl font-bold text-zarfuel-blue">
             Committee Report Dashboard
           </h1>
         </div>

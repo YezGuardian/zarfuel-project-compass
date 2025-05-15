@@ -51,55 +51,69 @@ const Sidebar: React.FC<SidebarProps> = ({ isOpen }) => {
       window.dispatchEvent(event);
     }
   };
+  // Close sidebar when clicking the backdrop
+  const handleBackdropClick = () => {
+    const event = new CustomEvent('closeSidebar');
+    window.dispatchEvent(event);
+  };
 
   return (
-    <div
-      className={cn(
-        'fixed inset-y-0 left-0 z-20 w-64 bg-sidebar transform transition-transform duration-300 ease-in-out',
-        isOpen ? 'translate-x-0' : '-translate-x-full',
-        'md:translate-x-0'
+    <>
+      {/* Backdrop for mobile/tablet */}
+      {isOpen && (
+        <div
+          className="fixed inset-0 z-10 bg-black bg-opacity-40 md:hidden"
+          onClick={handleBackdropClick}
+        />
       )}
-    >
-      {/* Sidebar Header */}
-      <div className="h-16 flex items-center justify-center border-b border-sidebar-border">
-        <h1 className="text-xl font-bold text-sidebar-accent">ZARFUEL TRUCKSTOP</h1>
-      </div>
-      
-      {/* Navigation Links */}
-      <nav className="py-6 px-3">
-        <ul className="space-y-1">
-          {allNavItems.map((item) => (
-            <li key={item.name}>
-              <NavLink
-                to={item.path}
-                className={({ isActive }) =>
-                  cn(
-                    'flex items-center px-3 py-2 rounded-md text-sm font-medium transition-colors',
-                    isActive
-                      ? 'bg-zarfuel-gold text-zarfuel-blue'
-                      : 'text-sidebar-foreground hover:bg-sidebar-border'
-                  )
-                }
-                end
-                onClick={handleNavClick}
-              >
-                <item.icon className="mr-3 h-5 w-5 dark:text-primary" />
-                {item.name}
-              </NavLink>
-            </li>
-          ))}
-        </ul>
-      </nav>
-      
-      {/* Footer */}
-      <div className="absolute bottom-0 left-0 right-0 p-4">
-        <div className="border-t border-sidebar-border pt-4 text-center">
-          <div className="text-xs text-sidebar-foreground/70">
-            © 2025 ZARSOM GROUP - Designed by <a href="https://www.whitepaperconcepts.co.za" target="_blank" rel="noopener noreferrer" className="underline">WHITE PAPER CONCEPTS</a>
+      <div
+        className={cn(
+          'fixed inset-y-0 left-0 z-20 w-64 bg-sidebar transform transition-transform duration-300 ease-in-out',
+          isOpen ? 'translate-x-0' : '-translate-x-full',
+          'md:translate-x-0'
+        )}
+      >
+        {/* Sidebar Header */}
+        <div className="h-16 flex items-center justify-center border-b border-sidebar-border">
+          <h1 className="text-xl font-bold text-sidebar-accent">ZARFUEL TRUCKSTOP</h1>
+        </div>
+        
+        {/* Navigation Links */}
+        <nav className="py-6 px-3">
+          <ul className="space-y-1">
+            {allNavItems.map((item) => (
+              <li key={item.name}>
+                <NavLink
+                  to={item.path}
+                  className={({ isActive }) =>
+                    cn(
+                      'flex items-center px-3 py-2 rounded-md text-sm font-medium transition-colors',
+                      isActive
+                        ? 'bg-zarfuel-gold text-zarfuel-blue'
+                        : 'text-sidebar-foreground hover:bg-sidebar-border'
+                    )
+                  }
+                  end
+                  onClick={handleNavClick}
+                >
+                  <item.icon className="mr-3 h-5 w-5 dark:text-primary" />
+                  {item.name}
+                </NavLink>
+              </li>
+            ))}
+          </ul>
+        </nav>
+        
+        {/* Footer */}
+        <div className="absolute bottom-0 left-0 right-0 p-4">
+          <div className="border-t border-sidebar-border pt-4 text-center">
+            <div className="text-xs text-sidebar-foreground/70">
+              © 2025 ZARSOM GROUP - Designed by <a href="https://www.whitepaperconcepts.co.za" target="_blank" rel="noopener noreferrer" className="underline">WHITE PAPER CONCEPTS</a>
+            </div>
           </div>
         </div>
       </div>
-    </div>
+    </>
   );
 };
 
