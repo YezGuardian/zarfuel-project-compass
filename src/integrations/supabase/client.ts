@@ -22,44 +22,6 @@ const getSiteUrl = (): string => {
   return 'https://zarfuel-project-compass.vercel.app'; // Fallback production URL
 };
 
-// More aggressive clearing of localStorage to start fresh
-try {
-  if (typeof window !== 'undefined') {
-    // Clear all Supabase related items from localStorage
-    const keysToRemove = [
-      'sb-auswnhnpeetphmlqtecs-auth-token',
-      'supabase-auth-token',
-      'supabase.auth.token',
-      'supabase.auth.refreshToken',
-      'supabase.auth.expires_at',
-      'supabase.auth.provider_token',
-      'supabase.auth.provider_refresh_token'
-    ];
-    
-    keysToRemove.forEach(key => {
-      localStorage.removeItem(key);
-    });
-    
-    // Clear ALL Supabase related keys with a more thorough approach
-    for (let i = 0; i < localStorage.length; i++) {
-      const key = localStorage.key(i);
-      if (key && (
-        key.startsWith('supabase.') || 
-        key.startsWith('sb-') || 
-        key.includes('supabase') || 
-        key.includes('auth')
-      )) {
-        console.log('Removing localStorage key:', key);
-        localStorage.removeItem(key);
-        // Adjust counter since we're removing items
-        i--;
-      }
-    }
-  }
-} catch (error) {
-  console.error('Error clearing localStorage:', error);
-}
-
 // Import the supabase client like this:
 // import { supabase } from "@/integrations/supabase/client";
 

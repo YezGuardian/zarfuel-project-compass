@@ -331,7 +331,7 @@ const Login: React.FC = () => {
         <div className="absolute inset-0 bg-[url('/pattern.svg')] opacity-20"></div>
         <div className="absolute inset-0 bg-gradient-to-br from-zarfuel-gold/10 via-transparent to-transparent"></div>
         <div className="relative z-10 text-center p-8 max-w-2xl mx-auto">
-          <h2 className="text-5xl font-bold text-zarfuel-gold mb-8">Fueling Progress. Nourishing Communities.</h2>
+          <h2 className="text-5xl font-bold text-zarfuel-gold mb-8">Fuelling Progress. Nourishing Communities.</h2>
           <p className="text-white/80 text-base px-8">
             Discover ZARFUEL, a next-generation truck stop by ZARSOM Group—designed to power South Africa's freight backbone and uplift local communities.
           </p>
