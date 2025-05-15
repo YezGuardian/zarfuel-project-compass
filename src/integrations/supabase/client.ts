@@ -4,7 +4,13 @@ import type { Database } from './types';
 
 // Use hardcoded values since environment variables aren't working
 const SUPABASE_URL = "https://auswnhnpeetphmlqtecs.supabase.co";
-const SUPABASE_ANON_KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImF1c3duaG5wZWV0cGhtbHF0ZWNzIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NDYwMTY2MzgsImV4cCI6MjA2MTU5MjYzOH0.tJXZNrK9LaGtVzy-_UuNOgj1kW6zC-FXDxTiIwevFcc";
+// Updated anon key (provided by user)
+const SUPABASE_ANON_KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImF1c3duaG5wZWV0cGhtbHF0ZWNzIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NDcyNjE3NDcsImV4cCI6MjA2MjgzNzc0N30.o9PazJGVj_jPFUn_AeO3xnvu7ePsK1ufc5jNTu3C2Dw";
+
+// To verify we don't have corrupted token or linebreaks
+// Print the key length for debugging
+console.log('Anon key length:', SUPABASE_ANON_KEY.length);
+console.log('Anon key:', SUPABASE_ANON_KEY);
 
 // Define the site URL for authentication redirects
 const getSiteUrl = (): string => {
@@ -16,11 +22,13 @@ const getSiteUrl = (): string => {
   return 'https://zarfuel-project-compass.vercel.app'; // Fallback production URL
 };
 
-// Clear any existing invalid tokens from localStorage
+// More aggressive clearing of localStorage to start fresh
 try {
   if (typeof window !== 'undefined') {
     // Clear all Supabase related items from localStorage
     const keysToRemove = [
+      'sb-auswnhnpeetphmlqtecs-auth-token',
+      'supabase-auth-token',
       'supabase.auth.token',
       'supabase.auth.refreshToken',
       'supabase.auth.expires_at',
@@ -32,11 +40,19 @@ try {
       localStorage.removeItem(key);
     });
     
-    // Also try to clear any items that start with 'supabase.auth.'
+    // Clear ALL Supabase related keys with a more thorough approach
     for (let i = 0; i < localStorage.length; i++) {
       const key = localStorage.key(i);
-      if (key && key.startsWith('supabase.auth.')) {
+      if (key && (
+        key.startsWith('supabase.') || 
+        key.startsWith('sb-') || 
+        key.includes('supabase') || 
+        key.includes('auth')
+      )) {
+        console.log('Removing localStorage key:', key);
         localStorage.removeItem(key);
+        // Adjust counter since we're removing items
+        i--;
       }
     }
   }
@@ -87,6 +103,22 @@ export const supabase = createClient<Database>(SUPABASE_URL, SUPABASE_ANON_KEY, 
     }
   }
 });
+
+// Test connection on initialization
+(async () => {
+  try {
+    console.log('Testing Supabase connection...');
+    const { data, error } = await supabase.from('profiles').select('count').limit(1);
+    
+    if (error) {
+      console.error('Supabase connection test failed:', error);
+    } else {
+      console.log('Supabase connection test successful:', data);
+    }
+  } catch (e) {
+    console.error('Supabase connection test exception:', e);
+  }
+})();
 
 // Add a function to refresh the schema cache
 export async function refreshSupabaseSchema() {

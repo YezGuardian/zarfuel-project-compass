@@ -1,87 +1,66 @@
 <!DOCTYPE html>
-<html lang="en">
+<html>
 <head>
-  <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Fix Authentication - ZARFUEL</title>
+  <title>Zarfuel Auth Fix</title>
   <style>
     body {
-      font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, Cantarell, 'Open Sans', 'Helvetica Neue', sans-serif;
-      line-height: 1.6;
-      color: #333;
+      font-family: Arial, sans-serif;
       max-width: 800px;
       margin: 0 auto;
       padding: 20px;
     }
-    .container {
-      background-color: #f9f9f9;
-      border-radius: 8px;
-      padding: 20px;
-      box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
-    }
     h1 {
-      color: #2563eb;
+      color: #333;
     }
     button {
-      background-color: #2563eb;
+      padding: 10px;
+      margin: 5px;
+      background-color: #4CAF50;
       color: white;
       border: none;
-      padding: 10px 20px;
-      border-radius: 4px;
       cursor: pointer;
-      font-size: 16px;
-      margin-top: 20px;
     }
     button:hover {
-      background-color: #1d4ed8;
+      background-color: #45a049;
     }
-    .success {
-      background-color: #dcfce7;
-      color: #166534;
+    pre {
+      background-color: #f5f5f5;
       padding: 10px;
-      border-radius: 4px;
-      margin-top: 20px;
-      display: none;
+      border-radius: 5px;
+      overflow: auto;
     }
-    .error {
-      background-color: #fee2e2;
-      color: #b91c1c;
-      padding: 10px;
-      border-radius: 4px;
+    #results {
       margin-top: 20px;
-      display: none;
+      border: 1px solid #ddd;
+      padding: 10px;
+      border-radius: 5px;
     }
   </style>
 </head>
 <body>
-  <div class="container">
-    <h1>Fix Authentication Issues</h1>
-    <p>If you're experiencing authentication problems with the ZARFUEL application, this page can help clear your authentication data and fix refresh token errors.</p>
-    
-    <h2>What This Does</h2>
-    <p>Clicking the button below will:</p>
-    <ul>
-      <li>Clear all Supabase authentication tokens from your browser's local storage</li>
-      <li>Remove any invalid or corrupted session data</li>
-      <li>Prepare your browser for a fresh login</li>
-    </ul>
-    
-    <button id="fixAuth">Clear Authentication Data</button>
-    
-    <div id="success" class="success">
-      <strong>Success!</strong> Authentication data has been cleared. <a href="/">Return to the application</a> and log in again.
-    </div>
-    
-    <div id="error" class="error">
-      <strong>Error!</strong> Could not clear authentication data. Please try again or contact support.
-    </div>
+  <h1>Zarfuel Authentication Fix</h1>
+  
+  <div>
+    <button id="clearStorage">Clear Supabase Auth Storage</button>
+    <button id="listStorage">List Local Storage</button>
+    <button id="testConnection">Test Supabase Connection</button>
+    <button id="goToApp">Go to App</button>
   </div>
-
+  
+  <div id="results">
+    <p>Results will appear here...</p>
+  </div>
+  
   <script>
-    document.getElementById('fixAuth').addEventListener('click', function() {
+    const resultsDiv = document.getElementById('results');
+    
+    // Clear Supabase Auth Storage
+    document.getElementById('clearStorage').addEventListener('click', function() {
       try {
         // Clear all Supabase related items from localStorage
         const keysToRemove = [
+          'sb-auswnhnpeetphmlqtecs-auth-token',
+          'supabase-auth-token',
           'supabase.auth.token',
           'supabase.auth.refreshToken',
           'supabase.auth.expires_at',
@@ -93,21 +72,93 @@
           localStorage.removeItem(key);
         });
         
-        // Also try to clear any items that start with 'supabase.auth.'
+        // Also try to clear any items that start with 'supabase.auth.' or 'sb-'
+        const keysToDelete = [];
         for (let i = 0; i < localStorage.length; i++) {
           const key = localStorage.key(i);
-          if (key && key.startsWith('supabase.auth.')) {
-            localStorage.removeItem(key);
+          if (key && (key.startsWith('supabase.auth.') || key.startsWith('sb-'))) {
+            keysToDelete.push(key);
           }
         }
         
-        document.getElementById('success').style.display = 'block';
-        document.getElementById('error').style.display = 'none';
+        keysToDelete.forEach(key => localStorage.removeItem(key));
+        
+        resultsDiv.innerHTML = '<p>Successfully cleared Supabase auth data from localStorage</p>';
       } catch (error) {
-        console.error('Error clearing auth data:', error);
-        document.getElementById('error').style.display = 'block';
-        document.getElementById('success').style.display = 'none';
+        resultsDiv.innerHTML = '<p>Error clearing localStorage: ' + error.message + '</p>';
       }
+    });
+    
+    // List Local Storage
+    document.getElementById('listStorage').addEventListener('click', function() {
+      try {
+        let html = '<h3>LocalStorage Contents:</h3>';
+        html += '<pre>';
+        
+        for (let i = 0; i < localStorage.length; i++) {
+          const key = localStorage.key(i);
+          let value = localStorage.getItem(key);
+          
+          // Try to pretty-print JSON
+          try {
+            const jsonValue = JSON.parse(value);
+            value = JSON.stringify(jsonValue, null, 2);
+          } catch (e) {
+            // Not JSON, leave as is
+          }
+          
+          // Truncate very long values
+          if (value && value.length > 500) {
+            value = value.substring(0, 500) + '... (truncated)';
+          }
+          
+          html += `${i + 1}. <strong>${key}</strong>: ${value}\n\n`;
+        }
+        
+        html += '</pre>';
+        resultsDiv.innerHTML = html;
+      } catch (error) {
+        resultsDiv.innerHTML = '<p>Error listing localStorage: ' + error.message + '</p>';
+      }
+    });
+    
+    // Test Supabase Connection
+    document.getElementById('testConnection').addEventListener('click', async function() {
+      resultsDiv.innerHTML = '<p>Testing Supabase connection...</p>';
+      
+      try {
+        const SUPABASE_URL = 'https://auswnhnpeetphmlqtecs.supabase.co';
+        const SUPABASE_ANON_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImF1c3duaG5wZWV0cGhtbHF0ZWNzIiwicm9sZSI6ImFub24iLCJpYXQiOjE3Mzk1MzM0MTYsImV4cCI6MjA1NTEwOTQxNn0.s07yOdZYp9G1iDGmQZPL_TYxqbZV9n70_c_2SZw-Fsc';
+        
+        // Log key details to check for any issues
+        console.log('SUPABASE_ANON_KEY length:', SUPABASE_ANON_KEY.length);
+        console.log('SUPABASE_ANON_KEY:', SUPABASE_ANON_KEY);
+        
+        const response = await fetch(`${SUPABASE_URL}/rest/v1/profiles?select=count`, {
+          method: 'GET',
+          headers: {
+            'apikey': SUPABASE_ANON_KEY,
+            'Authorization': `Bearer ${SUPABASE_ANON_KEY}`,
+            'Content-Type': 'application/json',
+            'Prefer': 'count=exact'
+          }
+        });
+        
+        if (response.ok) {
+          const data = await response.json();
+          resultsDiv.innerHTML = '<p>Connection successful!</p><pre>' + JSON.stringify(data, null, 2) + '</pre>';
+        } else {
+          const error = await response.text();
+          resultsDiv.innerHTML = '<p>Connection failed: ' + response.status + ' ' + response.statusText + '</p><pre>' + error + '</pre>';
+        }
+      } catch (error) {
+        resultsDiv.innerHTML = '<p>Error testing connection: ' + error.message + '</p>';
+      }
+    });
+    
+    // Go to App
+    document.getElementById('goToApp').addEventListener('click', function() {
+      window.location.href = '/';
     });
   </script>
 </body>
