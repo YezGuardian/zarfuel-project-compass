@@ -51,10 +51,10 @@ const Header: React.FC<HeaderProps> = ({ sidebarOpen, setSidebarOpen, user }) =>
             )}
           </Button>
           <h1 className="hidden md:block text-xl font-bold text-zarfuel-blue">
-            ZARFUEL TRUCKSTOP
+            Committee Report Dashboard
           </h1>
           <h1 className="md:hidden text-xl font-bold text-zarfuel-blue">
-            ZARFUEL TRUCKSTOP
+            Committee Report Dashboard
           </h1>
         </div>
         

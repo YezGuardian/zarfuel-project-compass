@@ -1,5 +1,4 @@
-
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { Outlet } from 'react-router-dom';
 import Header from './Header';
 import Sidebar from './Sidebar';
@@ -8,6 +7,17 @@ import { useAuth } from '@/contexts/AuthContext';
 const DashboardLayout: React.FC = () => {
   const [sidebarOpen, setSidebarOpen] = useState(true);
   const { user, profile } = useAuth();
+
+  // Listen for the custom closeSidebar event to close the sidebar on mobile/tablet
+  useEffect(() => {
+    const handleCloseSidebar = () => {
+      setSidebarOpen(false);
+    };
+    window.addEventListener('closeSidebar', handleCloseSidebar);
+    return () => {
+      window.removeEventListener('closeSidebar', handleCloseSidebar);
+    };
+  }, []);
 
   // If user is not authenticated (this shouldn't happen due to ProtectedRoute)
   if (!user) {

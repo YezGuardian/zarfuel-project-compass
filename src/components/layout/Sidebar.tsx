@@ -44,6 +44,14 @@ const Sidebar: React.FC<SidebarProps> = ({ isOpen }) => {
   
   const allNavItems = [...filteredNavigation, ...filteredAdminNavigation];
 
+  // Close sidebar on mobile/tablet after navigation
+  const handleNavClick = () => {
+    if (window.innerWidth < 1024) {
+      const event = new CustomEvent('closeSidebar');
+      window.dispatchEvent(event);
+    }
+  };
+
   return (
     <div
       className={cn(
@@ -54,7 +62,7 @@ const Sidebar: React.FC<SidebarProps> = ({ isOpen }) => {
     >
       {/* Sidebar Header */}
       <div className="h-16 flex items-center justify-center border-b border-sidebar-border">
-        <h1 className="text-xl font-bold text-sidebar-accent">Committee Dashboard</h1>
+        <h1 className="text-xl font-bold text-sidebar-accent">ZARFUEL TRUCKSTOP</h1>
       </div>
       
       {/* Navigation Links */}
@@ -73,6 +81,7 @@ const Sidebar: React.FC<SidebarProps> = ({ isOpen }) => {
                   )
                 }
                 end
+                onClick={handleNavClick}
               >
                 <item.icon className="mr-3 h-5 w-5 dark:text-primary" />
                 {item.name}
@@ -86,7 +95,7 @@ const Sidebar: React.FC<SidebarProps> = ({ isOpen }) => {
       <div className="absolute bottom-0 left-0 right-0 p-4">
         <div className="border-t border-sidebar-border pt-4 text-center">
           <div className="text-xs text-sidebar-foreground/70">
-            &copy; 2025 Committee Dashboard
+            © 2025 ZARSOM GROUP - Designed by <a href="https://www.whitepaperconcepts.co.za" target="_blank" rel="noopener noreferrer" className="underline">WHITE PAPER CONCEPTS</a>
           </div>
         </div>
       </div>
