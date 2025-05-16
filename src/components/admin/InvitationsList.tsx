@@ -19,7 +19,6 @@ import { Badge } from '@/components/ui/badge';
 import { RefreshCcw, Trash2, Mail } from 'lucide-react';
 import { toast } from 'sonner';
 import { supabase } from '@/integrations/supabase/client';
-import { serviceClient } from '@/integrations/supabase/service-client';
 import { formatDistanceToNow } from 'date-fns';
 
 type Invitation = {
@@ -42,6 +41,8 @@ type PendingUser = {
   isInvitation: boolean; // Whether this is from invitations table or profiles table
 };
 
+const API_BASE_URL = window.location.hostname === 'localhost' ? 'http://localhost:5000/api' : '/api';
+
 const InvitationsList: React.FC = () => {
   const [pendingUsers, setPendingUsers] = useState<PendingUser[]>([]);
   const [loading, setLoading] = useState<boolean>(true);
@@ -52,11 +53,9 @@ const InvitationsList: React.FC = () => {
       setLoading(true);
       console.log('Fetching pending users...');
       
-      // Get all invitations
-      const { data: invitations, error: invitationsError } = await serviceClient
-        .from('invitations')
-        .select('*')
-        .order('created_at', { ascending: false });
+      // TODO: Replace with a call to a backend API endpoint that fetches invitations securely
+      const response = await fetch(`${API_BASE_URL}/list-invitations`);
+      const { invitations, error: invitationsError } = await response.json();
       
       if (invitationsError) {
         console.error('Error fetching invitations:', invitationsError);
@@ -67,10 +66,9 @@ const InvitationsList: React.FC = () => {
       
       console.log('Invitations fetched:', invitations?.length || 0);
       
-      // Get all profiles to check which emails are already registered
-      const { data: allProfiles, error: profilesError } = await serviceClient
-        .from('profiles')
-        .select('email');
+      // TODO: Replace with a call to a backend API endpoint that fetches profiles securely
+      const profilesResponse = await fetch(`${API_BASE_URL}/list-profiles`);
+      const { profiles: allProfiles, error: profilesError } = await profilesResponse.json();
       
       if (profilesError) {
         console.error('Error fetching profiles:', profilesError);
@@ -105,9 +103,9 @@ const InvitationsList: React.FC = () => {
       }));
       
       setPendingUsers(invitationUsers);
-    } catch (error: any) {
+    } catch (error: unknown) {
       console.error('Error fetching pending users:', error);
-      toast.error(`Failed to load pending users: ${error.message || 'Unknown error'}`);
+      toast.error(`Failed to load pending users: ${error instanceof Error ? error.message : 'Unknown error'}`);
       setPendingUsers([]);
     } finally {
       setLoading(false);
@@ -127,28 +125,37 @@ const InvitationsList: React.FC = () => {
   const handleDelete = async (user: PendingUser) => {
     try {
       if (user.isInvitation) {
-        // Delete from invitations table
-        const { error } = await serviceClient
-          .from('invitations')
-          .delete()
-          .eq('id', user.id);
-          
+        // TODO: Replace with a call to a backend API endpoint that deletes an invitation
+        const response = await fetch(`${API_BASE_URL}/delete-invitation`, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ id: user.id }),
+        });
+        const { error } = await response.json();
+        
         if (error) {
           throw error;
         }
       } else {
-        // Delete from profiles table
-        const { error } = await serviceClient
-          .from('profiles')
-          .delete()
-          .eq('id', user.id);
-          
+        // TODO: Replace with a call to a backend API endpoint that deletes a profile
+        const response = await fetch(`${API_BASE_URL}/delete-profile`, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ id: user.id }),
+        });
+        const { error } = await response.json();
+        
         if (error) {
           throw error;
         }
         
-        // Also delete from auth.users
-        const { error: authError } = await serviceClient.auth.admin.deleteUser(user.id);
+        // TODO: Replace with a call to a backend API endpoint that deletes an auth user
+        const authResponse = await fetch(`${API_BASE_URL}/delete-auth-user`, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ id: user.id }),
+        });
+        const { error: authError } = await authResponse.json();
         
         if (authError) {
           console.error('Error deleting auth user:', authError);
@@ -158,28 +165,30 @@ const InvitationsList: React.FC = () => {
       
       setPendingUsers(pendingUsers.filter(u => u.id !== user.id));
       toast.success(`User ${user.email} removed`);
-    } catch (error: any) {
+    } catch (error: unknown) {
       console.error('Error deleting user:', error);
-      toast.error(`Failed to delete user: ${error.message || 'Unknown error'}`);
+      toast.error(`Failed to delete user: ${error instanceof Error ? error.message : 'Unknown error'}`);
     }
   };
   
   const handleResend = async (user: PendingUser) => {
     try {
-      // Send a password reset email
-      const { error } = await serviceClient.auth.admin.generateLink({
-        type: 'recovery',
-        email: user.email,
+      // TODO: Replace with a call to a backend API endpoint that sends a password reset email
+      const response = await fetch(`${API_BASE_URL}/send-password-reset`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ email: user.email }),
       });
+      const { error } = await response.json();
       
       if (error) {
         throw error;
       }
       
       toast.success(`Password reset email sent to ${user.email}`);
-    } catch (error: any) {
+    } catch (error: unknown) {
       console.error('Error sending password reset:', error);
-      toast.error(`Failed to send password reset: ${error.message || 'Unknown error'}`);
+      toast.error(`Failed to send password reset: ${error instanceof Error ? error.message : 'Unknown error'}`);
     }
   };
   

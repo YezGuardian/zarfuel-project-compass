@@ -6,7 +6,7 @@ const S3_SECRET_KEY = '35ee85209ea190baee5fdd75320c2d1c19360209d44a7f43b316d4744
 
 // Use hardcoded values since environment variables aren't working consistently
 const SUPABASE_URL = "https://auswnhnpeetphmlqtecs.supabase.co";
-const SUPABASE_ANON_KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImF1c3duaG5wZWV0cGhtbHF0ZWNzIiwicm9sZSI6ImFub24iLCJpYXQiOjE3Mzk1MzM0MTYsImV4cCI6MjA1NTEwOTQxNn0.s07yOdZYp9G1iDGmQZPL_TYxqbZV9n70_c_2SZw-Fsc";
+const SUPABASE_ANON_KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImF1c3duaG5wZWV0cGhtbHF0ZWNzIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NDcyNjE3NDcsImV4cCI6MjA2MjgzNzc0N30.o9PazJGVj_jPFUn_AeO3xnvu7ePsK1ufc5jNTu3C2Dw";
 
 // Log key details
 console.log('Admin client: Using hardcoded keys');

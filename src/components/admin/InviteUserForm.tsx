@@ -10,9 +10,11 @@ import { Form, FormControl, FormDescription, FormField, FormItem, FormLabel, For
 import { Loader2 } from "lucide-react";
 import { toast } from 'sonner';
 import { supabase } from "@/integrations/supabase/client";
-import { serviceClient, hasServiceRoleKey } from "@/integrations/supabase/service-client";
+// import { serviceClient } from "@/integrations/supabase/service-client";
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { useAuth } from '@/contexts/AuthContext';
+
+const API_BASE_URL = window.location.hostname === 'localhost' ? 'http://localhost:5000/api' : '/api';
 
 const formSchema = z.object({
   email: z.string().email({ message: "Please enter a valid email address." }),
@@ -45,12 +47,6 @@ const InviteUserForm: React.FC<InviteUserFormProps> = ({ onSuccess }) => {
     setIsSubmitting(true);
     
     try {
-      // Check if the service role key is available
-      if (!hasServiceRoleKey()) {
-        toast.error('Service role key is not set. Please set up your environment variables.');
-        return;
-      }
-      
       // Check if user with this email already exists
       const { data: existingUsers, error: checkError } = await supabase
         .from('profiles')
@@ -71,82 +67,30 @@ const InviteUserForm: React.FC<InviteUserFormProps> = ({ onSuccess }) => {
         return;
       }
       
-      // Create the user in the auth system with the provided default password
-      // Use service client for admin operations to bypass RLS
-      const { data: authData, error: authError } = await serviceClient.auth.admin.createUser({
-        email: values.email,
-        password: values.defaultPassword,
-        email_confirm: true,
-        user_metadata: {
+      // Call the backend API to invite the user
+      const response = await fetch(`${API_BASE_URL}/invite-user`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          email: values.email,
+          password: values.defaultPassword,
+          role: values.role,
+          organization: values.organization,
+          position: values.position,
           invited_by: user?.id,
-          needs_password_change: true
-        },
+        }),
       });
-      
-      if (authError) {
-        if (authError.message.includes('not allowed')) {
-          throw new Error('Permission denied: Your account does not have permission to create users. Please contact your administrator.');
-        } else {
-          throw new Error(authError.message);
-        }
-      }
-      
-      if (!authData.user) {
-        throw new Error('Failed to create user account');
-      }
-      
-      // Create/update the profile with role and other information
-      // Also use service client here to bypass RLS
-      const { error: profileError } = await serviceClient
-        .from('profiles')
-        .upsert({
-          id: authData.user.id,
-          email: values.email.toLowerCase(),
-          role: values.role,
-          organization: values.organization || null,
-          position: values.position || null,
-          invited_by: user?.id,
-          created_at: new Date().toISOString()
-        });
-      
-      if (profileError) {
-        if (profileError.message.includes('permission denied')) {
-          throw new Error('Permission denied: You do not have permission to create user profiles. Please contact your administrator.');
-        } else {
-          throw new Error(profileError.message);
-        }
-      }
-      
-      // Also add to invitations table for tracking
-      const expiryDate = new Date();
-      expiryDate.setDate(expiryDate.getDate() + 7); // Expire in 7 days
-      
-      const { error: invitationError } = await serviceClient
-        .from('invitations')
-        .insert({
-          email: values.email.toLowerCase(),
-          role: values.role,
-          organization: values.organization || null,
-          position: values.position || null,
-          invited_by: user?.id,
-          created_at: new Date().toISOString(),
-          expires_at: expiryDate.toISOString()
-        });
-      
-      if (invitationError) {
-        console.error('Error adding invitation record:', invitationError);
-        // Continue anyway, as the user has been created
-      }
-      
+      const result = await response.json();
+      if (!response.ok) throw new Error(result.error || 'Failed to invite user');
       toast.success(`User ${values.email} has been added successfully with a default password. They will be prompted to change it on first login.`);
       form.reset();
       
       if (onSuccess) {
         onSuccess();
       }
-    } catch (error: any) {
+    } catch (error: unknown) {
       console.error('Error adding user:', error);
-      toast.error(error.message || 'Failed to add user');
+      toast.error(error instanceof Error ? error.message : 'Failed to add user');
     } finally {
       setIsSubmitting(false);
     }

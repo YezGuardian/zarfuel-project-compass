@@ -4,7 +4,6 @@ import type { Database } from './types';
 
 // Use hardcoded values since environment variables aren't working
 const SUPABASE_URL = "https://auswnhnpeetphmlqtecs.supabase.co";
-// Updated anon key (provided by user)
 const SUPABASE_ANON_KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImF1c3duaG5wZWV0cGhtbHF0ZWNzIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NDcyNjE3NDcsImV4cCI6MjA2MjgzNzc0N30.o9PazJGVj_jPFUn_AeO3xnvu7ePsK1ufc5jNTu3C2Dw";
 
 // To verify we don't have corrupted token or linebreaks

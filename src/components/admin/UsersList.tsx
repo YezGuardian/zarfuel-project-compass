@@ -40,6 +40,8 @@ import { format } from 'date-fns';
 import { MoreHorizontal, Search, Shield, User, UserCog, Edit, Key, RefreshCcw } from 'lucide-react';
 import { UserRole } from '@/utils/permissions';
 
+const API_BASE_URL = window.location.hostname === 'localhost' ? 'http://localhost:5000/api' : '/api';
+
 const UsersList = () => {
   const { isSuperAdmin } = useAuth();
   const [users, setUsers] = useState<any[]>([]);
@@ -111,7 +113,7 @@ const UsersList = () => {
       }
 
       setUsers(data || []);
-    } catch (error) {
+    } catch (error: unknown) {
       console.error('Error fetching users:', error);
       toast.error('Failed to load users');
     } finally {
@@ -134,7 +136,7 @@ const UsersList = () => {
       ));
 
       toast.success(`User role updated to ${role}`);
-    } catch (error) {
+    } catch (error: unknown) {
       console.error('Error updating user role:', error);
       toast.error('Failed to update user role');
     }
@@ -187,7 +189,7 @@ const UsersList = () => {
       
       setEditDialogOpen(false);
       toast.success('User profile updated successfully');
-    } catch (error) {
+    } catch (error: unknown) {
       console.error('Error updating user profile:', error);
       toast.error('Failed to update user profile');
     } finally {
@@ -200,18 +202,18 @@ const UsersList = () => {
     
     setSubmitting(true);
     try {
-      // Note: Updating password usually requires an admin function or API endpoint
-      // This is just a placeholder for the actual implementation
-      const { error } = await supabase.auth.admin.updateUserById(
-        selectedUser.id,
-        { password: newPassword }
-      );
-      
-      if (error) throw error;
+      // Call backend API to update user password securely
+      const response = await fetch(`${API_BASE_URL}/update-user-password`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ id: selectedUser.id, password: newPassword }),
+      });
+      const result = await response.json();
+      if (!response.ok) throw new Error(result.error || 'Failed to update password');
       
       setPasswordDialogOpen(false);
       toast.success('Password updated successfully');
-    } catch (error) {
+    } catch (error: unknown) {
       console.error('Error updating password:', error);
       toast.error('Failed to update password. This may require additional admin privileges.');
     } finally {

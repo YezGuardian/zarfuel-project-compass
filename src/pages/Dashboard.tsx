@@ -13,28 +13,33 @@ import ChangePasswordModal from '@/components/ChangePasswordModal';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import PhaseProgress from '@/components/tasks/PhaseProgress';
 import { useNavigate } from 'react-router-dom';
+import { useBudget } from '@/hooks/useBudget';
+import { risks } from '@/data/mockData';
+import { mapMockRiskToAppRisk } from '@/types/risk';
 
 const Dashboard: React.FC = () => {
   const [tasks, setTasks] = useState<Task[]>([]);
   const [phases, setPhases] = useState<Phase[]>([]);
   const [isLoading, setIsLoading] = useState(true);
-  const [budgetData, setBudgetData] = useState({
-    totalBudget: 0,
-    allocated: 0,
-    spent: 0,
-    remainingBudget: 0,
-    allocatedPercentage: 0,
-    spentPercentage: 0
-  });
-  const [riskData, setRiskData] = useState({
-    totalRisks: 0,
-    mitigatedRisks: 0,
-    outstandingRisks: 0,
-    mitigatedPercentage: 0
-  });
   const { needsPasswordChange } = useAuth();
   const navigate = useNavigate();
-  
+
+  // Use the same budget hook as Budget page
+  const {
+    localBudgetData,
+    allocatedPercentage,
+    spentPercentage,
+    remainingBudget,
+    formatCurrency
+  } = useBudget();
+
+  // Use the same risk data and mapping as Risk Management page
+  const risksData = risks.map(mapMockRiskToAppRisk);
+  const mitigatedRisks = risksData.filter(risk => risk.status === 'mitigated');
+  const totalRisks = risksData.length;
+  const mitigatedPercentage = totalRisks > 0 ? Math.round((mitigatedRisks.length / totalRisks) * 100) : 0;
+  const outstandingRisks = totalRisks - mitigatedRisks.length;
+
   useEffect(() => {
     const fetchData = async () => {
       setIsLoading(true);
@@ -78,35 +83,6 @@ const Dashboard: React.FC = () => {
           allocatedPercentage: 70,
           spentPercentage: 40
         };
-        setBudgetData(mockBudgetData);
-        
-        // Fetch risk data (mock data for now)
-        const { data: risksData, error: risksError } = await supabase
-          .from('risks')
-          .select('*');
-          
-        if (risksError) {
-          console.error('Error fetching risks:', risksError);
-          // Use mock data if there's an error
-          setRiskData({
-            totalRisks: 10,
-            mitigatedRisks: 4,
-            outstandingRisks: 6,
-            mitigatedPercentage: 40
-          });
-        } else {
-          // Calculate risk statistics
-          const mitigatedRisks = (risksData || []).filter(risk => risk.status === 'mitigated').length;
-          const totalRisks = (risksData || []).length;
-          const mitigatedPercentage = totalRisks > 0 ? Math.round((mitigatedRisks / totalRisks) * 100) : 0;
-          
-          setRiskData({
-            totalRisks,
-            mitigatedRisks,
-            outstandingRisks: totalRisks - mitigatedRisks,
-            mitigatedPercentage
-          });
-        }
         
       } catch (error) {
         console.error('Error fetching dashboard data:', error);
@@ -163,16 +139,6 @@ const Dashboard: React.FC = () => {
     { name: 'Ongoing', value: taskStats.ongoing, color: '#3B82F6' },
     { name: 'Not Started', value: taskStats.notStarted, color: '#EF4444' },
   ];
-
-  // Format currency
-  const formatCurrency = (amount: number) => {
-    return new Intl.NumberFormat('en-ZA', {
-      style: 'currency',
-      currency: 'ZAR',
-      minimumFractionDigits: 0,
-      maximumFractionDigits: 0
-    }).format(amount);
-  };
   
   const handleTaskClick = (taskId: string) => {
     navigate(`/tasks?taskId=${taskId}`);
@@ -325,7 +291,7 @@ const Dashboard: React.FC = () => {
                 </CardContent>
               </Card>
               
-              {/* Budget & Financial Plan Summary */}
+              {/* Budget & Financial Plan */}
               <Card>
                 <CardHeader>
                   <CardTitle>Budget & Financial Plan</CardTitle>
@@ -334,44 +300,44 @@ const Dashboard: React.FC = () => {
                   <div className="space-y-4">
                     <div className="flex items-center justify-between">
                       <span className="text-sm font-medium">Total Budget:</span>
-                      <span className="font-bold">{formatCurrency(budgetData.totalBudget)}</span>
+                      <span className="font-bold">{formatCurrency(localBudgetData.totalBudget)}</span>
                     </div>
                     
                     <div className="space-y-1">
                       <div className="flex justify-between text-sm">
-                        <span>Allocated ({budgetData.allocatedPercentage}%)</span>
-                        <span>{formatCurrency(budgetData.allocated)}</span>
+                        <span>Allocated ({allocatedPercentage}%)</span>
+                        <span>{formatCurrency(localBudgetData.allocated)}</span>
                       </div>
                       <div className="w-full bg-muted rounded-full h-2.5">
                         <div 
                           className="h-2.5 rounded-full bg-zarfuel-blue" 
-                          style={{ width: `${budgetData.allocatedPercentage}%` }}
+                          style={{ width: `${allocatedPercentage}%` }}
                         ></div>
                       </div>
                     </div>
                     
                     <div className="space-y-1">
                       <div className="flex justify-between text-sm">
-                        <span>Spent ({budgetData.spentPercentage}%)</span>
-                        <span>{formatCurrency(budgetData.spent)}</span>
+                        <span>Spent ({spentPercentage}%)</span>
+                        <span>{formatCurrency(localBudgetData.spent)}</span>
                       </div>
                       <div className="w-full bg-muted rounded-full h-2.5">
                         <div 
                           className="h-2.5 rounded-full bg-status-complete" 
-                          style={{ width: `${budgetData.spentPercentage}%` }}
+                          style={{ width: `${spentPercentage}%` }}
                         ></div>
                       </div>
                     </div>
                     
                     <div className="space-y-1">
                       <div className="flex justify-between text-sm">
-                        <span>Remaining ({100 - budgetData.spentPercentage}%)</span>
-                        <span>{formatCurrency(budgetData.remainingBudget)}</span>
+                        <span>Remaining ({100 - spentPercentage}%)</span>
+                        <span>{formatCurrency(remainingBudget)}</span>
                       </div>
                       <div className="w-full bg-muted rounded-full h-2.5">
                         <div 
                           className="h-2.5 rounded-full bg-status-inprogress" 
-                          style={{ width: `${100 - budgetData.spentPercentage}%` }}
+                          style={{ width: `${100 - spentPercentage}%` }}
                         ></div>
                       </div>
                     </div>
@@ -387,27 +353,27 @@ const Dashboard: React.FC = () => {
                 <CardContent>
                   <div className="space-y-4">
                     <div className="flex items-center">
-                      <div className="text-sm font-medium mr-4">{riskData.mitigatedPercentage}% Mitigated</div>
+                      <div className="text-sm font-medium mr-4">{mitigatedPercentage}% Mitigated</div>
                       <div className="w-full bg-muted rounded-full h-2.5">
                         <div 
                           className="h-2.5 rounded-full bg-green-500" 
-                          style={{ width: `${riskData.mitigatedPercentage}%` }}
+                          style={{ width: `${mitigatedPercentage}%` }}
                         ></div>
                       </div>
                     </div>
-                    
-                    <div className="grid grid-cols-3 gap-4">
-                      <div className="border rounded-md p-3 text-center">
-                        <p className="text-sm text-muted-foreground mb-1">Total Risks</p>
-                        <p className="text-2xl font-bold">{riskData.totalRisks}</p>
+                    {/* Stack risk summary vertically */}
+                    <div className="flex flex-col gap-4">
+                      <div className="border rounded-md p-3 text-center bg-blue-100 text-blue-900">
+                        <p className="text-sm text-blue-800 mb-1">Total Risks</p>
+                        <p className="text-2xl font-bold text-blue-900">{totalRisks}</p>
                       </div>
-                      <div className="border rounded-md p-3 text-center">
-                        <p className="text-sm text-muted-foreground mb-1">Mitigated</p>
-                        <p className="text-2xl font-bold text-green-600">{riskData.mitigatedRisks}</p>
+                      <div className="border rounded-md p-3 text-center bg-green-100">
+                        <p className="text-sm text-green-800 mb-1">Mitigated</p>
+                        <p className="text-2xl font-bold text-green-700">{mitigatedRisks.length}</p>
                       </div>
-                      <div className="border rounded-md p-3 text-center">
-                        <p className="text-sm text-muted-foreground mb-1">Outstanding</p>
-                        <p className="text-2xl font-bold text-yellow-600">{riskData.outstandingRisks}</p>
+                      <div className="border rounded-md p-3 text-center bg-orange-100">
+                        <p className="text-sm text-orange-800 mb-1">Outstanding</p>
+                        <p className="text-2xl font-bold text-orange-600">{outstandingRisks}</p>
                       </div>
                     </div>
                   </div>

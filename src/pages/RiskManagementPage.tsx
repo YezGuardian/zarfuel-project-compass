@@ -173,19 +173,18 @@ const RiskManagementPage: React.FC = () => {
                 ></div>
               </div>
             </div>
-            
             <div className="grid grid-cols-3 gap-4">
-              <div className="border rounded-md p-3 text-center">
-                <p className="text-sm text-muted-foreground mb-1">Total Risks</p>
-                <p className="text-2xl font-bold">{risksData.length}</p>
+              <div className="border rounded-md p-3 text-center bg-blue-100 text-blue-900">
+                <p className="text-sm text-blue-800 mb-1">Total Risks</p>
+                <p className="text-2xl font-bold text-blue-900">{risksData.length}</p>
               </div>
-              <div className="border rounded-md p-3 text-center">
-                <p className="text-sm text-muted-foreground mb-1">Mitigated</p>
-                <p className="text-2xl font-bold text-green-600">{mitigatedRisks.length}</p>
+              <div className="border rounded-md p-3 text-center bg-green-100">
+                <p className="text-sm text-green-800 mb-1">Mitigated</p>
+                <p className="text-2xl font-bold text-green-700">{mitigatedRisks.length}</p>
               </div>
-              <div className="border rounded-md p-3 text-center">
-                <p className="text-sm text-muted-foreground mb-1">Outstanding</p>
-                <p className="text-2xl font-bold text-yellow-600">{risksData.length - mitigatedRisks.length}</p>
+              <div className="border rounded-md p-3 text-center bg-orange-100">
+                <p className="text-sm text-orange-800 mb-1">Outstanding</p>
+                <p className="text-2xl font-bold text-orange-600">{risksData.length - mitigatedRisks.length}</p>
               </div>
             </div>
           </div>

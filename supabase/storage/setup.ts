@@ -1,11 +1,24 @@
-
 // This file contains helper functions for setting up Supabase storage
 
-import { createClient } from '@supabase/supabase-js';
+import { createClient, SupabaseClient } from '@supabase/supabase-js';
+
+const SUPABASE_URL = import.meta.env.VITE_SUPABASE_URL;
+const SUPABASE_ANON_KEY = import.meta.env.VITE_SUPABASE_ANON_KEY;
+
+// Add this at the top if not already present
+declare global {
+  interface ImportMetaEnv {
+    readonly VITE_SUPABASE_URL: string;
+    readonly VITE_SUPABASE_ANON_KEY: string;
+  }
+  interface ImportMeta {
+    readonly env: ImportMetaEnv;
+  }
+}
 
 // Create documents bucket if it doesn't exist
-export const createDocumentsBucket = async (supabaseUrl: string, supabaseKey: string) => {
-  const supabase = createClient(supabaseUrl, supabaseKey);
+export const createDocumentsBucket = async () => {
+  const supabase = createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
   
   try {
     const { data: buckets, error } = await supabase.storage.listBuckets();
@@ -43,7 +56,7 @@ export const createDocumentsBucket = async (supabaseUrl: string, supabaseKey: st
 };
 
 // Create storage policies
-const createBucketPolicies = async (supabase: any) => {
+const createBucketPolicies = async (supabase: SupabaseClient) => {
   try {
     // Allow authenticated users to upload files
     await supabase.storage.from('documents').createPolicy('authenticated upload policy', {
