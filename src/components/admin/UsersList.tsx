@@ -39,6 +39,7 @@ import { toast } from 'sonner';
 import { format } from 'date-fns';
 import { MoreHorizontal, Search, Shield, User, UserCog, Edit, Key, RefreshCcw } from 'lucide-react';
 import { UserRole } from '@/utils/permissions';
+import { secureDeleteUser, secureDeleteProfile } from '@/utils/secureOperations';
 
 const API_BASE_URL = window.location.hostname === 'localhost' ? 'http://localhost:5000/api' : '/api';
 
@@ -218,6 +219,22 @@ const UsersList = () => {
       toast.error('Failed to update password. This may require additional admin privileges.');
     } finally {
       setSubmitting(false);
+    }
+  };
+
+  const handleDeleteUser = async (userId: string, profileId: string) => {
+    try {
+      // Use secure API endpoints instead of direct database access
+      await secureDeleteUser(userId);
+      await secureDeleteProfile(profileId);
+
+      // Refresh the users list
+      await fetchUsers();
+      
+      toast.success('User deleted successfully');
+    } catch (error) {
+      console.error('Error deleting user:', error);
+      toast.error('Failed to delete user');
     }
   };
 

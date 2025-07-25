@@ -193,7 +193,8 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     toast.info('You have been logged out');
   };
 
-  // Use the permission utilities
+  // Role checking functions - FRONTEND ONLY, NOT FOR SECURITY
+  // These are for UI display only. Server-side RLS provides real security.
   const isAdmin = (): boolean => {
     return profile?.role === 'admin' || isSuperAdmin();
   };

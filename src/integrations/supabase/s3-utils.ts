@@ -1,8 +1,6 @@
 import { supabase } from './client';
 
-// S3 credentials
-const S3_ACCESS_KEY = 'b060f494076a6e87be347359a7b7485c';
-const S3_SECRET_KEY = '35ee85209ea190baee5fdd75320c2d1c19360209d44a7f43b316d47447e2e067';
+// SECURITY: S3 credentials removed - use standard Supabase storage without bypass
 
 /**
  * Ensure a bucket exists, create it if it doesn't
@@ -91,17 +89,13 @@ export const uploadFileWithS3Credentials = async (
       throw new Error(`Failed to create or verify bucket '${bucket}'`);
     }
     
-    // Upload the file with standard client and S3 auth headers
+    // Upload the file with standard client (no credential bypass)
     const uploadOptions = {
       upsert: true,
-      contentType: file.type,
-      headers: {
-        'X-S3-Access-Key': S3_ACCESS_KEY,
-        'X-S3-Secret-Key': S3_SECRET_KEY
-      }
+      contentType: file.type
     };
     
-    console.log('Upload options:', { ...uploadOptions, headers: 'credentials_hidden' });
+    console.log('Upload options:', uploadOptions);
     
     const { data, error: uploadError } = await supabase.storage
       .from(bucket)

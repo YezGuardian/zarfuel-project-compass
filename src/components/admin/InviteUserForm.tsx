@@ -10,9 +10,9 @@ import { Form, FormControl, FormDescription, FormField, FormItem, FormLabel, For
 import { Loader2 } from "lucide-react";
 import { toast } from 'sonner';
 import { supabase } from "@/integrations/supabase/client";
-// import { serviceClient } from "@/integrations/supabase/service-client";
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { useAuth } from '@/contexts/AuthContext';
+import { secureInviteUser } from '@/utils/secureOperations';
 
 const API_BASE_URL = window.location.hostname === 'localhost' ? 'http://localhost:5000/api' : '/api';
 
@@ -67,21 +67,15 @@ const InviteUserForm: React.FC<InviteUserFormProps> = ({ onSuccess }) => {
         return;
       }
       
-      // Call the backend API to invite the user
-      const response = await fetch(`${API_BASE_URL}/invite-user`, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          email: values.email,
-          password: values.defaultPassword,
-          role: values.role,
-          organization: values.organization,
-          position: values.position,
-          invited_by: user?.id,
-        }),
+      // Use secure API endpoint instead of direct admin access
+      await secureInviteUser({
+        email: values.email,
+        password: values.defaultPassword,
+        role: values.role,
+        organization: values.organization || undefined,
+        position: values.position || undefined,
+        invited_by: user?.id,
       });
-      const result = await response.json();
-      if (!response.ok) throw new Error(result.error || 'Failed to invite user');
       toast.success(`User ${values.email} has been added successfully with a default password. They will be prompted to change it on first login.`);
       form.reset();
       
