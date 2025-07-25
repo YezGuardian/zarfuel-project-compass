@@ -61,9 +61,9 @@ export const useDocuments = () => {
           if (doc.uploader && typeof doc.uploader === 'object') {
             // Check if uploader has the required properties before accessing them
             uploaderValue = {
-              first_name: doc.uploader?.first_name || null,
-              last_name: doc.uploader?.last_name || null,
-              email: doc.uploader?.email || ''
+              first_name: (doc.uploader as any)?.first_name || null,
+              last_name: (doc.uploader as any)?.last_name || null,
+              email: (doc.uploader as any)?.email || ''
             };
           }
           

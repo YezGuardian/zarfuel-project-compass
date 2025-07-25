@@ -77,7 +77,7 @@ const Register: React.FC = () => {
           role: invitation.role,
           organization: invitation.organization,
           position: invitation.position,
-          default_password: invitation.default_password
+          // Note: default_password would come from invitation if needed
         });
         
       } catch (err) {

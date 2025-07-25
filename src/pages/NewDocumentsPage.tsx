@@ -23,7 +23,7 @@ const NewDocumentsPage: React.FC = () => {
   const [newRepoName, setNewRepoName] = useState('');
   const [newRepoUrl, setNewRepoUrl] = useState('');
   
-  const isAdmin = profile?.role === 'admin' || profile?.role === 'super_admin';
+  const isAdmin = profile?.role === 'admin' || profile?.role === 'superadmin';
   
   useEffect(() => {
     fetchRepositories();
